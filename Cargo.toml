@@ -7,12 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-sys = { git = "https://github.com/pacman82/odbc-sys", branch = "Renaming-and-safe-usage" }
-odbc-array = { path = "../odbc-array" }
-parquet = "1.0.0"
+odbc-api = { path = "../odbc-api" }
+parquet = "1.0.1"
 anyhow = "1.0.32"
 stderrlog = "0.4.3"
-structopt = "0.3.15"
+structopt = "0.3.16"
+log = "0.4.11"
 
 [dev-dependencies]
 assert_cmd = "1.0.1"
+predicates = "1.0.5"
+tempfile = "3.1.0"

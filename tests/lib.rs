@@ -1,41 +1,51 @@
 use assert_cmd::Command;
+use predicates::ord::eq;
+use tempfile::tempdir;
 
 #[test]
-fn sample_employee_data() {
-    // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
+fn test_xls_table() {
+    let expected = "\
+    {Text: \"Hello\"}\n\
+    {Text: \"World\"}\n\
+    ";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
     cmd.args(&[
         "-vvvv",
-        "-s",
-        "Driver={Microsoft Excel Driver (*.xls)};Dbq=tests/Sample_Employee_data_xls.xls;ReadOnly=0",
-        "-q",
-        "SELECT * FROM [uk-500$]",
+        // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
+        "Driver={Microsoft Excel Driver (*.xls)};Dbq=tests/test-table.xls;ReadOnly=0",
+        "SELECT * FROM [sheet1$]",
+        out_str,
     ])
     .assert()
     .success();
-}
 
-#[test]
-fn sample_sales_records() {
-    // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
-
-    let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&[
-        "-vvvv",
-        "-s",
-        "Driver={Microsoft Excel Driver (*.xls)};Dbq=tests/Sample_Sales_Records_xls.xls;ReadOnly=0",
-        "-q",
-        "SELECT * FROM [Sample_Sales Records$]",
-    ])
-    .assert()
-    .success();
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
 }
 
 #[test]
 fn foobar_connection_string() {
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&["-vvvv", "-s", "foobar", "-q", "SELECT * FROM [uk-500$]"])
+    cmd.args(&["-vvvv", "foobar", "SELECT * FROM [uk-500$]", out_str])
         .assert()
         .failure()
         .code(1);
