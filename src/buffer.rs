@@ -93,22 +93,13 @@ fn bind_column_to_cursor(
         indicator,
     } = column_buffer.bind_arguments();
     unsafe {
-        if let Err(e) = cursor.bind_col(
+        cursor.bind_col(
             column_number,
             target_type,
             target_value,
             target_length,
             indicator,
-        ) {
-            cursor.unbind_cols().expect(&format!(
-                "Error unbinding columns. Unbinding was triggerd due to an error binding a \
-            column: {}",
-                e
-            ));
-            Err(e)
-        } else {
-            Ok(())
-        }
+        )
     }
 }
 

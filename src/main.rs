@@ -3,7 +3,7 @@ mod buffer;
 use anyhow::Error;
 use buffer::{derive_buffer_description, OdbcBuffer};
 use odbc_api::{
-    sys::{USmallInt, NULL_DATA, SqlDataType},
+    sys::{SqlDataType, USmallInt, NULL_DATA},
     ColumnDescription, Cursor, Environment, Nullable,
 };
 use parquet::{
@@ -72,7 +72,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn cursor_to_parquet(mut cursor: Cursor, file: File, batch_size: usize) -> Result<(), Error> {
+fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<(), Error> {
     // Write properties
     let wpb = WriterProperties::builder();
     let properties = Rc::new(wpb.build());
@@ -99,7 +99,7 @@ fn cursor_to_parquet(mut cursor: Cursor, file: File, batch_size: usize) -> Resul
                 // parquet::column::writer::ColumnWriter::FloatColumnWriter(_) => {}
                 ColumnWriter::DoubleColumnWriter(cw) => {
                     let (values, indicators) = buffer.f64_column(col_index);
-                    def_levels.resize(0, 0);
+                    def_levels.clear();
                     for &ind in indicators {
                         def_levels.push(if ind == NULL_DATA { 0 } else { 1 });
                     }
@@ -108,7 +108,7 @@ fn cursor_to_parquet(mut cursor: Cursor, file: File, batch_size: usize) -> Resul
                 ColumnWriter::ByteArrayColumnWriter(cw) => {
                     let field_it = buffer.text_column_it(col_index);
                     let mut values = Vec::new();
-                    def_levels.resize(0, 0);
+                    def_levels.clear();
 
                     for read_buf in field_it {
                         let (bytes, nul) = read_buf
@@ -146,9 +146,7 @@ fn make_schema(cursor: &Cursor) -> Result<Rc<Type>, Error> {
 
         let (physical_type, logical_type) = match cd.data_type {
             SqlDataType::DOUBLE => (PhysicalType::DOUBLE, None),
-            _ => {
-                (PhysicalType::BYTE_ARRAY, Some(LogicalType::UTF8))
-            }
+            _ => (PhysicalType::BYTE_ARRAY, Some(LogicalType::UTF8)),
         };
 
         let repetition = match cd.nullable {
