@@ -96,7 +96,14 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
                 // parquet::column::writer::ColumnWriter::Int32ColumnWriter(_) => {}
                 // parquet::column::writer::ColumnWriter::Int64ColumnWriter(_) => {}
                 // parquet::column::writer::ColumnWriter::Int96ColumnWriter(_) => {}
-                // parquet::column::writer::ColumnWriter::FloatColumnWriter(_) => {}
+                ColumnWriter::FloatColumnWriter(cw) => {
+                    let (values, indicators) = buffer.f32_column(col_index);
+                    def_levels.clear();
+                    for &ind in indicators {
+                        def_levels.push(if ind == NULL_DATA { 0 } else { 1 });
+                    }
+                    cw.write_batch(values, Some(&def_levels), rep_levels)?;
+                }
                 ColumnWriter::DoubleColumnWriter(cw) => {
                     let (values, indicators) = buffer.f64_column(col_index);
                     def_levels.clear();
@@ -146,6 +153,7 @@ fn make_schema(cursor: &Cursor) -> Result<Rc<Type>, Error> {
 
         let (physical_type, logical_type) = match cd.data_type {
             SqlDataType::DOUBLE => (PhysicalType::DOUBLE, None),
+            SqlDataType::FLOAT => (PhysicalType::FLOAT, None),
             _ => (PhysicalType::BYTE_ARRAY, Some(LogicalType::UTF8)),
         };
 

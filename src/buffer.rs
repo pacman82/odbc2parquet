@@ -1,6 +1,6 @@
 use odbc_api::{
     buffers::{BindColParameters, ColumnBuffer, TextColumn},
-    sys::{CDataType, Len, Pointer, SqlDataType, ULen, USmallInt},
+    sys::{CDataType, Len, Pointer, SqlDataType, ULen, USmallInt, NULL_DATA},
     Cursor, Error, RowSetBuffer,
 };
 use std::convert::TryInto;
@@ -9,6 +9,7 @@ use std::convert::TryInto;
 pub enum ColumnBufferDescription {
     Text { max_str_len: usize },
     F64,
+    F32,
 }
 
 pub fn derive_buffer_description(cursor: &Cursor) -> Result<Vec<ColumnBufferDescription>, Error> {
@@ -16,10 +17,11 @@ pub fn derive_buffer_description(cursor: &Cursor) -> Result<Vec<ColumnBufferDesc
         .map(|column_number| {
             match cursor.col_data_type(column_number as USmallInt)? {
                 SqlDataType::DOUBLE => Ok(ColumnBufferDescription::F64),
+                SqlDataType::FLOAT => Ok(ColumnBufferDescription::F32),
                 _ => {
                     // +1 for terminating zero
                     let max_str_len =
-                        cursor.col_display_size(column_number.try_into().unwrap())? as usize + 1;
+                        cursor.col_display_size(column_number.try_into().unwrap())? as usize;
                     Ok(ColumnBufferDescription::Text { max_str_len })
                 }
             }
@@ -32,12 +34,14 @@ pub struct OdbcBuffer {
     num_rows_fetched: ULen,
     text_buffers: Vec<(usize, TextColumn)>,
     f64_buffers: Vec<(usize, F64ColumnBuffer)>,
+    f32_buffers: Vec<(usize, F32ColumnBuffer)>,
 }
 
 impl OdbcBuffer {
     pub fn new(batch_size: usize, desc: impl Iterator<Item = ColumnBufferDescription>) -> Self {
         let mut text_buffers = Vec::new();
         let mut f64_buffers = Vec::new();
+        let mut f32_buffers = Vec::new();
         for (col_index, column_desc) in desc.enumerate() {
             match column_desc {
                 ColumnBufferDescription::Text { max_str_len } => {
@@ -46,6 +50,9 @@ impl OdbcBuffer {
                 ColumnBufferDescription::F64 => {
                     f64_buffers.push((col_index, F64ColumnBuffer::new(batch_size)))
                 }
+                ColumnBufferDescription::F32 => {
+                    f32_buffers.push((col_index, F32ColumnBuffer::new(batch_size)))
+                }
             };
         }
         Self {
@@ -53,6 +60,7 @@ impl OdbcBuffer {
             batch_size,
             text_buffers,
             f64_buffers,
+            f32_buffers,
         }
     }
 
@@ -77,6 +85,18 @@ impl OdbcBuffer {
         (
             &f64_buffer.values()[..self.num_rows_fetched as usize],
             &f64_buffer.indicators()[..self.num_rows_fetched as usize],
+        )
+    }
+
+    pub fn f32_column(&self, col_index: usize) -> (&[f32], &[Len]) {
+        let (_col_index, f32_buffer) = self
+            .f32_buffers
+            .iter()
+            .find(|(index, _buf)| *index == col_index)
+            .expect("No f32 buffer found with specified index");
+        (
+            &f32_buffer.values()[..self.num_rows_fetched as usize],
+            &f32_buffer.indicators()[..self.num_rows_fetched as usize],
         )
     }
 }
@@ -122,41 +142,46 @@ unsafe impl RowSetBuffer for OdbcBuffer {
     }
 }
 
-pub struct F64ColumnBuffer {
-    values: Vec<f64>,
+type F64ColumnBuffer = FloatColumnBuffer<f64>;
+type F32ColumnBuffer = FloatColumnBuffer<f32>;
+
+pub struct FloatColumnBuffer<F> {
+    values: Vec<F>,
     indicators: Vec<Len>,
 }
 
-impl F64ColumnBuffer {
+impl<F> FloatColumnBuffer<F> where F: Default + Clone {
     pub fn new(batch_size: usize) -> Self {
-        F64ColumnBuffer {
-            values: vec![0.; batch_size],
-            indicators: vec![0; batch_size],
+        Self {
+            values: vec![F::default(); batch_size],
+            indicators: vec![NULL_DATA; batch_size],
         }
     }
 
-    pub fn values(&self) -> &[f64] {
+    pub fn values(&self) -> &[F] {
         &self.values
     }
 
     pub fn indicators(&self) -> &[Len] {
         &self.indicators
     }
-
-    // pub unsafe fn value_at(&self, row_index: usize) -> Option<f64> {
-    //     let str_len = self.indicators[row_index];
-    //     if str_len == NULL_DATA {
-    //         None
-    //     } else {
-    //         Some(self.values[row_index])
-    //     }
-    // }
 }
 
 unsafe impl ColumnBuffer for F64ColumnBuffer {
     fn bind_arguments(&mut self) -> BindColParameters {
         BindColParameters {
             target_type: CDataType::Double,
+            target_value: self.values.as_mut_ptr() as Pointer,
+            target_length: 0,
+            indicator: self.indicators.as_mut_ptr(),
+        }
+    }
+}
+
+unsafe impl ColumnBuffer for F32ColumnBuffer {
+    fn bind_arguments(&mut self) -> BindColParameters {
+        BindColParameters {
+            target_type: CDataType::Float,
             target_value: self.values.as_mut_ptr() as Pointer,
             target_length: 0,
             indicator: self.indicators.as_mut_ptr(),
