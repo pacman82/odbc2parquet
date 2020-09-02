@@ -7,12 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.2.0"
+odbc-api = "0.2.1"
 parquet = "1.0.1"
 anyhow = "1.0.32"
 stderrlog = "0.4.3"
-structopt = "0.3.16"
+structopt = "0.3.17"
 log = "0.4.11"
+chrono = "0.4.15"
 
 [dev-dependencies]
 assert_cmd = "1.0.1"

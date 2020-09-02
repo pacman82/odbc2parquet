@@ -1,32 +1,17 @@
 use odbc_api::{
     buffers::{BindColParameters, ColumnBuffer, TextColumn},
-    sys::{CDataType, Len, Pointer, SqlDataType, ULen, USmallInt, NULL_DATA},
+    sys::{CDataType, Date, Len, Pointer, Timestamp, ULen, USmallInt, NULL_DATA},
     Cursor, Error, RowSetBuffer,
 };
-use std::convert::TryInto;
+use std::{convert::TryInto, mem::size_of};
 
 #[derive(Clone, Copy)]
 pub enum ColumnBufferDescription {
     Text { max_str_len: usize },
     F64,
     F32,
-}
-
-pub fn derive_buffer_description(cursor: &Cursor) -> Result<Vec<ColumnBufferDescription>, Error> {
-    (1..(cursor.num_result_cols()? + 1))
-        .map(|column_number| {
-            match cursor.col_data_type(column_number as USmallInt)? {
-                SqlDataType::DOUBLE => Ok(ColumnBufferDescription::F64),
-                SqlDataType::FLOAT => Ok(ColumnBufferDescription::F32),
-                _ => {
-                    // +1 for terminating zero
-                    let max_str_len =
-                        cursor.col_display_size(column_number.try_into().unwrap())? as usize;
-                    Ok(ColumnBufferDescription::Text { max_str_len })
-                }
-            }
-        })
-        .collect()
+    Date,
+    Timestamp,
 }
 
 pub struct OdbcBuffer {
@@ -35,6 +20,8 @@ pub struct OdbcBuffer {
     text_buffers: Vec<(usize, TextColumn)>,
     f64_buffers: Vec<(usize, F64ColumnBuffer)>,
     f32_buffers: Vec<(usize, F32ColumnBuffer)>,
+    date_buffers: Vec<(usize, DateColumnBuffer)>,
+    timestamp_buffers: Vec<(usize, TimestampColumnBuffer)>,
 }
 
 impl OdbcBuffer {
@@ -42,6 +29,8 @@ impl OdbcBuffer {
         let mut text_buffers = Vec::new();
         let mut f64_buffers = Vec::new();
         let mut f32_buffers = Vec::new();
+        let mut date_buffers = Vec::new();
+        let mut timestamp_buffers = Vec::new();
         for (col_index, column_desc) in desc.enumerate() {
             match column_desc {
                 ColumnBufferDescription::Text { max_str_len } => {
@@ -53,6 +42,12 @@ impl OdbcBuffer {
                 ColumnBufferDescription::F32 => {
                     f32_buffers.push((col_index, F32ColumnBuffer::new(batch_size)))
                 }
+                ColumnBufferDescription::Date => {
+                    date_buffers.push((col_index, DateColumnBuffer::new(batch_size)))
+                }
+                ColumnBufferDescription::Timestamp => {
+                    timestamp_buffers.push((col_index, TimestampColumnBuffer::new(batch_size)))
+                }
             };
         }
         Self {
@@ -61,43 +56,67 @@ impl OdbcBuffer {
             text_buffers,
             f64_buffers,
             f32_buffers,
+            date_buffers,
+            timestamp_buffers,
         }
     }
 
     pub fn text_column_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&[u8]>> {
-        let (_col_index, text_buffer) = self
-            .text_buffers
-            .iter()
-            .find(|(index, _buf)| *index == col_index)
-            .expect("No text buffer found with specified index");
+        let buffer = Self::find_buffer(&self.text_buffers, col_index, "text");
         unsafe {
             (0..self.num_rows_fetched as usize)
-                .map(move |row_index| text_buffer.value_at(row_index))
+                .map(move |row_index| buffer.value_at(row_index))
         }
     }
 
     pub fn f64_column(&self, col_index: usize) -> (&[f64], &[Len]) {
-        let (_col_index, f64_buffer) = self
-            .f64_buffers
-            .iter()
-            .find(|(index, _buf)| *index == col_index)
-            .expect("No f64 buffer found with specified index");
-        (
-            &f64_buffer.values()[..self.num_rows_fetched as usize],
-            &f64_buffer.indicators()[..self.num_rows_fetched as usize],
-        )
+        self.fixed_size_column_buffer(&self.f64_buffers, col_index, "f64")
     }
 
     pub fn f32_column(&self, col_index: usize) -> (&[f32], &[Len]) {
-        let (_col_index, f32_buffer) = self
-            .f32_buffers
+        self.fixed_size_column_buffer(&self.f32_buffers, col_index, "f32")
+    }
+
+    pub fn date_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&Date>> {
+        let buffer = Self::find_buffer(&self.date_buffers, col_index, "date");
+        unsafe {
+            (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+        }
+    }
+
+    pub fn timestamp_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&Timestamp>> {
+        let buffer = Self::find_buffer(&self.timestamp_buffers, col_index, "date");
+        unsafe {
+            (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+        }
+    }
+
+    fn fixed_size_column_buffer<'a, T: FixedSizedCType>(
+        &self,
+        buffers: &'a [(usize, FixedSizedColumnBuffer<T>)],
+        col_index: usize,
+        typename: &'static str,
+    ) -> (&'a [T], &'a [Len]) {
+        let buffer = Self::find_buffer(buffers, col_index, typename);
+        (
+            &buffer.values()[..self.num_rows_fetched as usize],
+            &buffer.indicators()[..self.num_rows_fetched as usize],
+        )
+    }
+
+    fn find_buffer<'a, T>(
+        buffers: &'a [(usize, T)],
+        col_index: usize,
+        typename: &'static str,
+    ) -> &'a T {
+        let (_col_index, buffer) = buffers
             .iter()
             .find(|(index, _buf)| *index == col_index)
-            .expect("No f32 buffer found with specified index");
-        (
-            &f32_buffer.values()[..self.num_rows_fetched as usize],
-            &f32_buffer.indicators()[..self.num_rows_fetched as usize],
-        )
+            .expect(&format!(
+                "No {} buffer found with specified index",
+                typename
+            ));
+        buffer
     }
 }
 
@@ -142,19 +161,32 @@ unsafe impl RowSetBuffer for OdbcBuffer {
     }
 }
 
-type F64ColumnBuffer = FloatColumnBuffer<f64>;
-type F32ColumnBuffer = FloatColumnBuffer<f32>;
+type F64ColumnBuffer = FixedSizedColumnBuffer<f64>;
+type F32ColumnBuffer = FixedSizedColumnBuffer<f32>;
+type DateColumnBuffer = FixedSizedColumnBuffer<Date>;
+type TimestampColumnBuffer = FixedSizedColumnBuffer<Timestamp>;
 
-pub struct FloatColumnBuffer<F> {
+pub struct FixedSizedColumnBuffer<F> {
     values: Vec<F>,
     indicators: Vec<Len>,
 }
 
-impl<F> FloatColumnBuffer<F> where F: Default + Clone {
+impl<F> FixedSizedColumnBuffer<F>
+where
+    F: Default + Clone,
+{
     pub fn new(batch_size: usize) -> Self {
         Self {
             values: vec![F::default(); batch_size],
             indicators: vec![NULL_DATA; batch_size],
+        }
+    }
+
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&F> {
+        if self.indicators[row_index] == NULL_DATA {
+            None
+        } else {
+            Some(&self.values[row_index])
         }
     }
 
@@ -167,24 +199,36 @@ impl<F> FloatColumnBuffer<F> where F: Default + Clone {
     }
 }
 
-unsafe impl ColumnBuffer for F64ColumnBuffer {
+unsafe impl<T> ColumnBuffer for FixedSizedColumnBuffer<T>
+where
+    T: FixedSizedCType,
+{
     fn bind_arguments(&mut self) -> BindColParameters {
         BindColParameters {
-            target_type: CDataType::Double,
+            target_type: T::C_DATA_TYPE,
             target_value: self.values.as_mut_ptr() as Pointer,
-            target_length: 0,
+            target_length: size_of::<T>().try_into().unwrap(),
             indicator: self.indicators.as_mut_ptr(),
         }
     }
 }
 
-unsafe impl ColumnBuffer for F32ColumnBuffer {
-    fn bind_arguments(&mut self) -> BindColParameters {
-        BindColParameters {
-            target_type: CDataType::Float,
-            target_value: self.values.as_mut_ptr() as Pointer,
-            target_length: 0,
-            indicator: self.indicators.as_mut_ptr(),
-        }
-    }
+pub unsafe trait FixedSizedCType: Default + Clone + Copy {
+    const C_DATA_TYPE: CDataType;
+}
+
+unsafe impl FixedSizedCType for f64 {
+    const C_DATA_TYPE: CDataType = CDataType::Double;
+}
+
+unsafe impl FixedSizedCType for f32 {
+    const C_DATA_TYPE: CDataType = CDataType::Float;
+}
+
+unsafe impl FixedSizedCType for Date {
+    const C_DATA_TYPE: CDataType = CDataType::TypeDate;
+}
+
+unsafe impl FixedSizedCType for Timestamp {
+    const C_DATA_TYPE: CDataType = CDataType::TypeTimestamp;
 }

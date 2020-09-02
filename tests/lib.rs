@@ -5,8 +5,8 @@ use tempfile::tempdir;
 #[test]
 fn test_xls_table() {
     let expected = "\
-    {Text: \"Hello\"}\n\
-    {Text: \"World\"}\n\
+    {Text: \"Hello\", Real: 1.3}\n\
+    {Text: \"World\", Real: 5.4}\n\
     ";
 
     // A temporary directory, to be removed at the end of the test.
@@ -21,7 +21,7 @@ fn test_xls_table() {
     cmd.args(&[
         "-vvvv",
         // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
-        "Driver={Microsoft Excel Driver (*.xls)};Dbq=tests/test-table.xls;ReadOnly=0",
+        "Driver={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};Dbq=tests/test-table.xlsx;",
         "SELECT * FROM [sheet1$]",
         out_str,
     ])
