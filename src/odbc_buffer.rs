@@ -1,6 +1,6 @@
 use odbc_api::{
-    buffers::{BindColParameters, ColumnBuffer, TextColumn},
-    sys::{CDataType, Date, Len, Pointer, Timestamp, ULen, USmallInt, NULL_DATA},
+    buffers::{BindColParameters, ColumnBuffer, TextColumn, FixedSizedCType},
+    sys::{Date, Len, Pointer, Timestamp, ULen, USmallInt, NULL_DATA},
     Cursor, Error, RowSetBuffer,
 };
 use std::{convert::TryInto, mem::size_of};
@@ -59,6 +59,10 @@ impl OdbcBuffer {
             date_buffers,
             timestamp_buffers,
         }
+    }
+
+    pub fn num_rows_fetched(&self) -> ULen {
+        self.num_rows_fetched
     }
 
     pub fn text_column_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&[u8]>> {
@@ -213,22 +217,3 @@ where
     }
 }
 
-pub unsafe trait FixedSizedCType: Default + Clone + Copy {
-    const C_DATA_TYPE: CDataType;
-}
-
-unsafe impl FixedSizedCType for f64 {
-    const C_DATA_TYPE: CDataType = CDataType::Double;
-}
-
-unsafe impl FixedSizedCType for f32 {
-    const C_DATA_TYPE: CDataType = CDataType::Float;
-}
-
-unsafe impl FixedSizedCType for Date {
-    const C_DATA_TYPE: CDataType = CDataType::TypeDate;
-}
-
-unsafe impl FixedSizedCType for Timestamp {
-    const C_DATA_TYPE: CDataType = CDataType::TypeTimestamp;
-}

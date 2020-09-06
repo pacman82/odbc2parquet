@@ -1,24 +1,24 @@
-mod buffer;
+mod odbc_buffer;
+mod parquet_buffer;
 
-use anyhow::Error;
-use buffer::{ColumnBufferDescription, OdbcBuffer};
-use chrono::NaiveDate;
+use parquet_buffer::ParquetBuffer;
+use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use odbc_api::{
-    sys::{SqlDataType, USmallInt, NULL_DATA},
+    sys::{SqlDataType, USmallInt},
     ColumnDescription, Cursor, Environment, Nullable,
 };
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::ByteArray,
     file::{
         properties::WriterProperties,
         writer::{FileWriter, SerializedFileWriter},
     },
     schema::types::Type,
 };
-use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
 use structopt::StructOpt;
+use anyhow::Error;
+use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -83,91 +83,35 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
     let mut odbc_buffer = OdbcBuffer::new(batch_size, buffer_description.into_iter());
     let mut row_set_cursor = cursor.bind_row_set_buffer(&mut odbc_buffer)?;
 
-    let mut def_levels = Vec::with_capacity(batch_size);
+    let mut pb = ParquetBuffer::new(batch_size);
     // Wo only deal with flat tabular data.
-    let rep_levels = None;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
         let mut row_group_writer = writer.next_row_group()?;
         let mut col_index = 0;
+        let num_rows = buffer.num_rows_fetched() as usize;
         while let Some(mut column_writer) = row_group_writer.next_column()? {
+            pb.set_num_rows_fetched(num_rows);
             match &mut column_writer {
                 // parquet::column::writer::ColumnWriter::BoolColumnWriter(_) => {}
                 ColumnWriter::Int32ColumnWriter(cw) => {
-                    def_levels.clear();
-                    let mut values = Vec::new();
-                    // Currently we use int32 only to represent dates
-                    let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
-                    for field in buffer.date_it(col_index) {
-                        let (value, def) = field.map(|date| {
-                            // Transform date to days since unix epoch as i32
-                            let date = NaiveDate::from_ymd(
-                                date.year as i32,
-                                date.month as u32,
-                                date.day as u32,
-                            );
-                            let duration = date.signed_duration_since(unix_epoch);
-                            (duration.num_days().try_into().unwrap(), 1)
-                        }).unwrap_or((0,0));
-                        def_levels.push(def);
-                        values.push(value);
-                    }
-                    cw.write_batch(&values, Some(&def_levels), rep_levels)?;
+                    pb.write_dates(cw, buffer.date_it(col_index))?;
                 }
                 ColumnWriter::Int64ColumnWriter(cw) => {
-                    def_levels.clear();
-                    let mut values = Vec::new();
-                    // Currently we use int32 only to represent dates
-                    for field in buffer.timestamp_it(col_index) {
-                        let (value, def) = field.map(|ts| {
-                            // Transform date to days since unix epoch as i32
-                            let datetime = NaiveDate::from_ymd(
-                                ts.year as i32,
-                                ts.month as u32,
-                                ts.day as u32,
-                            ).and_hms_nano(ts.hour as u32, ts.minute as u32, ts.second as u32, ts.fraction as u32);
-                            (datetime.timestamp_nanos() / 1000, 1)
-                        }).unwrap_or((0,0));
-                        def_levels.push(def);
-                        values.push(value);
-                    }
-                    cw.write_batch(&values, Some(&def_levels), rep_levels)?;
+                    pb.write_timestamps(cw, buffer.timestamp_it(col_index))?;
                 }
                 // parquet::column::writer::ColumnWriter::Int96ColumnWriter(_) => {}
                 ColumnWriter::FloatColumnWriter(cw) => {
-                    let (values, indicators) = buffer.f32_column(col_index);
-                    def_levels.clear();
-                    for &ind in indicators {
-                        def_levels.push(if ind == NULL_DATA { 0 } else { 1 });
-                    }
-                    cw.write_batch(values, Some(&def_levels), rep_levels)?;
+                    pb.write_directly(cw, buffer.f32_column(col_index))?;
                 }
                 ColumnWriter::DoubleColumnWriter(cw) => {
-                    let (values, indicators) = buffer.f64_column(col_index);
-                    def_levels.clear();
-                    for &ind in indicators {
-                        def_levels.push(if ind == NULL_DATA { 0 } else { 1 });
-                    }
-                    cw.write_batch(values, Some(&def_levels), rep_levels)?;
+                    pb.write_directly(cw, buffer.f64_column(col_index))?;
                 }
                 ColumnWriter::ByteArrayColumnWriter(cw) => {
-                    let field_it = buffer.text_column_it(col_index);
-                    let mut values = Vec::new();
-                    def_levels.clear();
-
-                    for read_buf in field_it {
-                        let (bytes, nul) = read_buf
-                            // Value is not NULL
-                            .map(|buf| (buf.to_owned().into(), 1))
-                            // Value is NULL
-                            .unwrap_or_else(|| (ByteArray::new(), 0));
-                        values.push(bytes);
-                        def_levels.push(nul);
-                    }
-                    cw.write_batch(&values, Some(&def_levels), rep_levels)?;
+                    pb.write_strings(cw, buffer.text_column_it(col_index))?;
                 }
                 // parquet::column::writer::ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
-                _ => {} //panic!("Unsupported type for column writer type. Column index: {}", index)
+                _ => panic!("Invalid Columnwriter type"),
             }
             row_group_writer.close_column(column_writer)?;
             col_index += 1;
