@@ -1,12 +1,12 @@
 mod odbc_buffer;
 mod parquet_buffer;
 
-use parquet_buffer::ParquetBuffer;
-use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
+use anyhow::Error;
 use odbc_api::{
     sys::{SqlDataType, USmallInt},
     ColumnDescription, Cursor, Environment, Nullable,
 };
+use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -16,9 +16,9 @@ use parquet::{
     },
     schema::types::Type,
 };
-use structopt::StructOpt;
-use anyhow::Error;
+use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
+use structopt::StructOpt;
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -80,7 +80,7 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
 
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
     let mut writer = SerializedFileWriter::new(file, parquet_schema, properties)?;
-    let mut odbc_buffer = OdbcBuffer::new(batch_size, buffer_description.into_iter());
+    let mut odbc_buffer = OdbcBuffer::new(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_row_set_buffer(&mut odbc_buffer)?;
 
     let mut pb = ParquetBuffer::new(batch_size);
@@ -94,12 +94,24 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
             pb.set_num_rows_fetched(num_rows);
             match &mut column_writer {
                 // parquet::column::writer::ColumnWriter::BoolColumnWriter(_) => {}
-                ColumnWriter::Int32ColumnWriter(cw) => {
-                    pb.write_dates(cw, buffer.date_it(col_index))?;
-                }
-                ColumnWriter::Int64ColumnWriter(cw) => {
-                    pb.write_timestamps(cw, buffer.timestamp_it(col_index))?;
-                }
+                ColumnWriter::Int32ColumnWriter(cw) => match buffer_description[col_index] {
+                    ColumnBufferDescription::Date => {
+                        pb.write_dates(cw, buffer.date_it(col_index))?
+                    }
+                    ColumnBufferDescription::I32 => {
+                        pb.write_directly(cw, buffer.i32_column(col_index))?
+                    }
+                    _ => panic!("Mismatched ODBC and Parquet buffer type."),
+                },
+                ColumnWriter::Int64ColumnWriter(cw) => match buffer_description[col_index] {
+                    ColumnBufferDescription::Timestamp => {
+                        pb.write_timestamps(cw, buffer.timestamp_it(col_index))?
+                    }
+                    ColumnBufferDescription::I64 => {
+                        pb.write_directly(cw, buffer.i64_column(col_index))?
+                    }
+                    _ => panic!("Mismatched ODBC and Parquet buffer type."),
+                },
                 // parquet::column::writer::ColumnWriter::Int96ColumnWriter(_) => {}
                 ColumnWriter::FloatColumnWriter(cw) => {
                     pb.write_directly(cw, buffer.f32_column(col_index))?;
@@ -139,6 +151,21 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
         let (physical_type, logical_type, buffer_description) = match cd.data_type {
             SqlDataType::DOUBLE => (PhysicalType::DOUBLE, None, ColumnBufferDescription::F64),
             SqlDataType::FLOAT => (PhysicalType::FLOAT, None, ColumnBufferDescription::F32),
+            SqlDataType::SMALLINT => (
+                PhysicalType::INT32,
+                Some(LogicalType::INT_16),
+                ColumnBufferDescription::I32,
+            ),
+            SqlDataType::INTEGER => (
+                PhysicalType::INT32,
+                Some(LogicalType::INT_32),
+                ColumnBufferDescription::I32,
+            ),
+            SqlDataType::EXT_BIG_INT => (
+                PhysicalType::INT64,
+                Some(LogicalType::INT_64),
+                ColumnBufferDescription::I64,
+            ),
             SqlDataType::DATE => (
                 PhysicalType::INT32,
                 Some(LogicalType::DATE),
