@@ -140,10 +140,7 @@ impl OdbcBuffer {
         let (_col_index, buffer) = buffers
             .iter()
             .find(|(index, _buf)| *index == col_index)
-            .expect(&format!(
-                "No {} buffer found with specified index",
-                typename
-            ));
+            .unwrap_or_else(|| panic!("No {} buffer found with specified index", typename));
         buffer
     }
 }
