@@ -19,6 +19,7 @@ use parquet::{
 use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
 use structopt::StructOpt;
+use log::{debug, info};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -74,6 +75,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<(), Error> {
+    info!("Batch size set to {}", batch_size);
     // Write properties
     let wpb = WriterProperties::builder();
     let properties = Rc::new(wpb.build());
@@ -86,10 +88,14 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
     let mut pb = ParquetBuffer::new(batch_size);
     // Wo only deal with flat tabular data.
 
+    let mut num_batch = 0;
+
     while let Some(buffer) = row_set_cursor.fetch()? {
         let mut row_group_writer = writer.next_row_group()?;
         let mut col_index = 0;
+        num_batch += 1;
         let num_rows = buffer.num_rows_fetched() as usize;
+        info!("Fetched batch {} with {} rows.", num_batch, num_rows);
         while let Some(mut column_writer) = row_group_writer.next_column()? {
             pb.set_num_rows_fetched(num_rows);
             match &mut column_writer {
@@ -146,6 +152,8 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
         let mut cd = ColumnDescription::default();
         cursor.describe_col(index as USmallInt, &mut cd)?;
 
+        debug!("ODBC column descripton for column {}: {:?}", index, cd);
+
         let name = cd.name_to_string()?;
 
         let (physical_type, logical_type, buffer_description) = match cd.data_type {
@@ -185,6 +193,8 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 )
             }
         };
+
+        debug!("ODBC buffer description for column {}: {:?}", index, buffer_description);
 
         let repetition = match cd.nullable {
             Nullable::Nullable | Nullable::Unknown => Repetition::OPTIONAL,

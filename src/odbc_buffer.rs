@@ -5,7 +5,7 @@ use odbc_api::{
 };
 use std::{convert::TryInto, mem::size_of};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ColumnBufferDescription {
     Text { max_str_len: usize },
     F64,
