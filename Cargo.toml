@@ -5,6 +5,26 @@ authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 repository = "https://github.com/pacman82/odbc2parquet"
 documentation = "https://docs.rs/odbc2parquet/"
+license = "MIT"
+
+# A short blurb about the package. This is not rendered in any format when
+# uploaded to crates.io (aka this is not markdown).
+description = "Query an ODBC data source and store the result in a Parquet file."
+
+# This is a list of up to five keywords that describe this crate. Keywords
+# are searchable on crates.io, and you may choose any words that would
+# help someone find this crate.
+keywords = ["odbc", "parquet", "sql"]
+
+# This is a list of up to five categories where this crate would fit.
+# Categories are a fixed list available at crates.io/category_slugs, and
+# they must match exactly.
+categories = ["command-line-utilities"]
+
+# This points to a file under the package root (relative to this `Cargo.toml`).
+# The contents of this file are stored and indexed in the registry.
+# crates.io will render this file and place the result on the crate's page.
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
