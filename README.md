@@ -1,4 +1,6 @@
-# Parquet2Odbc
+# ODBC to Parquet
+
+Query ODBC databases and save the result in a parquet file.
 
 ## Usage
 

@@ -155,6 +155,12 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
         debug!("ODBC column descripton for column {}: {:?}", index, cd);
 
         let name = cd.name_to_string()?;
+        // Give a generated name, should we fail to retrieve one from the ODBC data source.
+        let name = if name.is_empty() {
+            format!("Column{}", index)
+        } else {
+            name
+        };
 
         let (physical_type, logical_type, buffer_description) = match cd.data_type {
             SqlDataType::DOUBLE => (PhysicalType::DOUBLE, None, ColumnBufferDescription::F64),
