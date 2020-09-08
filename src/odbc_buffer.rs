@@ -1,9 +1,13 @@
 use odbc_api::{
-    buffers::{BindColParameters, ColumnBuffer, FixedSizedCType, TextColumn},
-    sys::{Date, Len, Pointer, Timestamp, ULen, USmallInt, NULL_DATA},
+    buffers::{
+        ColumnBuffer, FixedSizedCType, OptDateColumnBuffer, OptF32ColumnBuffer, OptF64ColumnBuffer,
+        OptFixedSizedColumnBuffer, OptI32ColumnBuffer, OptI64ColumnBuffer,
+        OptTimestampColumnBuffer, TextColumn,
+    },
+    sys::{Date, Len, Timestamp, ULen, USmallInt},
     Cursor, Error, RowSetBuffer,
 };
-use std::{convert::TryInto, mem::size_of};
+use std::convert::TryInto;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ColumnBufferDescription {
@@ -20,12 +24,12 @@ pub struct OdbcBuffer {
     batch_size: usize,
     num_rows_fetched: ULen,
     text_buffers: Vec<(usize, TextColumn)>,
-    f64_buffers: Vec<(usize, F64ColumnBuffer)>,
-    f32_buffers: Vec<(usize, F32ColumnBuffer)>,
-    date_buffers: Vec<(usize, DateColumnBuffer)>,
-    timestamp_buffers: Vec<(usize, TimestampColumnBuffer)>,
-    i32_buffers: Vec<(usize, I32ColumnBuffer)>,
-    i64_buffers: Vec<(usize, I64ColumnBuffer)>,
+    f64_buffers: Vec<(usize, OptF64ColumnBuffer)>,
+    f32_buffers: Vec<(usize, OptF32ColumnBuffer)>,
+    date_buffers: Vec<(usize, OptDateColumnBuffer)>,
+    timestamp_buffers: Vec<(usize, OptTimestampColumnBuffer)>,
+    i32_buffers: Vec<(usize, OptI32ColumnBuffer)>,
+    i64_buffers: Vec<(usize, OptI64ColumnBuffer)>,
 }
 
 impl OdbcBuffer {
@@ -43,22 +47,22 @@ impl OdbcBuffer {
                     text_buffers.push((col_index, TextColumn::new(batch_size, max_str_len)))
                 }
                 ColumnBufferDescription::F64 => {
-                    f64_buffers.push((col_index, F64ColumnBuffer::new(batch_size)))
+                    f64_buffers.push((col_index, OptF64ColumnBuffer::new(batch_size)))
                 }
                 ColumnBufferDescription::F32 => {
-                    f32_buffers.push((col_index, F32ColumnBuffer::new(batch_size)))
+                    f32_buffers.push((col_index, OptF32ColumnBuffer::new(batch_size)))
                 }
                 ColumnBufferDescription::Date => {
-                    date_buffers.push((col_index, DateColumnBuffer::new(batch_size)))
+                    date_buffers.push((col_index, OptDateColumnBuffer::new(batch_size)))
                 }
                 ColumnBufferDescription::Timestamp => {
-                    timestamp_buffers.push((col_index, TimestampColumnBuffer::new(batch_size)))
+                    timestamp_buffers.push((col_index, OptTimestampColumnBuffer::new(batch_size)))
                 }
                 ColumnBufferDescription::I32 => {
-                    i32_buffers.push((col_index, I32ColumnBuffer::new(batch_size)))
+                    i32_buffers.push((col_index, OptI32ColumnBuffer::new(batch_size)))
                 }
                 ColumnBufferDescription::I64 => {
-                    i64_buffers.push((col_index, I64ColumnBuffer::new(batch_size)))
+                    i64_buffers.push((col_index, OptI64ColumnBuffer::new(batch_size)))
                 }
             };
         }
@@ -121,7 +125,7 @@ impl OdbcBuffer {
 
     fn fixed_size_column_buffer<'a, T: FixedSizedCType>(
         &self,
-        buffers: &'a [(usize, FixedSizedColumnBuffer<T>)],
+        buffers: &'a [(usize, OptFixedSizedColumnBuffer<T>)],
         col_index: usize,
         typename: &'static str,
     ) -> (&'a [T], &'a [Len]) {
@@ -150,21 +154,8 @@ fn bind_column_to_cursor(
     column_buffer: &mut impl ColumnBuffer,
     column_number: USmallInt,
 ) -> Result<(), Error> {
-    let BindColParameters {
-        target_type,
-        target_value,
-        target_length,
-        indicator,
-    } = column_buffer.bind_arguments();
-    unsafe {
-        cursor.bind_col(
-            column_number,
-            target_type,
-            target_value,
-            target_length,
-            indicator,
-        )
-    }
+    let bind_arguments = column_buffer.bind_arguments();
+    unsafe { cursor.bind_col(column_number, bind_arguments) }
 }
 
 unsafe impl RowSetBuffer for OdbcBuffer {
@@ -183,59 +174,5 @@ unsafe impl RowSetBuffer for OdbcBuffer {
             bind_column_to_cursor(cursor, column_buffer, (index + 1) as USmallInt)?;
         }
         Ok(())
-    }
-}
-
-type F64ColumnBuffer = FixedSizedColumnBuffer<f64>;
-type F32ColumnBuffer = FixedSizedColumnBuffer<f32>;
-type DateColumnBuffer = FixedSizedColumnBuffer<Date>;
-type TimestampColumnBuffer = FixedSizedColumnBuffer<Timestamp>;
-type I32ColumnBuffer = FixedSizedColumnBuffer<i32>;
-type I64ColumnBuffer = FixedSizedColumnBuffer<i64>;
-
-pub struct FixedSizedColumnBuffer<F> {
-    values: Vec<F>,
-    indicators: Vec<Len>,
-}
-
-impl<F> FixedSizedColumnBuffer<F>
-where
-    F: Default + Clone,
-{
-    pub fn new(batch_size: usize) -> Self {
-        Self {
-            values: vec![F::default(); batch_size],
-            indicators: vec![NULL_DATA; batch_size],
-        }
-    }
-
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&F> {
-        if self.indicators[row_index] == NULL_DATA {
-            None
-        } else {
-            Some(&self.values[row_index])
-        }
-    }
-
-    pub fn values(&self) -> &[F] {
-        &self.values
-    }
-
-    pub fn indicators(&self) -> &[Len] {
-        &self.indicators
-    }
-}
-
-unsafe impl<T> ColumnBuffer for FixedSizedColumnBuffer<T>
-where
-    T: FixedSizedCType,
-{
-    fn bind_arguments(&mut self) -> BindColParameters {
-        BindColParameters {
-            target_type: T::C_DATA_TYPE,
-            target_value: self.values.as_mut_ptr() as Pointer,
-            target_length: size_of::<T>().try_into().unwrap(),
-            indicator: self.indicators.as_mut_ptr(),
-        }
     }
 }
