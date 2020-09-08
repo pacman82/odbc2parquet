@@ -150,6 +150,8 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
 
     for index in 1..(num_cols + 1) {
         let mut cd = ColumnDescription::default();
+        // Reserving helps with drivers not reporting column name size correctly.
+        cd.name.reserve(128);
         cursor.describe_col(index as USmallInt, &mut cd)?;
 
         debug!("ODBC column descripton for column {}: {:?}", index, cd);
