@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+* Fix: Fixed an issue there some column types were not bound to the cursor, which let to some column only containg `NULL` or `0`.
+
 ## 0.1.2
 
 * Retrieve column names more reliably with a greater range of drivers.

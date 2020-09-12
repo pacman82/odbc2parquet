@@ -1,11 +1,11 @@
 use odbc_api::{
+    buffers::BindColParameters,
     buffers::{
-        ColumnBuffer, FixedSizedCType, OptDateColumnBuffer, OptF32ColumnBuffer, OptF64ColumnBuffer,
-        OptFixedSizedColumnBuffer, OptI32ColumnBuffer, OptI64ColumnBuffer,
-        OptTimestampColumnBuffer, TextColumn,
+        ColumnBuffer, OptDateColumnBuffer, OptF32ColumnBuffer, OptF64ColumnBuffer,
+        OptI32ColumnBuffer, OptI64ColumnBuffer, OptTimestampColumnBuffer, TextColumn,
     },
-    sys::{Date, Len, Timestamp, ULen, USmallInt},
-    Cursor, Error, RowSetBuffer,
+    sys::{Date, Len, Timestamp, ULen},
+    RowSetBuffer,
 };
 use std::convert::TryInto;
 
@@ -20,62 +20,68 @@ pub enum ColumnBufferDescription {
     I64,
 }
 
+enum AnyColumnBuffer {
+    Text(TextColumn),
+    F64(OptF64ColumnBuffer),
+    F32(OptF32ColumnBuffer),
+    Date(OptDateColumnBuffer),
+    Timestamp(OptTimestampColumnBuffer),
+    I32(OptI32ColumnBuffer),
+    I64(OptI64ColumnBuffer),
+}
+
+impl AnyColumnBuffer {
+    pub fn new(desc: ColumnBufferDescription, batch_size: usize) -> AnyColumnBuffer {
+        match desc {
+            ColumnBufferDescription::Text { max_str_len } => {
+                AnyColumnBuffer::Text(TextColumn::new(batch_size, max_str_len))
+            }
+            ColumnBufferDescription::F64 => {
+                AnyColumnBuffer::F64(OptF64ColumnBuffer::new(batch_size))
+            }
+            ColumnBufferDescription::F32 => {
+                AnyColumnBuffer::F32(OptF32ColumnBuffer::new(batch_size))
+            }
+            ColumnBufferDescription::Date => {
+                AnyColumnBuffer::Date(OptDateColumnBuffer::new(batch_size))
+            }
+            ColumnBufferDescription::Timestamp => {
+                AnyColumnBuffer::Timestamp(OptTimestampColumnBuffer::new(batch_size))
+            }
+            ColumnBufferDescription::I32 => {
+                AnyColumnBuffer::I32(OptI32ColumnBuffer::new(batch_size))
+            }
+            ColumnBufferDescription::I64 => {
+                AnyColumnBuffer::I64(OptI64ColumnBuffer::new(batch_size))
+            }
+        }
+    }
+
+    pub fn bind_arguments(&mut self) -> BindColParameters {
+        match self {
+            AnyColumnBuffer::Text(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::F64(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::F32(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::Date(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::Timestamp(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::I32(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::I64(buf) => buf.bind_arguments(),
+        }
+    }
+}
+
 pub struct OdbcBuffer {
     batch_size: usize,
     num_rows_fetched: ULen,
-    text_buffers: Vec<(usize, TextColumn)>,
-    f64_buffers: Vec<(usize, OptF64ColumnBuffer)>,
-    f32_buffers: Vec<(usize, OptF32ColumnBuffer)>,
-    date_buffers: Vec<(usize, OptDateColumnBuffer)>,
-    timestamp_buffers: Vec<(usize, OptTimestampColumnBuffer)>,
-    i32_buffers: Vec<(usize, OptI32ColumnBuffer)>,
-    i64_buffers: Vec<(usize, OptI64ColumnBuffer)>,
+    buffers: Vec<AnyColumnBuffer>,
 }
 
 impl OdbcBuffer {
     pub fn new(batch_size: usize, desc: impl Iterator<Item = ColumnBufferDescription>) -> Self {
-        let mut text_buffers = Vec::new();
-        let mut f64_buffers = Vec::new();
-        let mut f32_buffers = Vec::new();
-        let mut date_buffers = Vec::new();
-        let mut timestamp_buffers = Vec::new();
-        let mut i32_buffers = Vec::new();
-        let mut i64_buffers = Vec::new();
-        for (col_index, column_desc) in desc.enumerate() {
-            match column_desc {
-                ColumnBufferDescription::Text { max_str_len } => {
-                    text_buffers.push((col_index, TextColumn::new(batch_size, max_str_len)))
-                }
-                ColumnBufferDescription::F64 => {
-                    f64_buffers.push((col_index, OptF64ColumnBuffer::new(batch_size)))
-                }
-                ColumnBufferDescription::F32 => {
-                    f32_buffers.push((col_index, OptF32ColumnBuffer::new(batch_size)))
-                }
-                ColumnBufferDescription::Date => {
-                    date_buffers.push((col_index, OptDateColumnBuffer::new(batch_size)))
-                }
-                ColumnBufferDescription::Timestamp => {
-                    timestamp_buffers.push((col_index, OptTimestampColumnBuffer::new(batch_size)))
-                }
-                ColumnBufferDescription::I32 => {
-                    i32_buffers.push((col_index, OptI32ColumnBuffer::new(batch_size)))
-                }
-                ColumnBufferDescription::I64 => {
-                    i64_buffers.push((col_index, OptI64ColumnBuffer::new(batch_size)))
-                }
-            };
-        }
         Self {
             num_rows_fetched: 0,
             batch_size,
-            text_buffers,
-            f64_buffers,
-            f32_buffers,
-            date_buffers,
-            timestamp_buffers,
-            i32_buffers,
-            i64_buffers,
+            buffers: desc.map(|d| AnyColumnBuffer::new(d, batch_size)).collect(),
         }
     }
 
@@ -84,32 +90,66 @@ impl OdbcBuffer {
     }
 
     pub fn text_column_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&[u8]>> {
-        let buffer = Self::find_buffer(&self.text_buffers, col_index, "text");
-        unsafe {
-            (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+        if let AnyColumnBuffer::Text(ref buffer) = self.buffers[col_index] {
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+            }
+        } else {
+            panic!("Index {}, doest not hold a text buffer.", col_index)
         }
     }
 
     pub fn f64_column(&self, col_index: usize) -> (&[f64], &[Len]) {
-        self.fixed_size_column_buffer(&self.f64_buffers, col_index, "f64")
+        if let AnyColumnBuffer::F64(ref buffer) = self.buffers[col_index] {
+            (
+                &buffer.values()[0..self.num_rows_fetched as usize],
+                &buffer.indicators()[0..self.num_rows_fetched as usize],
+            )
+        } else {
+            panic!("Index {}, doest not hold a f64 buffer.", col_index)
+        }
     }
 
     pub fn f32_column(&self, col_index: usize) -> (&[f32], &[Len]) {
-        self.fixed_size_column_buffer(&self.f32_buffers, col_index, "f32")
+        if let AnyColumnBuffer::F32(ref buffer) = self.buffers[col_index] {
+            (
+                &buffer.values()[0..self.num_rows_fetched as usize],
+                &buffer.indicators()[0..self.num_rows_fetched as usize],
+            )
+        } else {
+            panic!("Index {}, doest not hold a f32 buffer.", col_index)
+        }
     }
 
     pub fn i32_column(&self, col_index: usize) -> (&[i32], &[Len]) {
-        self.fixed_size_column_buffer(&self.i32_buffers, col_index, "i32")
+        if let AnyColumnBuffer::I32(ref buffer) = self.buffers[col_index] {
+            (
+                &buffer.values()[0..self.num_rows_fetched as usize],
+                &buffer.indicators()[0..self.num_rows_fetched as usize],
+            )
+        } else {
+            panic!("Index {}, doest not hold a i32 buffer.", col_index)
+        }
     }
 
     pub fn i64_column(&self, col_index: usize) -> (&[i64], &[Len]) {
-        self.fixed_size_column_buffer(&self.i64_buffers, col_index, "i64")
+        if let AnyColumnBuffer::I64(ref buffer) = self.buffers[col_index] {
+            (
+                &buffer.values()[0..self.num_rows_fetched as usize],
+                &buffer.indicators()[0..self.num_rows_fetched as usize],
+            )
+        } else {
+            panic!("Index {}, doest not hold a i64 buffer.", col_index)
+        }
     }
 
     pub fn date_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<&Date>> {
-        let buffer = Self::find_buffer(&self.date_buffers, col_index, "date");
-        unsafe {
-            (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+        if let AnyColumnBuffer::Date(ref buffer) = self.buffers[col_index] {
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+            }
+        } else {
+            panic!("Index {}, doest not hold a date buffer.", col_index)
         }
     }
 
@@ -117,45 +157,14 @@ impl OdbcBuffer {
         &self,
         col_index: usize,
     ) -> impl ExactSizeIterator<Item = Option<&Timestamp>> {
-        let buffer = Self::find_buffer(&self.timestamp_buffers, col_index, "date");
-        unsafe {
-            (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+        if let AnyColumnBuffer::Timestamp(ref buffer) = self.buffers[col_index] {
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index))
+            }
+        } else {
+            panic!("Index {}, doest not hold a timestamp buffer.", col_index)
         }
     }
-
-    fn fixed_size_column_buffer<'a, T: FixedSizedCType>(
-        &self,
-        buffers: &'a [(usize, OptFixedSizedColumnBuffer<T>)],
-        col_index: usize,
-        typename: &'static str,
-    ) -> (&'a [T], &'a [Len]) {
-        let buffer = Self::find_buffer(buffers, col_index, typename);
-        (
-            &buffer.values()[..self.num_rows_fetched as usize],
-            &buffer.indicators()[..self.num_rows_fetched as usize],
-        )
-    }
-
-    fn find_buffer<'a, T>(
-        buffers: &'a [(usize, T)],
-        col_index: usize,
-        typename: &'static str,
-    ) -> &'a T {
-        let (_col_index, buffer) = buffers
-            .iter()
-            .find(|(index, _buf)| *index == col_index)
-            .unwrap_or_else(|| panic!("No {} buffer found with specified index", typename));
-        buffer
-    }
-}
-
-fn bind_column_to_cursor(
-    cursor: &mut Cursor,
-    column_buffer: &mut impl ColumnBuffer,
-    column_number: USmallInt,
-) -> Result<(), Error> {
-    let bind_arguments = column_buffer.bind_arguments();
-    unsafe { cursor.bind_col(column_number, bind_arguments) }
 }
 
 unsafe impl RowSetBuffer for OdbcBuffer {
@@ -165,13 +174,8 @@ unsafe impl RowSetBuffer for OdbcBuffer {
     ) -> Result<(), odbc_api::Error> {
         cursor.set_row_array_size(self.batch_size.try_into().unwrap())?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;
-        // Text buffers
-        for &mut (index, ref mut column_buffer) in self.text_buffers.iter_mut() {
-            bind_column_to_cursor(cursor, column_buffer, (index + 1) as USmallInt)?;
-        }
-        // f64 buffers
-        for &mut (index, ref mut column_buffer) in self.f64_buffers.iter_mut() {
-            bind_column_to_cursor(cursor, column_buffer, (index + 1) as USmallInt)?;
+        for (index, buf) in self.buffers.iter_mut().enumerate() {
+            cursor.bind_col((index + 1).try_into().unwrap(), buf.bind_arguments())?
         }
         Ok(())
     }

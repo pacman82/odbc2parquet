@@ -2,6 +2,7 @@ mod odbc_buffer;
 mod parquet_buffer;
 
 use anyhow::Error;
+use log::{debug, info};
 use odbc_api::{
     sys::{SqlDataType, USmallInt},
     ColumnDescription, Cursor, Environment, Nullable,
@@ -19,7 +20,6 @@ use parquet::{
 use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
 use structopt::StructOpt;
-use log::{debug, info};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -202,7 +202,10 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
             }
         };
 
-        debug!("ODBC buffer description for column {}: {:?}", index, buffer_description);
+        debug!(
+            "ODBC buffer description for column {}: {:?}",
+            index, buffer_description
+        );
 
         let repetition = match cd.nullable {
             Nullable::Nullable | Nullable::Unknown => Repetition::OPTIONAL,
