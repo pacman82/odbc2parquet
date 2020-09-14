@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+* Default row group size is now `100000`.
+* Adds support for Decimal tyes with precision 0..18 and scale = 0 (i.e. Everything that has a straitforward `i32` or `i64` representation).
+
 ## 0.1.3
 
 * Fix: Fixed an issue there some column types were not bound to the cursor, which let to some column only containg `NULL` or `0`.

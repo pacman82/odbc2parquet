@@ -40,7 +40,7 @@ struct Cli {
     /// Size of a single batch in rows. The content of the data source is written into the output
     /// parquet files in batches. This way the content does never need to be materialized completly
     /// in memory at once.
-    #[structopt(long, default_value = "500")]
+    #[structopt(long, default_value = "100000")]
     batch_size: usize,
 }
 
@@ -86,8 +86,6 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
     let mut row_set_cursor = cursor.bind_row_set_buffer(&mut odbc_buffer)?;
 
     let mut pb = ParquetBuffer::new(batch_size);
-    // Wo only deal with flat tabular data.
-
     let mut num_batch = 0;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
@@ -105,6 +103,7 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
                         pb.write_dates(cw, buffer.date_it(col_index))?
                     }
                     ColumnBufferDescription::I32 => {
+                        // Used for Ints and Decimal logical types
                         pb.write_directly(cw, buffer.i32_column(col_index))?
                     }
                     _ => panic!("Mismatched ODBC and Parquet buffer type."),
@@ -114,6 +113,7 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
                         pb.write_timestamps(cw, buffer.timestamp_it(col_index))?
                     }
                     ColumnBufferDescription::I64 => {
+                        // Used for Ints and Decimal logical types
                         pb.write_directly(cw, buffer.i64_column(col_index))?
                     }
                     _ => panic!("Mismatched ODBC and Parquet buffer type."),
@@ -192,6 +192,16 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 Some(LogicalType::TIMESTAMP_MICROS),
                 ColumnBufferDescription::Timestamp,
             ),
+            SqlDataType::DECIMAL if cd.decimal_digits == 0 && cd.column_size < 10 => (
+                PhysicalType::INT32,
+                Some(LogicalType::DECIMAL),
+                ColumnBufferDescription::I32,
+            ),
+            SqlDataType::DECIMAL if cd.decimal_digits == 0 && cd.column_size < 19 => (
+                PhysicalType::INT64,
+                Some(LogicalType::DECIMAL),
+                ColumnBufferDescription::I64,
+            ),
             _ => {
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (
@@ -214,10 +224,13 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
 
         let field_builder =
             Type::primitive_type_builder(&name, physical_type).with_repetition(repetition);
-        let field_builder = if let Some(logical_type) = logical_type {
-            field_builder.with_logical_type(logical_type)
-        } else {
-            field_builder
+        let field_builder = match logical_type {
+            Some(LogicalType::DECIMAL) => field_builder
+                .with_logical_type(LogicalType::DECIMAL)
+                .with_precision(cd.column_size.try_into().unwrap())
+                .with_scale(cd.decimal_digits.try_into().unwrap()),
+            Some(logical_type) => field_builder.with_logical_type(logical_type),
+            None => field_builder,
         };
         fields.push(Rc::new(field_builder.build()?));
         odbc_buffer_desc.push(buffer_description);

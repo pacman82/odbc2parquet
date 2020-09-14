@@ -8,9 +8,10 @@ use parquet::{
 use std::convert::TryInto;
 
 pub struct ParquetBuffer {
-    /// Used to hold date values converted from ODBC `Date` types.
+    /// Used to hold date values converted from ODBC `Date` types or int or decimals with scale 0.
     pub values_i32: Vec<i32>,
-    /// Used to hold timestamp values converted from ODBC `Timestamp` types.
+    /// Used to hold timestamp values converted from ODBC `Timestamp` types or int or decimal with
+    /// scale 0.
     pub values_i64: Vec<i64>,
     pub values_bytes_array: Vec<ByteArray>,
     pub def_levels: Vec<i16>,

@@ -18,13 +18,16 @@ Currently only deployed via cargo. Use `cargo +nightly install odbc2parquet` to 
 
 The tool queries the ODBC Data source for type information and maps it to parquet type as such:
 
-| ODBC SQL Type | Parquet Logical Type   |
-|---------------|------------------------|
-| Double        | Double                 |
-| Float         | Float                  |
-| Small Integer | Int16                  |
-| Integer       | Int32                  |
-| Big Int       | Int64                  |
-| Date          | Date                   |
-| Timestamp     | Timestamp Microseconds |
-| All others    | Utf8 Byte Array        |
+| ODBC SQL Type         | Parquet Logical Type   |
+|-----------------------|------------------------|
+| Decimal(p=0..18, s=0) | Decimal(p,s)           |
+| Double                | Double                 |
+| Float                 | Float                  |
+| Small Integer         | Int16                  |
+| Integer               | Int32                  |
+| Big Int               | Int64                  |
+| Date                  | Date                   |
+| Timestamp             | Timestamp Microseconds |
+| All others            | Utf8 Byte Array        |
+
+`p` is short for `precision`. `s` is short for `scale`. Intervals are inculsive the last element.
