@@ -5,7 +5,7 @@ use anyhow::Error;
 use log::{debug, info};
 use odbc_api::{
     sys::{SqlDataType, USmallInt},
-    ColumnDescription, Cursor, Environment, Nullable,
+    ColumnDescription, Cursor, DataType, Environment, Nullable,
 };
 use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
@@ -164,49 +164,68 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
             name
         };
 
-        let (physical_type, logical_type, buffer_description) = match cd.data_type {
-            SqlDataType::DOUBLE => (PhysicalType::DOUBLE, None, ColumnBufferDescription::F64),
-            SqlDataType::FLOAT => (PhysicalType::FLOAT, None, ColumnBufferDescription::F32),
-            SqlDataType::SMALLINT => (
-                PhysicalType::INT32,
-                Some(LogicalType::INT_16),
+        let ptb = |physical_type| Type::primitive_type_builder(&name, physical_type);
+
+        let (field_builder, buffer_description) = match cd.data_type {
+            DataType::Double => (ptb(PhysicalType::DOUBLE), ColumnBufferDescription::F64),
+            DataType::Float => (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32),
+            DataType::SmallInt => (
+                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
                 ColumnBufferDescription::I32,
             ),
-            SqlDataType::INTEGER => (
-                PhysicalType::INT32,
-                Some(LogicalType::INT_32),
+            DataType::Integer => (
+                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_32),
                 ColumnBufferDescription::I32,
             ),
-            SqlDataType::EXT_BIG_INT => (
-                PhysicalType::INT64,
-                Some(LogicalType::INT_64),
-                ColumnBufferDescription::I64,
-            ),
-            SqlDataType::DATE => (
-                PhysicalType::INT32,
-                Some(LogicalType::DATE),
+            DataType::Date => (
+                ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
                 ColumnBufferDescription::Date,
             ),
-            SqlDataType::TIMESTAMP => (
-                PhysicalType::INT64,
-                Some(LogicalType::TIMESTAMP_MICROS),
-                ColumnBufferDescription::Timestamp,
-            ),
-            SqlDataType::DECIMAL if cd.decimal_digits == 0 && cd.column_size < 10 => (
-                PhysicalType::INT32,
-                Some(LogicalType::DECIMAL),
+            DataType::Decimal { scale, precision } if scale == 0 && precision < 10 => (
+                ptb(PhysicalType::INT32)
+                    .with_logical_type(LogicalType::DECIMAL)
+                    .with_precision(precision.try_into().unwrap())
+                    .with_scale(scale.try_into().unwrap()),
                 ColumnBufferDescription::I32,
             ),
-            SqlDataType::DECIMAL if cd.decimal_digits == 0 && cd.column_size < 19 => (
-                PhysicalType::INT64,
-                Some(LogicalType::DECIMAL),
+            DataType::Decimal { scale, precision } if scale == 0 && precision < 19 => (
+                ptb(PhysicalType::INT64)
+                    .with_logical_type(LogicalType::DECIMAL)
+                    .with_precision(precision.try_into().unwrap())
+                    .with_scale(scale.try_into().unwrap()),
                 ColumnBufferDescription::I64,
             ),
-            _ => {
+            DataType::Timestamp { .. } => (
+                ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
+                ColumnBufferDescription::Timestamp,
+            ),
+            DataType::Other { data_type, .. } => match data_type {
+                SqlDataType::EXT_BIG_INT => (
+                    ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
+                    ColumnBufferDescription::I64,
+                ),
+                _ => {
+                    let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
+                    (
+                        ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                        ColumnBufferDescription::Text { max_str_len },
+                    )
+                }
+            },
+            DataType::Char { length } | DataType::Varchar { length } => (
+                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                ColumnBufferDescription::Text {
+                    max_str_len: length.try_into().unwrap(),
+                },
+            ),
+            DataType::Unknown
+            | DataType::Numeric { .. }
+            | DataType::Decimal { .. }
+            | DataType::Real
+            | DataType::Time { .. } => {
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (
-                    PhysicalType::BYTE_ARRAY,
-                    Some(LogicalType::UTF8),
+                    ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
                     ColumnBufferDescription::Text { max_str_len },
                 )
             }
@@ -222,16 +241,7 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
             Nullable::NoNulls => Repetition::REQUIRED,
         };
 
-        let field_builder =
-            Type::primitive_type_builder(&name, physical_type).with_repetition(repetition);
-        let field_builder = match logical_type {
-            Some(LogicalType::DECIMAL) => field_builder
-                .with_logical_type(LogicalType::DECIMAL)
-                .with_precision(cd.column_size.try_into().unwrap())
-                .with_scale(cd.decimal_digits.try_into().unwrap()),
-            Some(logical_type) => field_builder.with_logical_type(logical_type),
-            None => field_builder,
-        };
+        let field_builder = field_builder.with_repetition(repetition);
         fields.push(Rc::new(field_builder.build()?));
         odbc_buffer_desc.push(buffer_description);
     }
