@@ -168,7 +168,7 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
 
         let (field_builder, buffer_description) = match cd.data_type {
             DataType::Double => (ptb(PhysicalType::DOUBLE), ColumnBufferDescription::F64),
-            DataType::Float => (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32),
+            DataType::Float | DataType::Real => (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32),
             DataType::SmallInt => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
                 ColumnBufferDescription::I32,
@@ -181,14 +181,14 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
                 ColumnBufferDescription::Date,
             ),
-            DataType::Decimal { scale, precision } if scale == 0 && precision < 10 => (
+            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }if scale == 0 && precision < 10 => (
                 ptb(PhysicalType::INT32)
                     .with_logical_type(LogicalType::DECIMAL)
                     .with_precision(precision.try_into().unwrap())
                     .with_scale(scale.try_into().unwrap()),
                 ColumnBufferDescription::I32,
             ),
-            DataType::Decimal { scale, precision } if scale == 0 && precision < 19 => (
+            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision}if scale == 0 && precision < 19 => (
                 ptb(PhysicalType::INT64)
                     .with_logical_type(LogicalType::DECIMAL)
                     .with_precision(precision.try_into().unwrap())
@@ -221,7 +221,6 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
             DataType::Unknown
             | DataType::Numeric { .. }
             | DataType::Decimal { .. }
-            | DataType::Real
             | DataType::Time { .. } => {
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (

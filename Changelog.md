@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+* Maps ODBC `REAL` to Parquet `Float`.
+* Maps ODBC `NUMERIC` same as it would `DECIMAL`.
+
 ## 0.1.4
 
 * Default row group size is now `100000`.
