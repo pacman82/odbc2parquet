@@ -1,8 +1,8 @@
 use odbc_api::{
     buffers::BindColParameters,
     buffers::{
-        ColumnBuffer, OptDateColumn, OptF32Column, OptF64Column,
-        OptI32Column, OptI64Column, OptTimestampColumn, TextColumn,
+        ColumnBuffer, OptDateColumn, OptF32Column, OptF64Column, OptI32Column, OptI64Column,
+        OptTimestampColumn, TextColumn,
     },
     sys::{Date, Len, Timestamp, ULen},
     RowSetBuffer,
@@ -36,24 +36,14 @@ impl AnyColumnBuffer {
             ColumnBufferDescription::Text { max_str_len } => {
                 AnyColumnBuffer::Text(TextColumn::new(batch_size, max_str_len))
             }
-            ColumnBufferDescription::F64 => {
-                AnyColumnBuffer::F64(OptF64Column::new(batch_size))
-            }
-            ColumnBufferDescription::F32 => {
-                AnyColumnBuffer::F32(OptF32Column::new(batch_size))
-            }
-            ColumnBufferDescription::Date => {
-                AnyColumnBuffer::Date(OptDateColumn::new(batch_size))
-            }
+            ColumnBufferDescription::F64 => AnyColumnBuffer::F64(OptF64Column::new(batch_size)),
+            ColumnBufferDescription::F32 => AnyColumnBuffer::F32(OptF32Column::new(batch_size)),
+            ColumnBufferDescription::Date => AnyColumnBuffer::Date(OptDateColumn::new(batch_size)),
             ColumnBufferDescription::Timestamp => {
                 AnyColumnBuffer::Timestamp(OptTimestampColumn::new(batch_size))
             }
-            ColumnBufferDescription::I32 => {
-                AnyColumnBuffer::I32(OptI32Column::new(batch_size))
-            }
-            ColumnBufferDescription::I64 => {
-                AnyColumnBuffer::I64(OptI64Column::new(batch_size))
-            }
+            ColumnBufferDescription::I32 => AnyColumnBuffer::I32(OptI32Column::new(batch_size)),
+            ColumnBufferDescription::I64 => AnyColumnBuffer::I64(OptI64Column::new(batch_size)),
         }
     }
 

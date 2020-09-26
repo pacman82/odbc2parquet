@@ -3,10 +3,7 @@ mod parquet_buffer;
 
 use anyhow::Error;
 use log::{debug, info};
-use odbc_api::{
-    sys::{SqlDataType, USmallInt},
-    ColumnDescription, Cursor, DataType, Environment, Nullable,
-};
+use odbc_api::{sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable};
 use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -168,7 +165,9 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
 
         let (field_builder, buffer_description) = match cd.data_type {
             DataType::Double => (ptb(PhysicalType::DOUBLE), ColumnBufferDescription::F64),
-            DataType::Float | DataType::Real => (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32),
+            DataType::Float | DataType::Real => {
+                (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32)
+            }
             DataType::SmallInt => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
                 ColumnBufferDescription::I32,
@@ -181,29 +180,43 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
                 ColumnBufferDescription::Date,
             ),
-            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }if scale == 0 && precision < 10 => (
-                ptb(PhysicalType::INT32)
-                    .with_logical_type(LogicalType::DECIMAL)
-                    .with_precision(precision.try_into().unwrap())
-                    .with_scale(scale.try_into().unwrap()),
-                ColumnBufferDescription::I32,
-            ),
-            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision}if scale == 0 && precision < 19 => (
-                ptb(PhysicalType::INT64)
-                    .with_logical_type(LogicalType::DECIMAL)
-                    .with_precision(precision.try_into().unwrap())
-                    .with_scale(scale.try_into().unwrap()),
-                ColumnBufferDescription::I64,
-            ),
+            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
+                if scale == 0 && precision < 10 =>
+            {
+                (
+                    ptb(PhysicalType::INT32)
+                        .with_logical_type(LogicalType::DECIMAL)
+                        .with_precision(precision.try_into().unwrap())
+                        .with_scale(scale.try_into().unwrap()),
+                    ColumnBufferDescription::I32,
+                )
+            }
+            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
+                if scale == 0 && precision < 19 =>
+            {
+                (
+                    ptb(PhysicalType::INT64)
+                        .with_logical_type(LogicalType::DECIMAL)
+                        .with_precision(precision.try_into().unwrap())
+                        .with_scale(scale.try_into().unwrap()),
+                    ColumnBufferDescription::I64,
+                )
+            }
             DataType::Timestamp { .. } => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
                 ColumnBufferDescription::Timestamp,
             ),
+            DataType::Bigint => (
+                ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
+                ColumnBufferDescription::I64,
+            ),
+            DataType::Char { length } | DataType::Varchar { length } => (
+                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                ColumnBufferDescription::Text {
+                    max_str_len: length.try_into().unwrap(),
+                },
+            ),
             DataType::Other { data_type, .. } => match data_type {
-                SqlDataType::EXT_BIG_INT => (
-                    ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
-                    ColumnBufferDescription::I64,
-                ),
                 _ => {
                     let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                     (
@@ -212,13 +225,9 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                     )
                 }
             },
-            DataType::Char { length } | DataType::Varchar { length } => (
-                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                ColumnBufferDescription::Text {
-                    max_str_len: length.try_into().unwrap(),
-                },
-            ),
             DataType::Unknown
+            | DataType::Tinyint
+            | DataType::Bit
             | DataType::Numeric { .. }
             | DataType::Decimal { .. }
             | DataType::Time { .. } => {
