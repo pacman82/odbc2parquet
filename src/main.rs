@@ -220,19 +220,11 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
             ),
             DataType::Bit => (ptb(PhysicalType::BOOLEAN), ColumnBufferDescription::Bit),
             DataType::Tinyint => (ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8), ColumnBufferDescription::I32),
-            DataType::Other { data_type, .. } => match data_type {
-                _ => {
-                    let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
-                    (
-                        ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                        ColumnBufferDescription::Text { max_str_len },
-                    )
-                }
-            },
             DataType::Unknown
             | DataType::Numeric { .. }
             | DataType::Decimal { .. }
-            | DataType::Time { .. } => {
+            | DataType::Time { .. }
+            | DataType::Other { .. } => {
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (
                     ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),

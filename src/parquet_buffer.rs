@@ -126,7 +126,7 @@ impl ParquetBuffer {
         Ok(())
     }
 
-    pub fn write_bools<'a>(
+    pub fn write_bools(
         &mut self,
         cw: &mut ColumnWriterImpl<BoolType>,
         booleans: impl Iterator<Item = Option<bool>>,
