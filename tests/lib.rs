@@ -5,8 +5,8 @@ use tempfile::tempdir;
 #[test]
 fn test_xls_table() {
     let expected = "\
-    {Text: \"Hello\", Real: 1.3}\n\
-    {Text: \"World\", Real: 5.4}\n\
+    {Text: \"Hello\", Real: 1.3, Boolean: true}\n\
+    {Text: \"World\", Real: 5.4, Boolean: false}\n\
     ";
 
     // A temporary directory, to be removed at the end of the test.

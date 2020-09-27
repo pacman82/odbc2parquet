@@ -1,8 +1,8 @@
 use odbc_api::{
     buffers::BindColParameters,
     buffers::{
-        ColumnBuffer, OptDateColumn, OptF32Column, OptF64Column, OptI32Column, OptI64Column,
-        OptTimestampColumn, TextColumn,
+        ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI32Column,
+        OptI64Column, OptTimestampColumn, TextColumn
     },
     sys::{Date, Len, Timestamp, ULen},
     RowSetBuffer,
@@ -18,6 +18,7 @@ pub enum ColumnBufferDescription {
     Timestamp,
     I32,
     I64,
+    Bit,
 }
 
 enum AnyColumnBuffer {
@@ -28,6 +29,7 @@ enum AnyColumnBuffer {
     Timestamp(OptTimestampColumn),
     I32(OptI32Column),
     I64(OptI64Column),
+    Bit(OptBitColumn),
 }
 
 impl AnyColumnBuffer {
@@ -44,11 +46,13 @@ impl AnyColumnBuffer {
             }
             ColumnBufferDescription::I32 => AnyColumnBuffer::I32(OptI32Column::new(batch_size)),
             ColumnBufferDescription::I64 => AnyColumnBuffer::I64(OptI64Column::new(batch_size)),
+            ColumnBufferDescription::Bit => AnyColumnBuffer::Bit(OptBitColumn::new(batch_size)),
         }
     }
 
     pub fn bind_arguments(&mut self) -> BindColParameters {
         match self {
+            AnyColumnBuffer::Bit(buf) => buf.bind_arguments(),
             AnyColumnBuffer::Text(buf) => buf.bind_arguments(),
             AnyColumnBuffer::F64(buf) => buf.bind_arguments(),
             AnyColumnBuffer::F32(buf) => buf.bind_arguments(),
@@ -140,6 +144,20 @@ impl OdbcBuffer {
             }
         } else {
             panic!("Index {}, doest not hold a date buffer.", col_index)
+        }
+    }
+
+    pub fn bool_it<'a>(&'a self, col_index: usize) -> impl ExactSizeIterator<Item = Option<bool>> + 'a {
+        if let AnyColumnBuffer::Bit(ref buffer) = self.buffers[col_index] {
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| {
+                    buffer
+                        .value_at(row_index)
+                        .map(|&bit| bit.as_bool())
+                })
+            }
+        } else {
+            panic!("Index {}, doest not hold a boolean buffer.", col_index)
         }
     }
 

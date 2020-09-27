@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use odbc_api::sys::{Date, Len, Timestamp, NULL_DATA};
 use parquet::{
     column::writer::ColumnWriterImpl,
-    data_type::{ByteArray, ByteArrayType, DataType, Int32Type, Int64Type},
+    data_type::{BoolType, ByteArray, ByteArrayType, DataType, Int32Type, Int64Type},
 };
 use std::convert::TryInto;
 
@@ -14,6 +14,7 @@ pub struct ParquetBuffer {
     /// scale 0.
     pub values_i64: Vec<i64>,
     pub values_bytes_array: Vec<ByteArray>,
+    pub values_bool: Vec<bool>,
     pub def_levels: Vec<i16>,
 }
 
@@ -23,6 +24,7 @@ impl ParquetBuffer {
             values_i32: Vec::with_capacity(batch_size),
             values_i64: Vec::with_capacity(batch_size),
             values_bytes_array: Vec::with_capacity(batch_size),
+            values_bool: Vec::with_capacity(batch_size),
             def_levels: Vec::with_capacity(batch_size),
         }
     }
@@ -32,6 +34,7 @@ impl ParquetBuffer {
         self.values_i32.resize(num_rows, 0);
         self.values_i64.resize(num_rows, 0);
         self.values_bytes_array.resize(num_rows, ByteArray::new());
+        self.values_bool.resize(num_rows, false);
     }
 
     /// In case the ODBC C Type matches the physical Parquet type, we can write the buffer directly
@@ -119,6 +122,24 @@ impl ParquetBuffer {
             self.def_levels[row_index] = nul;
         }
         cw.write_batch(&self.values_bytes_array, Some(&self.def_levels), None)?;
+
+        Ok(())
+    }
+
+    pub fn write_bools<'a>(
+        &mut self,
+        cw: &mut ColumnWriterImpl<BoolType>,
+        booleans: impl Iterator<Item = Option<bool>>,
+    ) -> Result<(), Error> {
+        for (row_index, field) in booleans.enumerate() {
+            if let Some(val) = field {
+                self.values_bool[row_index] = val;
+                self.def_levels[row_index] = 1;
+            } else {
+                self.def_levels[row_index] = 0;
+            }
+        }
+        cw.write_batch(&self.values_bool, Some(&self.def_levels), None)?;
 
         Ok(())
     }

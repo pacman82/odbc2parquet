@@ -22,9 +22,11 @@ The tool queries the ODBC Data source for type information and maps it to parque
 |-----------------------|------------------------|
 | Decimal(p=0..18, s=0) | Decimal(p,s)           |
 | Numeric(p=0..18, s=0) | Decimal(p,s)           |
+| Bit                   | Boolean                |
 | Double                | Double                 |
 | Real                  | Float                  |
 | Float                 | Float                  |
+| Tiny Integer          | Int8                   |
 | Small Integer         | Int16                  |
 | Integer               | Int32                  |
 | Big Int               | Int64                  |

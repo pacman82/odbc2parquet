@@ -2,8 +2,10 @@
 
 ## 0.1.5
 
-* Maps ODBC `REAL` to Parquet `Float`.
-* Maps ODBC `NUMERIC` same as it would `DECIMAL`.
+* Maps ODBC `Bit` to Parquet `Boolean`.
+* Maps ODBC `Tinyint` to Parquet `INT 8`.
+* Maps ODBC `Real` to Parquet `Float`.
+* Maps ODBC `Numeric` same as it would `DECIMAL`.
 
 ## 0.1.4
 

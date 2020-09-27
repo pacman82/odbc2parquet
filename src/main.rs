@@ -94,7 +94,9 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
         while let Some(mut column_writer) = row_group_writer.next_column()? {
             pb.set_num_rows_fetched(num_rows);
             match &mut column_writer {
-                // parquet::column::writer::ColumnWriter::BoolColumnWriter(_) => {}
+                ColumnWriter::BoolColumnWriter(cw) => {
+                    pb.write_bools(cw, buffer.bool_it(col_index))?;
+                }
                 ColumnWriter::Int32ColumnWriter(cw) => match buffer_description[col_index] {
                     ColumnBufferDescription::Date => {
                         pb.write_dates(cw, buffer.date_it(col_index))?
@@ -216,6 +218,8 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                     max_str_len: length.try_into().unwrap(),
                 },
             ),
+            DataType::Bit => (ptb(PhysicalType::BOOLEAN), ColumnBufferDescription::Bit),
+            DataType::Tinyint => (ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8), ColumnBufferDescription::I32),
             DataType::Other { data_type, .. } => match data_type {
                 _ => {
                     let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
@@ -226,8 +230,6 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 }
             },
             DataType::Unknown
-            | DataType::Tinyint
-            | DataType::Bit
             | DataType::Numeric { .. }
             | DataType::Decimal { .. }
             | DataType::Time { .. } => {
