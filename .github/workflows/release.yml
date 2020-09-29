@@ -16,7 +16,8 @@ jobs:
       - name: Insall latests rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-x84_64-pc-windows-msvc
+          toolchain: nightly
+          target: x86_64-pc-windows-msvc
           default: true
           override: true
 
@@ -30,3 +31,4 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/release/odbc2parquet.exe
           asset_name: odbc2parquet-win64
+          tag: ${{ github.ref }}

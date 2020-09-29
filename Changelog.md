@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+* Binary release of 64 Bit Window executable to GitHub
+
 ## 0.1.5
 
 * Maps ODBC `Bit` to Parquet `Boolean`.
