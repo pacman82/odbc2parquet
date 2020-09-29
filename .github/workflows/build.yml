@@ -1,0 +1,23 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+    name: Build on 64Bit Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Insall latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
