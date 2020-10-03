@@ -35,7 +35,7 @@ struct Cli {
     /// Name of the output parquet file.
     output: PathBuf,
     /// Size of a single batch in rows. The content of the data source is written into the output
-    /// parquet files in batches. This way the content does never need to be materialized completly
+    /// parquet files in batches. This way the content does never need to be materialized completely
     /// in memory at once.
     #[structopt(long, default_value = "100000")]
     batch_size: usize,
@@ -128,7 +128,7 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
                     pb.write_strings(cw, buffer.text_column_it(col_index))?;
                 }
                 // parquet::column::writer::ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
-                _ => panic!("Invalid Columnwriter type"),
+                _ => panic!("Invalid ColumnWriter type"),
             }
             row_group_writer.close_column(column_writer)?;
             col_index += 1;
@@ -153,7 +153,7 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
         cd.name.reserve(128);
         cursor.describe_col(index as USmallInt, &mut cd)?;
 
-        debug!("ODBC column descripton for column {}: {:?}", index, cd);
+        debug!("ODBC column description for column {}: {:?}", index, cd);
 
         let name = cd.name_to_string()?;
         // Give a generated name, should we fail to retrieve one from the ODBC data source.
