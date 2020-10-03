@@ -1,11 +1,19 @@
 # ODBC to Parquet
 
-Query ODBC databases and save the result in a parquet file.
+A command line tool to query an ODBC data source and write the result into a parquet file.
 
 ## Usage
 
+### Query using connection string
+
 ```shell
-odbc2parquet run "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" "SELECT * FROM Birthdays" out.par1
+odbc2parquet --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" "SELECT * FROM Birthdays" out.par1
+```
+
+### Query using data source name
+
+```shell
+odbc2parquet --dsn my_db --password "<YourStrong@Passw0rd>" --user "SA" "SELECT * FROM Birthdays" out.par1
 ```
 
 Use `odbc2parquet --help` to see all option.

@@ -17,6 +17,7 @@ use parquet::{
 use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
 use structopt::StructOpt;
+use structopt::clap::ArgGroup;
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -25,9 +26,10 @@ struct Cli {
     /// Verbose mode (-v, -vv, -vvv, etc)
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: usize,
-    /// The connection string used to connect to the ODBC data source.
-    #[structopt()]
-    connection_string: String,
+    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
+    /// the ODBC dsn.
+    #[structopt(long, short = "c")]
+    connection_string: Option<String>,
     /// Query executed against the ODBC data source.
     #[structopt()]
     query: String,
@@ -39,9 +41,22 @@ struct Cli {
     /// in memory at once.
     #[structopt(long, default_value = "100000")]
     batch_size: usize,
+    /// ODBC Data Source Name. Either this or the connection string must be specified to identify
+    /// the datasource. Data source name (dsn) and connection string, may not be specified both.
+    #[structopt(long, conflicts_with = "connection-string")]
+    dsn: Option<String>,
+    #[structopt(long, short = "u")]
+    /// User used to access the datasource specified in dsn.
+    user: Option<String>,
+    /// Password used to log into the datasource. Only used if dsn is specified, instead of a
+    /// connection string.
+    #[structopt(long, short = "p")]
+    password: Option<String>,
 }
 
 fn main() -> Result<(), Error> {
+    // Require either `dsn` or `connection_string`
+    Cli::clap().group(ArgGroup::with_name("source").required(true).args(&["dsn", "connection-string"]));
     let opt = Cli::from_args();
 
     // Initialize logging
@@ -57,7 +72,18 @@ fn main() -> Result<(), Error> {
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
     let odbc_env = unsafe { Environment::new() }?;
 
-    let mut odbc_conn = odbc_env.connect_with_connection_string(&opt.connection_string)?;
+    let mut odbc_conn = if let Some(dsn) = opt.dsn {
+        odbc_env.connect(
+            &dsn,
+            opt.user.as_deref().unwrap_or(""),
+            opt.password.as_deref().unwrap_or(""),
+        )?
+    } else {
+        odbc_env.connect_with_connection_string(
+            &opt.connection_string
+                .expect("Connection string must be specified, if dsn is not."),
+        )?
+    };
 
     if let Some(cursor) = odbc_conn.exec_direct(&opt.query)? {
         let file = File::create(&opt.output)?;
@@ -219,7 +245,10 @@ fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription
                 },
             ),
             DataType::Bit => (ptb(PhysicalType::BOOLEAN), ColumnBufferDescription::Bit),
-            DataType::Tinyint => (ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8), ColumnBufferDescription::I32),
+            DataType::Tinyint => (
+                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
+                ColumnBufferDescription::I32,
+            ),
             DataType::Unknown
             | DataType::Numeric { .. }
             | DataType::Decimal { .. }

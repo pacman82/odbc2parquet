@@ -1,8 +1,14 @@
 # Changelog
 
+## 0.2.0 (next)
+
+* Binary release of 32 Bit Window executable on GitHub
+* Connection string is no longer a positional argument.
+* Allow connecting to an ODBC datasource using dsn.
+
 ## 0.1.6
 
-* Binary release of 64 Bit Window executable to GitHub
+* Binary release of 64 Bit Window executable on GitHub
 
 ## 0.1.5
 
@@ -14,11 +20,11 @@
 ## 0.1.4
 
 * Default row group size is now `100000`.
-* Adds support for Decimal tyes with precision 0..18 and scale = 0 (i.e. Everything that has a straitforward `i32` or `i64` representation).
+* Adds support for Decimal types with precision 0..18 and scale = 0 (i.e. Everything that has a straightforward `i32` or `i64` representation).
 
 ## 0.1.3
 
-* Fix: Fixed an issue there some column types were not bound to the cursor, which let to some column only containg `NULL` or `0`.
+* Fix: Fixed an issue there some column types were not bound to the cursor, which let to some column only containing `NULL` or `0`.
 
 ## 0.1.2
 

@@ -21,6 +21,7 @@ fn test_xls_table() {
     cmd.args(&[
         "-vvvv",
         // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
+        "-c",
         "Driver={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};Dbq=tests/test-table.xlsx;",
         "SELECT * FROM [sheet1$]",
         out_str,
@@ -45,7 +46,7 @@ fn foobar_connection_string() {
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&["-vvvv", "foobar", "SELECT * FROM [uk-500$]", out_str])
+    cmd.args(&["-vvvv", "-c", "foobar", "SELECT * FROM [uk-500$]", out_str])
         .assert()
         .failure()
         .code(1);
