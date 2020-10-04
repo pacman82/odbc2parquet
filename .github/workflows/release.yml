@@ -56,5 +56,31 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/release/odbc2parquet.exe
-          asset_name: odbc2parquet-win64
+          asset_name: odbc2parquet-win32
+          tag: ${{ github.ref }}
+
+  release_os-x:
+    name: Build and release OS-X
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Insall latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/odbc2parquet
+          asset_name: odbc2parquet-osx
           tag: ${{ github.ref }}

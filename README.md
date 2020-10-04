@@ -20,7 +20,19 @@ Use `odbc2parquet --help` to see all option.
 
 ## Installation
 
-Currently only deployed via cargo. Use `cargo +nightly install odbc2parquet` to install it.
+### Download binary from GitHub
+
+<https://github.com/pacman82/odbc2parquet/releases/latest>
+
+*Note*: Download the 32 Bit version if you want to connect to data sources using 32 Bit drivers and download the 64 Bit version if you want to connect via 64 Bit drivers. It won't work vice versa.
+
+### Via Cargo
+
+If you have a rust nightly toolchain installed, you can install this tool via cargo.
+
+```shell script
+cargo +nightly install odbc2parquet
+```
 
 ## Mapping of types
 
@@ -42,4 +54,4 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Timestamp             | Timestamp Microseconds |
 | All others            | Utf8 Byte Array        |
 
-`p` is short for `precision`. `s` is short for `scale`. Intervals are inculsive the last element.
+`p` is short for `precision`. `s` is short for `scale`. Intervals are inclusive the last element.

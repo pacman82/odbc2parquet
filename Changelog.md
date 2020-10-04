@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.2.0 (next)
+## 0.2.0
 
 * Binary release of 32 Bit Window executable on GitHub
+* Binary release for OS-X
 * Connection string is no longer a positional argument.
 * Allow connecting to an ODBC datasource using dsn.
 
