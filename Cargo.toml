@@ -30,10 +30,10 @@ readme = "README.md"
 
 [dependencies]
 odbc-api = "0.7.0"
-parquet = "1.0.1"
-anyhow = "1.0.32"
+parquet = "2.0.0"
+anyhow = "1.0.33"
 stderrlog = "0.5.0"
-structopt = "0.3.18"
+structopt = "0.3.20"
 log = "0.4.11"
 chrono = "0.4.19"
 
