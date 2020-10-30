@@ -121,37 +121,37 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
             pb.set_num_rows_fetched(num_rows);
             match &mut column_writer {
                 ColumnWriter::BoolColumnWriter(cw) => {
-                    pb.write_bools(cw, buffer.bool_it(col_index))?;
+                    pb.write_optional(cw, buffer.bool_it(col_index))?;
                 }
                 ColumnWriter::Int32ColumnWriter(cw) => match buffer_description[col_index] {
                     ColumnBufferDescription::Date => {
-                        pb.write_dates(cw, buffer.date_it(col_index))?
+                        pb.write_optional(cw, buffer.date_it(col_index))?
                     }
                     ColumnBufferDescription::I32 => {
                         // Used for Ints and Decimal logical types
-                        pb.write_directly(cw, buffer.i32_column(col_index))?
+                        pb.write_optional(cw, buffer.i32_it(col_index))?
                     }
                     _ => panic!("Mismatched ODBC and Parquet buffer type."),
                 },
                 ColumnWriter::Int64ColumnWriter(cw) => match buffer_description[col_index] {
                     ColumnBufferDescription::Timestamp => {
-                        pb.write_timestamps(cw, buffer.timestamp_it(col_index))?
+                        pb.write_optional(cw, buffer.timestamp_it(col_index))?
                     }
                     ColumnBufferDescription::I64 => {
                         // Used for Ints and Decimal logical types
-                        pb.write_directly(cw, buffer.i64_column(col_index))?
+                        pb.write_optional(cw, buffer.i64_it(col_index))?
                     }
                     _ => panic!("Mismatched ODBC and Parquet buffer type."),
                 },
                 // parquet::column::writer::ColumnWriter::Int96ColumnWriter(_) => {}
                 ColumnWriter::FloatColumnWriter(cw) => {
-                    pb.write_directly(cw, buffer.f32_column(col_index))?;
+                    pb.write_optional(cw, buffer.f32_it(col_index))?;
                 }
                 ColumnWriter::DoubleColumnWriter(cw) => {
-                    pb.write_directly(cw, buffer.f64_column(col_index))?;
+                    pb.write_optional(cw, buffer.f64_it(col_index))?;
                 }
                 ColumnWriter::ByteArrayColumnWriter(cw) => {
-                    pb.write_strings(cw, buffer.text_column_it(col_index))?;
+                    pb.write_optional(cw, buffer.text_column_it(col_index))?;
                 }
                 // parquet::column::writer::ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
                 _ => panic!("Invalid ColumnWriter type"),

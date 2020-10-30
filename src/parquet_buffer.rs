@@ -1,9 +1,9 @@
 use anyhow::Error;
 use chrono::NaiveDate;
-use odbc_api::sys::{Date, Len, Timestamp, NULL_DATA};
+use odbc_api::sys::{Date, Timestamp};
 use parquet::{
     column::writer::ColumnWriterImpl,
-    data_type::{BoolType, ByteArray, ByteArrayType, DataType, Int32Type, Int64Type},
+    data_type::{ByteArray, DataType},
 };
 use std::convert::TryInto;
 
@@ -13,6 +13,8 @@ pub struct ParquetBuffer {
     /// Used to hold timestamp values converted from ODBC `Timestamp` types or int or decimal with
     /// scale 0.
     pub values_i64: Vec<i64>,
+    pub values_f32: Vec<f32>,
+    pub values_f64: Vec<f64>,
     pub values_bytes_array: Vec<ByteArray>,
     pub values_bool: Vec<bool>,
     pub def_levels: Vec<i16>,
@@ -23,6 +25,8 @@ impl ParquetBuffer {
         ParquetBuffer {
             values_i32: Vec::with_capacity(batch_size),
             values_i64: Vec::with_capacity(batch_size),
+            values_f32: Vec::with_capacity(batch_size),
+            values_f64: Vec::with_capacity(batch_size),
             values_bytes_array: Vec::with_capacity(batch_size),
             values_bool: Vec::with_capacity(batch_size),
             def_levels: Vec::with_capacity(batch_size),
@@ -33,114 +37,133 @@ impl ParquetBuffer {
         self.def_levels.resize(num_rows, 0);
         self.values_i32.resize(num_rows, 0);
         self.values_i64.resize(num_rows, 0);
+        self.values_f32.resize(num_rows, 0.);
+        self.values_f64.resize(num_rows, 0.);
         self.values_bytes_array.resize(num_rows, ByteArray::new());
         self.values_bool.resize(num_rows, false);
     }
 
     /// In case the ODBC C Type matches the physical Parquet type, we can write the buffer directly
     /// without transforming. The definition levels still require transformation, though.
-    pub fn write_directly<T>(
+    pub fn write_optional<T, S>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
-        source: (&[T::T], &[Len]),
+        source: impl Iterator<Item = Option<S>>,
     ) -> Result<(), Error>
     where
         T: DataType,
+        T::T: BufferedDataType,
+        S: IntoPhysical<T::T>,
     {
-        let (values, indicators) = source;
-        for (def, &ind) in self.def_levels.iter_mut().zip(indicators) {
-            *def = if ind == NULL_DATA { 0 } else { 1 };
-        }
-        cw.write_batch(values, Some(&self.def_levels), None)?;
-        Ok(())
-    }
-
-    pub fn write_dates<'a>(
-        &mut self,
-        cw: &mut ColumnWriterImpl<Int32Type>,
-        dates: impl Iterator<Item = Option<&'a Date>>,
-    ) -> Result<(), Error> {
-        // Currently we use int32 only to represent dates
-        let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
-        for (row_index, field) in dates.enumerate() {
-            let (value, def) = field
-                .map(|date| {
-                    // Transform date to days since unix epoch as i32
-                    let date =
-                        NaiveDate::from_ymd(date.year as i32, date.month as u32, date.day as u32);
-                    let duration = date.signed_duration_since(unix_epoch);
-                    (duration.num_days().try_into().unwrap(), 1)
-                })
-                .unwrap_or((0, 0));
-            self.def_levels[row_index] = def;
-            self.values_i32[row_index] = value;
-        }
-        cw.write_batch(&self.values_i32, Some(&self.def_levels), None)?;
-        Ok(())
-    }
-
-    pub fn write_timestamps<'a>(
-        &mut self,
-        cw: &mut ColumnWriterImpl<Int64Type>,
-        timestamps: impl Iterator<Item = Option<&'a Timestamp>>,
-    ) -> Result<(), Error> {
-        // Currently we use int32 only to represent dates
-        for (row_index, field) in timestamps.enumerate() {
-            let (value, def) = field
-                .map(|ts| {
-                    // Transform date to days since unix epoch as i32
-                    let datetime =
-                        NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
-                            .and_hms_nano(
-                                ts.hour as u32,
-                                ts.minute as u32,
-                                ts.second as u32,
-                                ts.fraction as u32,
-                            );
-                    (datetime.timestamp_nanos() / 1000, 1)
-                })
-                .unwrap_or((0, 0));
-            self.def_levels[row_index] = def;
-            self.values_i64[row_index] = value;
-        }
-        cw.write_batch(&self.values_i64, Some(&self.def_levels), None)?;
-        Ok(())
-    }
-
-    pub fn write_strings<'a>(
-        &mut self,
-        cw: &mut ColumnWriterImpl<ByteArrayType>,
-        strings: impl Iterator<Item = Option<&'a [u8]>>,
-    ) -> Result<(), Error> {
-        for (row_index, read_buf) in strings.enumerate() {
-            let (bytes, nul) = read_buf
-                // Value is not NULL
-                .map(|buf| (buf.to_owned().into(), 1))
-                // Value is NULL
-                .unwrap_or_else(|| (ByteArray::new(), 0));
-            self.values_bytes_array[row_index] = bytes;
-            self.def_levels[row_index] = nul;
-        }
-        cw.write_batch(&self.values_bytes_array, Some(&self.def_levels), None)?;
-
-        Ok(())
-    }
-
-    pub fn write_bools(
-        &mut self,
-        cw: &mut ColumnWriterImpl<BoolType>,
-        booleans: impl Iterator<Item = Option<bool>>,
-    ) -> Result<(), Error> {
-        for (row_index, field) in booleans.enumerate() {
-            if let Some(val) = field {
-                self.values_bool[row_index] = val;
-                self.def_levels[row_index] = 1;
+        let (values, def_levels) = T::T::mut_buf(self);
+        let mut values_index = 0;
+        for (item, definition_level) in source.zip(&mut def_levels.iter_mut()) {
+            *definition_level = if let Some(value) = item {
+                values[values_index] = value.into_physical();
+                values_index += 1;
+                1
             } else {
-                self.def_levels[row_index] = 0;
+                0
             }
         }
-        cw.write_batch(&self.values_bool, Some(&self.def_levels), None)?;
-
+        cw.write_batch(values, Some(&def_levels), None)?;
         Ok(())
+    }
+}
+
+pub trait BufferedDataType: Sized {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]);
+}
+
+impl BufferedDataType for i32 {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_i32.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for i64 {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_i64.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for f32 {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_f32.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for f64 {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_f64.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for bool {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_bool.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for ByteArray {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_bytes_array.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+pub trait IntoPhysical<T> {
+    fn into_physical(self) -> T;
+}
+
+impl<T> IntoPhysical<T> for T {
+    fn into_physical(self) -> T {
+        self
+    }
+}
+
+impl IntoPhysical<i32> for &Date {
+    fn into_physical(self) -> i32 {
+        let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
+        // Transform date to days since unix epoch as i32
+        let date = NaiveDate::from_ymd(self.year as i32, self.month as u32, self.day as u32);
+        let duration = date.signed_duration_since(unix_epoch);
+        duration.num_days().try_into().unwrap()
+    }
+}
+
+impl IntoPhysical<i64> for &Timestamp {
+    fn into_physical(self) -> i64 {
+        let datetime = NaiveDate::from_ymd(self.year as i32, self.month as u32, self.day as u32)
+            .and_hms_nano(
+                self.hour as u32,
+                self.minute as u32,
+                self.second as u32,
+                self.fraction as u32,
+            );
+        datetime.timestamp_nanos() / 1000
+    }
+}
+
+impl IntoPhysical<ByteArray> for &[u8] {
+    fn into_physical(self) -> ByteArray {
+        self.to_owned().into()
     }
 }

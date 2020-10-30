@@ -2,9 +2,9 @@ use odbc_api::{
     buffers::BindColParameters,
     buffers::{
         ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI32Column,
-        OptI64Column, OptTimestampColumn, TextColumn
+        OptI64Column, OptTimestampColumn, TextColumn,
     },
-    sys::{Date, Len, Timestamp, ULen},
+    sys::{Date, Timestamp, ULen},
     RowSetBuffer,
 };
 use std::convert::TryInto;
@@ -93,47 +93,43 @@ impl OdbcBuffer {
         }
     }
 
-    pub fn f64_column(&self, col_index: usize) -> (&[f64], &[Len]) {
+    pub fn f64_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<f64>> + '_ {
         if let AnyColumnBuffer::F64(ref buffer) = self.buffers[col_index] {
-            (
-                &buffer.values()[0..self.num_rows_fetched as usize],
-                &buffer.indicators()[0..self.num_rows_fetched as usize],
-            )
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+            }
         } else {
-            panic!("Index {}, doest not hold a f64 buffer.", col_index)
+            panic!("Index {}, doest not hold an f64 buffer.", col_index)
         }
     }
 
-    pub fn f32_column(&self, col_index: usize) -> (&[f32], &[Len]) {
+    pub fn f32_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<f32>> + '_ {
         if let AnyColumnBuffer::F32(ref buffer) = self.buffers[col_index] {
-            (
-                &buffer.values()[0..self.num_rows_fetched as usize],
-                &buffer.indicators()[0..self.num_rows_fetched as usize],
-            )
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+            }
         } else {
-            panic!("Index {}, doest not hold a f32 buffer.", col_index)
+            panic!("Index {}, doest not hold an f32 buffer.", col_index)
         }
     }
 
-    pub fn i32_column(&self, col_index: usize) -> (&[i32], &[Len]) {
+    pub fn i32_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<i32>> + '_ {
         if let AnyColumnBuffer::I32(ref buffer) = self.buffers[col_index] {
-            (
-                &buffer.values()[0..self.num_rows_fetched as usize],
-                &buffer.indicators()[0..self.num_rows_fetched as usize],
-            )
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+            }
         } else {
-            panic!("Index {}, doest not hold a i32 buffer.", col_index)
+            panic!("Index {}, doest not hold an i32 buffer.", col_index)
         }
     }
 
-    pub fn i64_column(&self, col_index: usize) -> (&[i64], &[Len]) {
+    pub fn i64_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<i64>> + '_ {
         if let AnyColumnBuffer::I64(ref buffer) = self.buffers[col_index] {
-            (
-                &buffer.values()[0..self.num_rows_fetched as usize],
-                &buffer.indicators()[0..self.num_rows_fetched as usize],
-            )
+            unsafe {
+                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+            }
         } else {
-            panic!("Index {}, doest not hold a i64 buffer.", col_index)
+            panic!("Index {}, doest not hold an i64 buffer.", col_index)
         }
     }
 
@@ -147,14 +143,14 @@ impl OdbcBuffer {
         }
     }
 
-    pub fn bool_it<'a>(&'a self, col_index: usize) -> impl ExactSizeIterator<Item = Option<bool>> + 'a {
+    pub fn bool_it<'a>(
+        &'a self,
+        col_index: usize,
+    ) -> impl ExactSizeIterator<Item = Option<bool>> + 'a {
         if let AnyColumnBuffer::Bit(ref buffer) = self.buffers[col_index] {
             unsafe {
-                (0..self.num_rows_fetched as usize).map(move |row_index| {
-                    buffer
-                        .value_at(row_index)
-                        .map(|&bit| bit.as_bool())
-                })
+                (0..self.num_rows_fetched as usize)
+                    .map(move |row_index| buffer.value_at(row_index).map(|&bit| bit.as_bool()))
             }
         } else {
             panic!("Index {}, doest not hold a boolean buffer.", col_index)

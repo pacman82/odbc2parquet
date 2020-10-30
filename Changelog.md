@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+* Fix: A major issue caused columns containing NULL values to either cause a panic or even worse, produce a parquet file with wrong data in the affected column without showing any error at all.
+
 ## 0.2.0
 
 * Binary release of 32 Bit Window executable on GitHub
