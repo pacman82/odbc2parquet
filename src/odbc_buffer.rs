@@ -1,8 +1,8 @@
 use odbc_api::{
-    buffers::BindColParameters,
+    Cursor,
     buffers::{
         ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI32Column,
-        OptI64Column, OptTimestampColumn, TextColumn,
+        OptI64Column, OptTimestampColumn, TextColumn, BindColArgs
     },
     sys::{Date, Timestamp, ULen},
     RowSetBuffer,
@@ -50,7 +50,7 @@ impl AnyColumnBuffer {
         }
     }
 
-    pub fn bind_arguments(&mut self) -> BindColParameters {
+    pub fn bind_arguments(&mut self) -> BindColArgs {
         match self {
             AnyColumnBuffer::Bit(buf) => buf.bind_arguments(),
             AnyColumnBuffer::Text(buf) => buf.bind_arguments(),
@@ -96,7 +96,8 @@ impl OdbcBuffer {
     pub fn f64_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<f64>> + '_ {
         if let AnyColumnBuffer::F64(ref buffer) = self.buffers[col_index] {
             unsafe {
-                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+                (0..self.num_rows_fetched as usize)
+                    .map(move |row_index| buffer.value_at(row_index).copied())
             }
         } else {
             panic!("Index {}, doest not hold an f64 buffer.", col_index)
@@ -106,7 +107,8 @@ impl OdbcBuffer {
     pub fn f32_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<f32>> + '_ {
         if let AnyColumnBuffer::F32(ref buffer) = self.buffers[col_index] {
             unsafe {
-                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+                (0..self.num_rows_fetched as usize)
+                    .map(move |row_index| buffer.value_at(row_index).copied())
             }
         } else {
             panic!("Index {}, doest not hold an f32 buffer.", col_index)
@@ -116,7 +118,8 @@ impl OdbcBuffer {
     pub fn i32_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<i32>> + '_ {
         if let AnyColumnBuffer::I32(ref buffer) = self.buffers[col_index] {
             unsafe {
-                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+                (0..self.num_rows_fetched as usize)
+                    .map(move |row_index| buffer.value_at(row_index).copied())
             }
         } else {
             panic!("Index {}, doest not hold an i32 buffer.", col_index)
@@ -126,7 +129,8 @@ impl OdbcBuffer {
     pub fn i64_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<i64>> + '_ {
         if let AnyColumnBuffer::I64(ref buffer) = self.buffers[col_index] {
             unsafe {
-                (0..self.num_rows_fetched as usize).map(move |row_index| buffer.value_at(row_index).copied())
+                (0..self.num_rows_fetched as usize)
+                    .map(move |row_index| buffer.value_at(row_index).copied())
             }
         } else {
             panic!("Index {}, doest not hold an i64 buffer.", col_index)
@@ -143,10 +147,10 @@ impl OdbcBuffer {
         }
     }
 
-    pub fn bool_it<'a>(
-        &'a self,
+    pub fn bool_it(
+        &self,
         col_index: usize,
-    ) -> impl ExactSizeIterator<Item = Option<bool>> + 'a {
+    ) -> impl ExactSizeIterator<Item = Option<bool>> + '_ {
         if let AnyColumnBuffer::Bit(ref buffer) = self.buffers[col_index] {
             unsafe {
                 (0..self.num_rows_fetched as usize)
@@ -174,7 +178,7 @@ impl OdbcBuffer {
 unsafe impl RowSetBuffer for OdbcBuffer {
     unsafe fn bind_to_cursor(
         &mut self,
-        cursor: &mut odbc_api::Cursor,
+        cursor: &mut impl Cursor,
     ) -> Result<(), odbc_api::Error> {
         cursor.set_row_array_size(self.batch_size.try_into().unwrap())?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;

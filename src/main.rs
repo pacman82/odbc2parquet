@@ -16,8 +16,7 @@ use parquet::{
 };
 use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
-use structopt::StructOpt;
-use structopt::clap::ArgGroup;
+use structopt::{clap::ArgGroup, StructOpt};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt, Debug)]
@@ -56,7 +55,11 @@ struct Cli {
 
 fn main() -> Result<(), Error> {
     // Require either `dsn` or `connection_string`
-    Cli::clap().group(ArgGroup::with_name("source").required(true).args(&["dsn", "connection-string"]));
+    Cli::clap().group(
+        ArgGroup::with_name("source")
+            .required(true)
+            .args(&["dsn", "connection-string"]),
+    );
     let opt = Cli::from_args();
 
     // Initialize logging
@@ -85,7 +88,7 @@ fn main() -> Result<(), Error> {
         )?
     };
 
-    if let Some(cursor) = odbc_conn.exec_direct(&opt.query)? {
+    if let Some(cursor) = odbc_conn.exec_direct(&opt.query, ())? {
         let file = File::create(&opt.output)?;
         cursor_to_parquet(cursor, file, opt.batch_size)?;
     } else {
@@ -97,7 +100,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<(), Error> {
+fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Result<(), Error> {
     info!("Batch size set to {}", batch_size);
     // Write properties
     let wpb = WriterProperties::builder();
@@ -167,7 +170,7 @@ fn cursor_to_parquet(cursor: Cursor, file: File, batch_size: usize) -> Result<()
     Ok(())
 }
 
-fn make_schema(cursor: &Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription>), Error> {
+fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
