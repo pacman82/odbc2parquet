@@ -23,8 +23,8 @@ fn test_xls_table() {
         "-c",
         // See: https://www.connectionstrings.com/microsoft-excel-odbc-driver/
         "Driver={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)};Dbq=tests/test-table.xlsx;",
-        "SELECT * FROM [sheet1$]",
         out_str,
+        "SELECT * FROM [sheet1$]",
     ])
     .assert()
     .success();
@@ -56,10 +56,10 @@ fn nullable_parquet_buffers() {
         .unwrap()
         .args(&[
             "-vvvv",
+            out_str,
             "--connection-string",
             "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
             "SELECT title,year from Movies order by year",
-            out_str
         ])
         .assert()
         .success();
@@ -81,8 +81,42 @@ fn foobar_connection_string() {
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&["-vvvv", "-c", "foobar", "SELECT * FROM [uk-500$]", out_str])
+    cmd.args(&["-vvvv", "-c", "foobar", out_str, "SELECT * FROM [uk-500$]"])
         .assert()
         .failure()
         .code(1);
+}
+
+/// Currently this test requires the docker setup from `odbc-api` to run.
+#[test]
+fn parameters_in_query() {
+    let expected = "\
+        {title: \"2001: A Space Odyssey\", year: 1968}\n\
+    ";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            out_str,
+            "--connection-string",
+            "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
+            "SELECT title,year from Movies where year=?",
+            "1968"
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
 }

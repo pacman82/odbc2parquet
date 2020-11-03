@@ -1,11 +1,10 @@
 use odbc_api::{
-    Cursor,
     buffers::{
-        ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI32Column,
-        OptI64Column, OptTimestampColumn, TextColumn, BindColArgs
+        BindColArgs, ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
+        OptI32Column, OptI64Column, OptTimestampColumn, TextColumn,
     },
     sys::{Date, Timestamp, ULen},
-    RowSetBuffer,
+    Cursor, RowSetBuffer,
 };
 use std::convert::TryInto;
 
@@ -147,10 +146,7 @@ impl OdbcBuffer {
         }
     }
 
-    pub fn bool_it(
-        &self,
-        col_index: usize,
-    ) -> impl ExactSizeIterator<Item = Option<bool>> + '_ {
+    pub fn bool_it(&self, col_index: usize) -> impl ExactSizeIterator<Item = Option<bool>> + '_ {
         if let AnyColumnBuffer::Bit(ref buffer) = self.buffers[col_index] {
             unsafe {
                 (0..self.num_rows_fetched as usize)
@@ -176,10 +172,7 @@ impl OdbcBuffer {
 }
 
 unsafe impl RowSetBuffer for OdbcBuffer {
-    unsafe fn bind_to_cursor(
-        &mut self,
-        cursor: &mut impl Cursor,
-    ) -> Result<(), odbc_api::Error> {
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
         cursor.set_row_array_size(self.batch_size.try_into().unwrap())?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;
         for (index, buf) in self.buffers.iter_mut().enumerate() {

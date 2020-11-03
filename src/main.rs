@@ -3,7 +3,9 @@ mod parquet_buffer;
 
 use anyhow::Error;
 use log::{debug, info};
-use odbc_api::{sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable};
+use odbc_api::{
+    sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable, VarCharParam,
+};
 use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -29,12 +31,6 @@ struct Cli {
     /// the ODBC dsn.
     #[structopt(long, short = "c")]
     connection_string: Option<String>,
-    /// Query executed against the ODBC data source.
-    #[structopt()]
-    query: String,
-    #[structopt()]
-    /// Name of the output parquet file.
-    output: PathBuf,
     /// Size of a single batch in rows. The content of the data source is written into the output
     /// parquet files in batches. This way the content does never need to be materialized completely
     /// in memory at once.
@@ -44,13 +40,21 @@ struct Cli {
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
     #[structopt(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
-    #[structopt(long, short = "u")]
     /// User used to access the datasource specified in dsn.
+    #[structopt(long, short = "u")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string.
     #[structopt(long, short = "p")]
     password: Option<String>,
+    /// Name of the output parquet file.
+    output: PathBuf,
+    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// placeholders for positional parameters.
+    query: String,
+    /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
+    /// the end of the command line.
+    parameters: Vec<String>,
 }
 
 fn main() -> Result<(), Error> {
@@ -88,7 +92,13 @@ fn main() -> Result<(), Error> {
         )?
     };
 
-    if let Some(cursor) = odbc_conn.exec_direct(&opt.query, ())? {
+    let params: Vec<_> = opt
+        .parameters
+        .iter()
+        .map(|param| VarCharParam::new(param.as_bytes()))
+        .collect();
+
+    if let Some(cursor) = odbc_conn.exec_direct(&opt.query, params.as_slice())? {
         let file = File::create(&opt.output)?;
         cursor_to_parquet(cursor, file, opt.batch_size)?;
     } else {

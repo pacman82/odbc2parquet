@@ -7,13 +7,19 @@ A command line tool to query an ODBC data source and write the result into a par
 ### Query using connection string
 
 ```shell
-odbc2parquet --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" "SELECT * FROM Birthdays" out.par1
+odbc2parquet --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" out.par  "SELECT * FROM Birthdays"
 ```
 
 ### Query using data source name
 
 ```shell
-odbc2parquet --dsn my_db --password "<YourStrong@Passw0rd>" --user "SA" "SELECT * FROM Birthdays" out.par1
+odbc2parquet --dsn my_db --password "<YourStrong@Passw0rd>" --user "SA" out.par1 "SELECT * FROM Birthdays"
+```
+
+### Use parameters in query
+
+```shell
+odbc2parquet --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" out.par  "SELECT * FROM Birthdays WHERE year > ? and year < ?" 1990 2010
 ```
 
 Use `odbc2parquet --help` to see all option.
