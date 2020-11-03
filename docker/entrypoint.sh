@@ -1,0 +1,1 @@
+./import-data.sh & /opt/mssql/bin/sqlservr --accept-eula --reset-sa-password
