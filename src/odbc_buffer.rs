@@ -171,7 +171,7 @@ impl OdbcBuffer {
     }
 }
 
-unsafe impl RowSetBuffer for OdbcBuffer {
+unsafe impl RowSetBuffer for &mut OdbcBuffer {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
         cursor.set_row_array_size(self.batch_size.try_into().unwrap())?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;

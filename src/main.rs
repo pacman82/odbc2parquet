@@ -4,7 +4,7 @@ mod parquet_buffer;
 use anyhow::Error;
 use log::{debug, info};
 use odbc_api::{
-    sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable, VarCharParam,
+    sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable, IntoParameter,
 };
 use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
@@ -95,10 +95,10 @@ fn main() -> Result<(), Error> {
     let params: Vec<_> = opt
         .parameters
         .iter()
-        .map(|param| VarCharParam::new(param.as_bytes()))
+        .map(|param| param.into_parameter())
         .collect();
 
-    if let Some(cursor) = odbc_conn.exec_direct(&opt.query, params.as_slice())? {
+    if let Some(cursor) = odbc_conn.execute(&opt.query, params.as_slice())? {
         let file = File::create(&opt.output)?;
         cursor_to_parquet(cursor, file, opt.batch_size)?;
     } else {
@@ -119,7 +119,7 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Resu
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
     let mut writer = SerializedFileWriter::new(file, parquet_schema, properties)?;
     let mut odbc_buffer = OdbcBuffer::new(batch_size, buffer_description.iter().copied());
-    let mut row_set_cursor = cursor.bind_row_set_buffer(&mut odbc_buffer)?;
+    let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
     let mut pb = ParquetBuffer::new(batch_size);
     let mut num_batch = 0;
