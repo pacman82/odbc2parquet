@@ -41,3 +41,9 @@ chrono = "0.4.19"
 assert_cmd = "1.0.1"
 predicates = "1.0.5"
 tempfile = "3.1.0"
+
+[profile.release]
+# Panics should only be caused by logic errors and are considered bugs
+panic = 'abort'
+# Link time Optimization
+lto = true

@@ -1,9 +1,5 @@
 # Changelog
 
-## 0.3.1
-
-* Updated dependencies
-
 ## 0.3.0
 
 * Adds support for parameterized queries.

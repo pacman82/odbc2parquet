@@ -61,3 +61,11 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | All others            | Utf8 Byte Array        |
 
 `p` is short for `precision`. `s` is short for `scale`. Intervals are inclusive the last element.
+
+## Local test setup
+
+Executing `cargo test` requires
+
+* the Microsoft Excel ODBC Drivers.
+* the MS SQL Database started with `docker-compose up`
+* `cargo install parquet` for the parquet binaries `parquet-read` and `parquet-schema`.
