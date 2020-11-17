@@ -506,9 +506,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f90fdca4cf13162019d0f14e7ce5d78632f227cbab520335c3e34985f3c29982"
+checksum = "a78c5e3d930adaf186f0b1cabd2143adc24dd9759e2c2cde8ce7521925b3a746"
 dependencies = [
  "log",
  "odbc-sys",
@@ -518,9 +518,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.14.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cba1e5663e6a4c8793318415b714e27f9164ef327a97c9d497e7186e7e41a260"
+checksum = "fdf596b3d7cc5397407e0d839d171b3d50f19a3fc08235b2911c083554eb924d"
 
 [[package]]
 name = "odbc2parquet"
@@ -938,9 +938,9 @@ checksum = "a7f741b240f1a48843f9b8e0444fb55fb2a4ff67293b50a9179dfd5ea67f8d41"
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
+checksum = "db8716a166f290ff49dabc18b44aa407cb7c6dbe1aa0971b44b8a24b0ca35aae"
 
 [[package]]
 name = "unicode-width"

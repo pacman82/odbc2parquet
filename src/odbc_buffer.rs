@@ -1,12 +1,8 @@
-use odbc_api::{
-    buffers::{
-        BindColArgs, ColumnBuffer, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
+use odbc_api::{handles::CData, Cursor, RowSetBuffer, buffers::{
+        OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
         OptI32Column, OptI64Column, OptTimestampColumn, TextColumn,
-    },
-    sys::{Date, Timestamp, ULen},
-    Cursor, RowSetBuffer,
-};
-use std::convert::TryInto;
+    }, handles::CDataMut, sys::{Date, Timestamp, ULen}};
+use std::{convert::TryInto, ffi::c_void};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ColumnBufferDescription {
@@ -49,17 +45,59 @@ impl AnyColumnBuffer {
         }
     }
 
-    pub fn bind_arguments(&mut self) -> BindColArgs {
+    fn inner_cdata(&self) -> &dyn CData {
         match self {
-            AnyColumnBuffer::Bit(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::Text(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::F64(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::F32(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::Date(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::Timestamp(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::I32(buf) => buf.bind_arguments(),
-            AnyColumnBuffer::I64(buf) => buf.bind_arguments(),
+            AnyColumnBuffer::Text(col) => col,
+            AnyColumnBuffer::F64(col) => col,
+            AnyColumnBuffer::F32(col) => col,
+            AnyColumnBuffer::Date(col) => col,
+            AnyColumnBuffer::Timestamp(col) => col,
+            AnyColumnBuffer::I32(col) => col,
+            AnyColumnBuffer::I64(col) => col,
+            AnyColumnBuffer::Bit(col) => col,
         }
+    }
+
+    fn inner_cdata_mut(&mut self) -> &mut dyn CDataMut {
+        match self {
+            AnyColumnBuffer::Text(col) => col,
+            AnyColumnBuffer::F64(col) => col,
+            AnyColumnBuffer::F32(col) => col,
+            AnyColumnBuffer::Date(col) => col,
+            AnyColumnBuffer::Timestamp(col) => col,
+            AnyColumnBuffer::I32(col) => col,
+            AnyColumnBuffer::I64(col) => col,
+            AnyColumnBuffer::Bit(col) => col,
+        }
+    }
+}
+
+unsafe impl CData for AnyColumnBuffer {
+
+    fn cdata_type(&self) -> odbc_api::sys::CDataType {
+        self.inner_cdata().cdata_type()
+    }
+
+    fn indicator_ptr(&self) -> *const isize {
+        self.inner_cdata().indicator_ptr()
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.inner_cdata().value_ptr()
+    }
+
+    fn buffer_length(&self) -> isize {
+        self.inner_cdata().buffer_length()
+    }
+}
+
+unsafe impl CDataMut for AnyColumnBuffer {
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
+        self.inner_cdata_mut().mut_indicator_ptr()
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.inner_cdata_mut().mut_value_ptr()
     }
 }
 
@@ -176,7 +214,7 @@ unsafe impl RowSetBuffer for &mut OdbcBuffer {
         cursor.set_row_array_size(self.batch_size.try_into().unwrap())?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;
         for (index, buf) in self.buffers.iter_mut().enumerate() {
-            cursor.bind_col((index + 1).try_into().unwrap(), buf.bind_arguments())?
+            cursor.bind_col((index + 1).try_into().unwrap(), buf)?
         }
         Ok(())
     }
