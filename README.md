@@ -2,6 +2,10 @@
 
 A command line tool to query an ODBC data source and write the result into a parquet file.
 
+* Low memory requirements. Only holds one batch at a time in memory.
+* Fast. Makes efficient use of ODBC bulk reads, to lower IO overhead.
+* Flexible. Query any ODBC data source you have a driver for. MySQL, MS SQL, Excel, ...
+
 ## Mapping of types
 
 The tool queries the ODBC Data source for type information and maps it to parquet type as such:
