@@ -14,7 +14,7 @@ Should you use Visual Studio Code with the Remote Developmont extension, it will
 
 ### Not Visual Studio Code
 
-With docker and the SQL Driver installed run:
+With docker installed run:
 
 ```shell
 docker-compose up
@@ -22,15 +22,16 @@ docker-compose up
 
 This starts two containers called `odbc2parquet_dev` and `odbc2parquet_mssql`. You can use the `dev` container to build your code and execute tests in case you do not want to install the required ODBC drivers and/or Rust toolchain on your local machine.
 
-Otherwise you can install these requirements from here:
+Otherwise you can manually install these requirements from here:
 
-* Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
+* Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html). We need the nightly toolchain.
 * [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
-* <https://rustup.rs/>
+* An ODBC Driver manager if you are not on windows: http://www.unixodbc.org/
+* The command line tools shipping with the `parquet` crate are invoked by the tests. `cargo +nigthtly install parquet`.
 
 ### Workaround
 
-Have not figuered out, how to get the nighly toolchain during Docker setup yet. Meanwhile you must use `rustup toolchain install nightly` and `cargo +nightly install parquet` to install the missing pieces for the development setup on the dev container.
+Have not figuered out, how to get the nightly toolchain during Docker setup yet. Meanwhile you must use `rustup toolchain install nightly` and `cargo +nightly install parquet` to install the missing pieces for the development setup on the dev container.
 
 
 We now can execute the tests in Rust typical fashion using:
@@ -39,4 +40,4 @@ We now can execute the tests in Rust typical fashion using:
 cargo test
 ```
 
-to run all tests in the workspace, which should now succeed.
+to run all tests in the workspace.
