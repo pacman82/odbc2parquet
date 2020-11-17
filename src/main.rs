@@ -1,10 +1,11 @@
 mod odbc_buffer;
 mod parquet_buffer;
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 use log::{debug, info};
 use odbc_api::{
-    sys::USmallInt, ColumnDescription, Cursor, DataType, Environment, Nullable, IntoParameter,
+    sys::USmallInt, ColumnDescription, Connection, Cursor, DataType, Environment, IntoParameter,
+    Nullable,
 };
 use odbc_buffer::{ColumnBufferDescription, OdbcBuffer};
 use parquet::{
@@ -18,35 +19,56 @@ use parquet::{
 };
 use parquet_buffer::ParquetBuffer;
 use std::{convert::TryInto, fs::File, path::PathBuf, rc::Rc};
-use structopt::{clap::ArgGroup, StructOpt};
+use structopt::StructOpt;
 
 /// Query an ODBC data source at store the result in a Parquet file.
-#[derive(StructOpt, Debug)]
-#[structopt()]
+#[derive(StructOpt)]
 struct Cli {
     /// Verbose mode (-v, -vv, -vvv, etc)
-    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    #[structopt(short = "v", long, parse(from_occurrences))]
     verbose: usize,
-    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
-    /// the ODBC dsn.
+    #[structopt(subcommand)]
+    command: Command,
+}
+
+#[derive(StructOpt)]
+enum Command {
+    /// Query a data source and write the result as parquet.
+    Query {
+        #[structopt(flatten)]
+        query_opt: QueryOpt,
+    },
+}
+
+/// Command line arguments used to establish a connection with the ODBC data source
+#[derive(StructOpt)]
+struct ConnectOpts {
+    /// The connection string used to connect to the ODBC data source. Alternatively you may
+    /// specify the ODBC dsn.
     #[structopt(long, short = "c")]
     connection_string: Option<String>,
-    /// Size of a single batch in rows. The content of the data source is written into the output
-    /// parquet files in batches. This way the content does never need to be materialized completely
-    /// in memory at once.
-    #[structopt(long, default_value = "100000")]
-    batch_size: usize,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
     #[structopt(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn.
-    #[structopt(long, short = "u")]
+    #[structopt(long, short = "u", env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string.
-    #[structopt(long, short = "p")]
+    #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
+}
+
+#[derive(StructOpt)]
+struct QueryOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+    /// Size of a single batch in rows. The content of the data source is written into the output
+    /// parquet files in batches. This way the content does never need to be materialized completely
+    /// in memory at once.
+    #[structopt(long, default_value = "100000")]
+    batch_size: u32,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
@@ -58,12 +80,6 @@ struct Cli {
 }
 
 fn main() -> Result<(), Error> {
-    // Require either `dsn` or `connection_string`
-    Cli::clap().group(
-        ArgGroup::with_name("source")
-            .required(true)
-            .args(&["dsn", "connection-string"]),
-    );
     let opt = Cli::from_args();
 
     // Initialize logging
@@ -79,35 +95,61 @@ fn main() -> Result<(), Error> {
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
     let odbc_env = unsafe { Environment::new() }?;
 
-    let odbc_conn = if let Some(dsn) = opt.dsn {
-        odbc_env.connect(
-            &dsn,
-            opt.user.as_deref().unwrap_or(""),
-            opt.password.as_deref().unwrap_or(""),
-        )?
-    } else {
-        odbc_env.connect_with_connection_string(
-            &opt.connection_string
-                .expect("Connection string must be specified, if dsn is not."),
-        )?
-    };
+    match opt.command {
+        Command::Query { query_opt } => {
+            query(&odbc_env, &query_opt)?;
+        }
+    }
 
-    let params: Vec<_> = opt
-        .parameters
+    Ok(())
+}
+
+/// Execute a query and writes the result to parquet.
+fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
+    let QueryOpt {
+        connect_opts,
+        output,
+        parameters,
+        query,
+        batch_size,
+    } = opt;
+
+    // Convert the input strings into parameters suitable to for use with ODBC.
+    let params: Vec<_> = parameters
         .iter()
         .map(|param| param.into_parameter())
         .collect();
 
-    if let Some(cursor) = odbc_conn.execute(&opt.query, params.as_slice())? {
-        let file = File::create(&opt.output)?;
-        cursor_to_parquet(cursor, file, opt.batch_size)?;
+    let odbc_conn = open_connection(&environment, connect_opts)?;
+
+    if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
+        let file = File::create(output)?;
+        cursor_to_parquet(cursor, file, *batch_size as usize)?;
     } else {
         eprintln!(
             "Query came back empty (not even a schema has been returned). No file has been created"
         );
     }
-
     Ok(())
+}
+
+/// Open a database connection using the options provided on the command line.
+fn open_connection<'e>(
+    odbc_env: &'e Environment,
+    opt: &ConnectOpts,
+) -> Result<Connection<'e>, Error> {
+    let conn = if let Some(dsn) = &opt.dsn {
+        odbc_env.connect(
+            &dsn,
+            opt.user.as_deref().unwrap_or(""),
+            opt.password.as_deref().unwrap_or(""),
+        )?
+    } else if let Some(connection_string) = &opt.connection_string {
+        odbc_env.connect_with_connection_string(&connection_string)?
+    } else {
+        bail!("Please specify a data source either using --dsn or --connection-string.");
+    };
+    Ok(conn)
 }
 
 fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Result<(), Error> {

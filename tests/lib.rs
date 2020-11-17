@@ -22,6 +22,7 @@ fn nullable_parquet_buffers() {
         .unwrap()
         .args(&[
             "-vvvv",
+            "query",
             out_str,
             "--connection-string",
             "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
@@ -47,7 +48,7 @@ fn foobar_connection_string() {
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&["-vvvv", "-c", "foobar", out_str, "SELECT * FROM [uk-500$]"])
+    cmd.args(&["-vvvv", "query", "-c", "foobar", out_str, "SELECT * FROM [uk-500$]"])
         .assert()
         .failure()
         .code(1);
@@ -71,6 +72,7 @@ fn parameters_in_query() {
         .unwrap()
         .args(&[
             "-vvvv",
+            "query",
             out_str,
             "--connection-string",
             "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",

@@ -1,7 +1,13 @@
-use odbc_api::{handles::CData, Cursor, RowSetBuffer, buffers::{
-        OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
-        OptI32Column, OptI64Column, OptTimestampColumn, TextColumn,
-    }, handles::CDataMut, sys::{Date, Timestamp, ULen}};
+use odbc_api::{
+    buffers::{
+        OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI32Column, OptI64Column,
+        OptTimestampColumn, TextColumn,
+    },
+    handles::CData,
+    handles::CDataMut,
+    sys::{Date, Timestamp, ULen},
+    Cursor, RowSetBuffer,
+};
 use std::{convert::TryInto, ffi::c_void};
 
 #[derive(Clone, Copy, Debug)]
@@ -73,7 +79,6 @@ impl AnyColumnBuffer {
 }
 
 unsafe impl CData for AnyColumnBuffer {
-
     fn cdata_type(&self) -> odbc_api::sys::CDataType {
         self.inner_cdata().cdata_type()
     }
