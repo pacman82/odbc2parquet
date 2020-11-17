@@ -60,11 +60,3 @@ odbc2parquet --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=
 ```
 
 Use `odbc2parquet --help` to see all option.
-
-## Local test setup
-
-Executing `cargo test` requires
-
-* the Microsoft Excel ODBC Drivers.
-* the MS SQL Database started with `docker-compose up`
-* `cargo install parquet` for the parquet binaries `parquet-read` and `parquet-schema`.
