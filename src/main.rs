@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
     let odbc_env = unsafe { Environment::new() }?;
 
-    let mut odbc_conn = if let Some(dsn) = opt.dsn {
+    let odbc_conn = if let Some(dsn) = opt.dsn {
         odbc_env.connect(
             &dsn,
             opt.user.as_deref().unwrap_or(""),
