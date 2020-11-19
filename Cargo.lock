@@ -269,6 +269,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "force-send-sync"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d9188d4e883c054455b2c7950be30c54b11d7400f0a8562b74a4acd79c495b6"
+
+[[package]]
 name = "getrandom"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -506,10 +512,11 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a78c5e3d930adaf186f0b1cabd2143adc24dd9759e2c2cde8ce7521925b3a746"
+checksum = "c6ee1968b32b2cd1046d10a8538f200b6e9e4d6ef4df9bfdbbc53e28cdd43d8b"
 dependencies = [
+ "force-send-sync",
  "log",
  "odbc-sys",
  "thiserror",
