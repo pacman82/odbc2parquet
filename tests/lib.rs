@@ -48,10 +48,17 @@ fn foobar_connection_string() {
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
     let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
-    cmd.args(&["-vvvv", "query", "-c", "foobar", out_str, "SELECT * FROM [uk-500$]"])
-        .assert()
-        .failure()
-        .code(1);
+    cmd.args(&[
+        "-vvvv",
+        "query",
+        "-c",
+        "foobar",
+        out_str,
+        "SELECT * FROM [uk-500$]",
+    ])
+    .assert()
+    .failure()
+    .code(1);
 }
 
 #[test]
