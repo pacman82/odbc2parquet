@@ -26,6 +26,8 @@ enum Command {
         #[structopt(flatten)]
         query_opt: QueryOpt,
     },
+    /// List available drivers and their attributes.
+    ListDrivers,
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
@@ -81,11 +83,20 @@ fn main() -> Result<(), Error> {
         .unwrap();
 
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
-    let odbc_env = unsafe { Environment::new() }?;
+    let mut odbc_env = unsafe { Environment::new() }?;
 
     match opt.command {
         Command::Query { query_opt } => {
             query::query(&odbc_env, &query_opt)?;
+        },
+        Command::ListDrivers => {
+            for driver_info in odbc_env.drivers()? {
+                println!("{}", driver_info.description);
+                for (key, value) in &driver_info.attributes {
+                    println!("\t{}={}", key,value);
+                }
+                println!()
+            }
         }
     }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+* Introduces subcommands. `query` is now required to `query` the database and store contents into parquet.
+* Introduces drivers subcommand.
+
 ## 0.3.0
 
 * Adds support for parameterized queries.
