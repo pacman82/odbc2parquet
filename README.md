@@ -2,7 +2,7 @@
 
 A command line tool to query an ODBC data source and write the result into a parquet file.
 
-* Low memory requirements. Only holds one batch at a time in memory.
+* Small memory footprint. Only holds one batch at a time in memory.
 * Fast. Makes efficient use of ODBC bulk reads, to lower IO overhead.
 * Flexible. Query any ODBC data source you have a driver for. MySQL, MS SQL, Excel, ...
 
@@ -43,24 +43,38 @@ If you have a rust nightly toolchain installed, you can install this tool via ca
 cargo +nightly install odbc2parquet
 ```
 
+You can install `cargo` from here <https://rustup.rs/>.
+
 ## Usage
 
 ### Query using connection string
 
-```shell
-odbc2parquet query --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" out.par  "SELECT * FROM Birthdays"
+```bash
+odbc2parquet query \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+out.par  \
+"SELECT * FROM Birthdays"
 ```
 
 ### Query using data source name
 
-```shell
-odbc2parquet query --dsn my_db --password "<YourStrong@Passw0rd>" --user "SA" out.par1 "SELECT * FROM Birthdays"
+```bash
+odbc2parquet query \
+--dsn my_db \
+--password "<YourStrong@Passw0rd>" \
+--user "SA" \
+out.par1 \
+"SELECT * FROM Birthdays"
 ```
 
 ### Use parameters in query
 
 ```shell
-odbc2parquet query --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" out.par  "SELECT * FROM Birthdays WHERE year > ? and year < ?" 1990 2010
+odbc2parquet query \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+out.par  \
+"SELECT * FROM Birthdays WHERE year > ? and year < ?" \
+1990 2010
 ```
 
 Use `odbc2parquet --help` to see all option.
