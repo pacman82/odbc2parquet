@@ -38,7 +38,7 @@ log = "0.4.11"
 chrono = "0.4.19"
 
 [dev-dependencies]
-assert_cmd = "1.0.1"
+assert_cmd = "1.0.2"
 predicates = "1.0.5"
 tempfile = "3.1.0"
 
