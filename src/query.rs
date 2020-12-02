@@ -99,7 +99,10 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
                 }
                 // ColumnWriter::Int96ColumnWriter(_) => {}
                 // ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
-                _ => panic!("Invalid ColumnWriter type"),
+                _ => panic!(
+                    "Invalid ColumnWriter type. This is not supposed to happen. Please \
+                    open a Bug at https://github.com/pacman82/odbc2parquet/issues."
+                ),
             }
             row_group_writer.close_column(column_writer)?;
             col_index += 1;

@@ -1,9 +1,13 @@
 # Changelog
 
+## 0.4.1
+
+* Introduces subcommand `list-data-sources`.
+
 ## 0.4.0
 
 * Introduces subcommands. `query` is now required to `query` the database and store contents into parquet.
-* Introduces drivers subcommand.
+* Introduces `drivers` subcommand.
 
 ## 0.3.0
 
