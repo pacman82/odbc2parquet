@@ -8,7 +8,7 @@ use parquet::{
     column::writer::ColumnWriterImpl,
     data_type::{ByteArray, DataType},
 };
-use std::{ffi::CStr, convert::TryInto};
+use std::{convert::TryInto, ffi::CStr};
 
 pub struct ParquetBuffer {
     /// Used to hold date values converted from ODBC `Date` types or int or decimals with scale 0.

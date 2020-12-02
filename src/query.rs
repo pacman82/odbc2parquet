@@ -184,7 +184,7 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
             DataType::Char { length } | DataType::Varchar { length } => (
                 ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
                 BufferKind::Text {
-                    max_str_len: length.try_into().unwrap(),
+                    max_str_len: length,
                 },
             ),
             DataType::Bit => (ptb(PhysicalType::BOOLEAN), BufferKind::Bit),
