@@ -3,9 +3,7 @@ use std::{convert::TryInto, fs::File, rc::Rc};
 use anyhow::Error;
 use log::{debug, info};
 use odbc_api::{
-    buffers::AnyColumnView,
-    buffers::BufferKind,
-    buffers::{BufferDescription, ColumnarRowSet},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable,
 };
 use parquet::{
