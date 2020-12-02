@@ -67,6 +67,18 @@ out.par1 \
 "SELECT * FROM Birthdays"
 ```
 
+### List available ODBC drivers
+
+```bash
+odbc2parquet list-drivers
+```
+
+### List available ODBC data sources
+
+```bash
+odbc2parquet list-data-sources
+```
+
 ### Use parameters in query
 
 ```shell

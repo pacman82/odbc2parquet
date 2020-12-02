@@ -1,11 +1,8 @@
-mod odbc_buffer;
 mod parquet_buffer;
 mod query;
 
 use anyhow::{bail, Error};
-use odbc_api::{
-    Connection, Environment,
-};
+use odbc_api::{Connection, Environment};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -28,6 +25,8 @@ enum Command {
     },
     /// List available drivers and their attributes.
     ListDrivers,
+    /// List preconfigured datasources. Useful to find data source name to connect to database.
+    ListDataSources,
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
@@ -88,14 +87,27 @@ fn main() -> Result<(), Error> {
     match opt.command {
         Command::Query { query_opt } => {
             query::query(&odbc_env, &query_opt)?;
-        },
+        }
         Command::ListDrivers => {
             for driver_info in odbc_env.drivers()? {
                 println!("{}", driver_info.description);
                 for (key, value) in &driver_info.attributes {
-                    println!("\t{}={}", key,value);
+                    println!("\t{}={}", key, value);
                 }
                 println!()
+            }
+        }
+        Command::ListDataSources => {
+            let mut first = true;
+            for data_source_info in odbc_env.data_sources()? {
+                // After first item, always place an additional newline in between.
+                if first {
+                    first = false;
+                } else {
+                    println!()
+                }
+                println!("Server name: {}", data_source_info.server_name);
+                println!("Driver: {}", data_source_info.driver);
             }
         }
     }

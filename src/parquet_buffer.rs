@@ -1,11 +1,14 @@
 use anyhow::Error;
 use chrono::NaiveDate;
-use odbc_api::sys::{Date, Timestamp};
+use odbc_api::{
+    sys::{Date, Timestamp},
+    Bit,
+};
 use parquet::{
     column::writer::ColumnWriterImpl,
     data_type::{ByteArray, DataType},
 };
-use std::convert::TryInto;
+use std::{ffi::CStr, convert::TryInto};
 
 pub struct ParquetBuffer {
     /// Used to hold date values converted from ODBC `Date` types or int or decimals with scale 0.
@@ -133,9 +136,12 @@ pub trait IntoPhysical<T> {
     fn into_physical(self) -> T;
 }
 
-impl<T> IntoPhysical<T> for T {
+impl<T> IntoPhysical<T> for &T
+where
+    T: Copy,
+{
     fn into_physical(self) -> T {
-        self
+        *self
     }
 }
 
@@ -162,8 +168,14 @@ impl IntoPhysical<i64> for &Timestamp {
     }
 }
 
-impl IntoPhysical<ByteArray> for &[u8] {
+impl IntoPhysical<bool> for &Bit {
+    fn into_physical(self) -> bool {
+        self.as_bool()
+    }
+}
+
+impl IntoPhysical<ByteArray> for &CStr {
     fn into_physical(self) -> ByteArray {
-        self.to_owned().into()
+        self.to_bytes().to_owned().into()
     }
 }

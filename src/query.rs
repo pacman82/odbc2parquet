@@ -1,8 +1,13 @@
-use std::{fs::File, rc::Rc, convert::TryInto};
+use std::{convert::TryInto, fs::File, rc::Rc};
 
 use anyhow::Error;
 use log::{debug, info};
-use odbc_api::{ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable};
+use odbc_api::{
+    buffers::AnyColumnView,
+    buffers::BufferKind,
+    buffers::{BufferDescription, ColumnarRowSet},
+    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable,
+};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -13,7 +18,7 @@ use parquet::{
     schema::types::Type,
 };
 
-use crate::{QueryOpt, odbc_buffer::{ColumnBufferDescription, OdbcBuffer}, open_connection, parquet_buffer::ParquetBuffer};
+use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
@@ -35,7 +40,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
         let file = File::create(output)?;
-        cursor_to_parquet(cursor, file, *batch_size as usize)?;
+        cursor_to_parquet(cursor, file, *batch_size)?;
     } else {
         eprintln!(
             "Query came back empty (not even a schema has been returned). No file has been created"
@@ -44,7 +49,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     Ok(())
 }
 
-fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Result<(), Error> {
+fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result<(), Error> {
     info!("Batch size set to {}", batch_size);
     // Write properties
     let wpb = WriterProperties::builder();
@@ -52,55 +57,48 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Resu
 
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
     let mut writer = SerializedFileWriter::new(file, parquet_schema, properties)?;
-    let mut odbc_buffer = OdbcBuffer::new(batch_size, buffer_description.iter().copied());
+    let mut odbc_buffer = ColumnarRowSet::new(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
-    let mut pb = ParquetBuffer::new(batch_size);
+    let mut pb = ParquetBuffer::new(batch_size as usize);
     let mut num_batch = 0;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
         let mut row_group_writer = writer.next_row_group()?;
         let mut col_index = 0;
         num_batch += 1;
-        let num_rows = buffer.num_rows_fetched() as usize;
+        let num_rows = buffer.num_rows();
         info!("Fetched batch {} with {} rows.", num_batch, num_rows);
         while let Some(mut column_writer) = row_group_writer.next_column()? {
             pb.set_num_rows_fetched(num_rows);
-            match &mut column_writer {
-                ColumnWriter::BoolColumnWriter(cw) => {
-                    pb.write_optional(cw, buffer.bool_it(col_index))?;
+            let odbc_column = buffer.column(col_index);
+            match (&mut column_writer, odbc_column) {
+                (ColumnWriter::BoolColumnWriter(cw), AnyColumnView::NullableBit(it)) => {
+                    pb.write_optional(cw, it)?;
                 }
-                ColumnWriter::Int32ColumnWriter(cw) => match buffer_description[col_index] {
-                    ColumnBufferDescription::Date => {
-                        pb.write_optional(cw, buffer.date_it(col_index))?
-                    }
-                    ColumnBufferDescription::I32 => {
-                        // Used for Ints and Decimal logical types
-                        pb.write_optional(cw, buffer.i32_it(col_index))?
-                    }
-                    _ => panic!("Mismatched ODBC and Parquet buffer type."),
-                },
-                ColumnWriter::Int64ColumnWriter(cw) => match buffer_description[col_index] {
-                    ColumnBufferDescription::Timestamp => {
-                        pb.write_optional(cw, buffer.timestamp_it(col_index))?
-                    }
-                    ColumnBufferDescription::I64 => {
-                        // Used for Ints and Decimal logical types
-                        pb.write_optional(cw, buffer.i64_it(col_index))?
-                    }
-                    _ => panic!("Mismatched ODBC and Parquet buffer type."),
-                },
-                // parquet::column::writer::ColumnWriter::Int96ColumnWriter(_) => {}
-                ColumnWriter::FloatColumnWriter(cw) => {
-                    pb.write_optional(cw, buffer.f32_it(col_index))?;
+                (ColumnWriter::Int32ColumnWriter(cw), AnyColumnView::NullableDate(it)) => {
+                    pb.write_optional(cw, it)?;
                 }
-                ColumnWriter::DoubleColumnWriter(cw) => {
-                    pb.write_optional(cw, buffer.f64_it(col_index))?;
+                (ColumnWriter::Int32ColumnWriter(cw), AnyColumnView::NullableI32(it)) => {
+                    pb.write_optional(cw, it)?;
                 }
-                ColumnWriter::ByteArrayColumnWriter(cw) => {
-                    pb.write_optional(cw, buffer.text_column_it(col_index))?;
+                (ColumnWriter::Int64ColumnWriter(cw), AnyColumnView::NullableTimestamp(it)) => {
+                    pb.write_optional(cw, it)?;
                 }
-                // parquet::column::writer::ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
+                (ColumnWriter::Int64ColumnWriter(cw), AnyColumnView::NullableI64(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
+                (ColumnWriter::FloatColumnWriter(cw), AnyColumnView::NullableF32(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
+                (ColumnWriter::DoubleColumnWriter(cw), AnyColumnView::NullableF64(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
+                (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
+                // ColumnWriter::Int96ColumnWriter(_) => {}
+                // ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
                 _ => panic!("Invalid ColumnWriter type"),
             }
             row_group_writer.close_column(column_writer)?;
@@ -114,7 +112,7 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: usize) -> Resu
     Ok(())
 }
 
-fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescription>), Error> {
+fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -138,22 +136,20 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescri
 
         let ptb = |physical_type| Type::primitive_type_builder(&name, physical_type);
 
-        let (field_builder, buffer_description) = match cd.data_type {
-            DataType::Double => (ptb(PhysicalType::DOUBLE), ColumnBufferDescription::F64),
-            DataType::Float | DataType::Real => {
-                (ptb(PhysicalType::FLOAT), ColumnBufferDescription::F32)
-            }
+        let (field_builder, buffer_kind) = match cd.data_type {
+            DataType::Double => (ptb(PhysicalType::DOUBLE), BufferKind::F64),
+            DataType::Float | DataType::Real => (ptb(PhysicalType::FLOAT), BufferKind::F32),
             DataType::SmallInt => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
-                ColumnBufferDescription::I32,
+                BufferKind::I32,
             ),
             DataType::Integer => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_32),
-                ColumnBufferDescription::I32,
+                BufferKind::I32,
             ),
             DataType::Date => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
-                ColumnBufferDescription::Date,
+                BufferKind::Date,
             ),
             DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
                 if scale == 0 && precision < 10 =>
@@ -163,7 +159,7 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescri
                         .with_logical_type(LogicalType::DECIMAL)
                         .with_precision(precision.try_into().unwrap())
                         .with_scale(scale.try_into().unwrap()),
-                    ColumnBufferDescription::I32,
+                    BufferKind::I32,
                 )
             }
             DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
@@ -174,27 +170,27 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescri
                         .with_logical_type(LogicalType::DECIMAL)
                         .with_precision(precision.try_into().unwrap())
                         .with_scale(scale.try_into().unwrap()),
-                    ColumnBufferDescription::I64,
+                    BufferKind::I64,
                 )
             }
             DataType::Timestamp { .. } => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
-                ColumnBufferDescription::Timestamp,
+                BufferKind::Timestamp,
             ),
             DataType::Bigint => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
-                ColumnBufferDescription::I64,
+                BufferKind::I64,
             ),
             DataType::Char { length } | DataType::Varchar { length } => (
                 ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                ColumnBufferDescription::Text {
+                BufferKind::Text {
                     max_str_len: length.try_into().unwrap(),
                 },
             ),
-            DataType::Bit => (ptb(PhysicalType::BOOLEAN), ColumnBufferDescription::Bit),
+            DataType::Bit => (ptb(PhysicalType::BOOLEAN), BufferKind::Bit),
             DataType::Tinyint => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
-                ColumnBufferDescription::I32,
+                BufferKind::I32,
             ),
             DataType::Unknown
             | DataType::Numeric { .. }
@@ -204,9 +200,14 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<ColumnBufferDescri
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (
                     ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                    ColumnBufferDescription::Text { max_str_len },
+                    BufferKind::Text { max_str_len },
                 )
             }
+        };
+
+        let buffer_description = BufferDescription {
+            kind: buffer_kind,
+            nullable: true,
         };
 
         debug!(
