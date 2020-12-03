@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+* Fix: Tool could panic if too many warnings were generated at once.
+
 ## 0.4.1
 
 * Introduces subcommand `list-data-sources`.
