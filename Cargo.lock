@@ -79,6 +79,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoi"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "616896e05fc0e2649463a93a15183c6a16bf03413a7af88ef1285ddedfa9cda5"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -531,12 +540,14 @@ checksum = "fdf596b3d7cc5397407e0d839d171b3d50f19a3fc08235b2911c083554eb924d"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "atoi",
  "chrono",
  "log",
+ "num-bigint",
  "odbc-api",
  "parquet",
  "predicates",

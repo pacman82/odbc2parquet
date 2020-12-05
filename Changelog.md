@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+
+* SQL Numeric and Decimal are now always mapped to the parquet Decimal independent of the precision or scale. The 32Bit or 62Bit "physical" Integer epresentation is choosen for SQL types with Scale Null and a precision smaller ten or 19, otherwise the "physical" type is to be a fixed size byte array.
+
 ## 0.4.2
 
 * Fix: Tool could panic if too many warnings were generated at once.
