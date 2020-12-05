@@ -54,7 +54,7 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
     let properties = Rc::new(wpb.build());
 
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
-    let mut writer = SerializedFileWriter::new(file, parquet_schema, properties)?;
+    let mut writer = SerializedFileWriter::new(file, parquet_schema.clone(), properties)?;
     let mut odbc_buffer = ColumnarRowSet::new(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
@@ -95,8 +95,10 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
                 (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
                     pb.write_optional(cw, it)?;
                 }
+                (ColumnWriter::FixedLenByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
+                    pb.write_decimal(cw, it, &*parquet_schema.get_fields()[col_index])?;
+                }
                 // ColumnWriter::Int96ColumnWriter(_) => {}
-                // ColumnWriter::FixedLenByteArrayColumnWriter(_) => {}
                 _ => panic!(
                     "Invalid ColumnWriter type. This is not supposed to happen. Please \
                     open a Bug at https://github.com/pacman82/odbc2parquet/issues."
@@ -174,6 +176,23 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
                     BufferKind::I64,
                 )
             }
+            DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
+                // Length of the two's complement.
+                let num_binary_digits = precision as f64 * 10f64.log2();
+                // Plus one bit for the sign (+/-)
+                let length_in_bits = num_binary_digits + 1.0;
+                let length_in_bytes = (length_in_bits / 8.0).ceil() as i32;
+                (
+                    ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
+                        .with_length(dbg!(length_in_bytes))
+                        .with_logical_type(LogicalType::DECIMAL)
+                        .with_precision(precision.try_into().unwrap())
+                        .with_scale(scale.try_into().unwrap()),
+                    BufferKind::Text {
+                        max_str_len: cd.data_type.column_size(),
+                    },
+                )
+            }
             DataType::Timestamp { .. } => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
                 BufferKind::Timestamp,
@@ -193,11 +212,7 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
                 BufferKind::I32,
             ),
-            DataType::Unknown
-            | DataType::Numeric { .. }
-            | DataType::Decimal { .. }
-            | DataType::Time { .. }
-            | DataType::Other { .. } => {
+            DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
                 let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
                 (
                     ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),

@@ -1,12 +1,15 @@
 use anyhow::Error;
 use chrono::NaiveDate;
+use num_bigint::BigInt;
 use odbc_api::{
     sys::{Date, Timestamp},
     Bit,
 };
 use parquet::{
+    basic::Type as PhysicalType,
     column::writer::ColumnWriterImpl,
-    data_type::{ByteArray, DataType},
+    data_type::{ByteArray, DataType, FixedLenByteArrayType},
+    schema::types::Type,
 };
 use std::{convert::TryInto, ffi::CStr};
 
@@ -46,8 +49,88 @@ impl ParquetBuffer {
         self.values_bool.resize(num_rows, false);
     }
 
-    /// In case the ODBC C Type matches the physical Parquet type, we can write the buffer directly
-    /// without transforming. The definition levels still require transformation, though.
+    fn to_twos_complement(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
+        use atoi::FromRadix10Signed;
+
+        digits.clear();
+        digits.extend(decimal.to_bytes().iter().filter(|&&c| c != b'.'));
+        // Extracts all bytes up to the decimal point
+        let (num, _consumed) = BigInt::from_radix_10_signed(&digits);
+        let mut out = num.to_signed_bytes_be();
+
+        let num_leading_bytes = length - out.len();
+        let fill: u8 = if num.sign() == num_bigint::Sign::Minus {
+            255
+        } else {
+            0
+        };
+        out.resize(length, fill);
+        out.rotate_right(num_leading_bytes);
+        out.into()
+    }
+
+    pub fn write_decimal<'o>(
+        &mut self,
+        cw: &mut ColumnWriterImpl<FixedLenByteArrayType>,
+        source: impl Iterator<Item = Option<&'o CStr>>,
+        primitive_type: &Type,
+    ) -> Result<(), Error> {
+        let (&length, &precision) = match primitive_type {
+            Type::PrimitiveType {
+                basic_info: _,
+                physical_type: pt,
+                type_length,
+                scale: _,
+                precision,
+            } => {
+                debug_assert_eq!(*pt, PhysicalType::FIXED_LEN_BYTE_ARRAY);
+                (type_length, precision)
+            }
+            Type::GroupType {
+                basic_info: _,
+                fields: _,
+            } => panic!("Column must be a primitive type"),
+        };
+
+        let precision: usize = precision.try_into().unwrap();
+
+        // This vec is going to hold the digits with sign, but without the decimal point. It is
+        // allocated once and reused for each value.
+        let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
+
+        self.write_optional_any(cw, source, |item| {
+            Self::to_twos_complement(item, length.try_into().unwrap(), &mut digits)
+        })
+    }
+
+    fn write_optional_any<T, S>(
+        &mut self,
+        cw: &mut ColumnWriterImpl<T>,
+        source: impl Iterator<Item = Option<S>>,
+        mut into_physical: impl FnMut(S) -> T::T,
+    ) -> Result<(), Error>
+    where
+        T: DataType,
+        T::T: BufferedDataType,
+    {
+        let (values, def_levels) = T::T::mut_buf(self);
+        let mut values_index = 0;
+        for (item, definition_level) in source.zip(&mut def_levels.iter_mut()) {
+            *definition_level = if let Some(value) = item {
+                values[values_index] = into_physical(value);
+                values_index += 1;
+                1
+            } else {
+                0
+            }
+        }
+        cw.write_batch(values, Some(&def_levels), None)?;
+        Ok(())
+    }
+
+    /// Write to a parquet buffer using an iterator over optional source items. A default
+    /// transformation, defined via the `IntoPhysical` trait is used to transform the items into
+    /// buffer elements.
     pub fn write_optional<T, S>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
@@ -58,19 +141,7 @@ impl ParquetBuffer {
         T::T: BufferedDataType,
         S: IntoPhysical<T::T>,
     {
-        let (values, def_levels) = T::T::mut_buf(self);
-        let mut values_index = 0;
-        for (item, definition_level) in source.zip(&mut def_levels.iter_mut()) {
-            *definition_level = if let Some(value) = item {
-                values[values_index] = value.into_physical();
-                values_index += 1;
-                1
-            } else {
-                0
-            }
-        }
-        cw.write_batch(values, Some(&def_levels), None)?;
-        Ok(())
+        self.write_optional_any(cw, source, |s| s.into_physical())
     }
 }
 
