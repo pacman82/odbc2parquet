@@ -49,12 +49,29 @@ impl ParquetBuffer {
         self.values_bool.resize(num_rows, false);
     }
 
-    fn to_twos_complement(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
+    /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
+    fn to_twos_complement_i128(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
         digits.extend(decimal.to_bytes().iter().filter(|&&c| c != b'.'));
-        // Extracts all bytes up to the decimal point
+
+        let (num, _consumed) = i128::from_radix_10_signed(&digits);
+
+        num.to_be_bytes()[(16 - length)..].to_owned().into()
+    }
+
+    // Use num big int to calculate the two complements of abitrary size
+    fn to_twos_complement_big_int(
+        decimal: &CStr,
+        length: usize,
+        digits: &mut Vec<u8>,
+    ) -> ByteArray {
+        use atoi::FromRadix10Signed;
+
+        digits.clear();
+        digits.extend(decimal.to_bytes().iter().filter(|&&c| c != b'.'));
+
         let (num, _consumed) = BigInt::from_radix_10_signed(&digits);
         let mut out = num.to_signed_bytes_be();
 
@@ -98,9 +115,16 @@ impl ParquetBuffer {
         // allocated once and reused for each value.
         let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
 
-        self.write_optional_any(cw, source, |item| {
-            Self::to_twos_complement(item, length.try_into().unwrap(), &mut digits)
-        })
+        if precision < 39 {
+            self.write_optional_any(cw, source, |item| {
+                Self::to_twos_complement_i128(item, length.try_into().unwrap(), &mut digits)
+            })
+        } else {
+            // The big int implementation is slow, let's use it only if we have to
+            self.write_optional_any(cw, source, |item| {
+                Self::to_twos_complement_big_int(item, length.try_into().unwrap(), &mut digits)
+            })
+        }
     }
 
     fn write_optional_any<T, S>(
