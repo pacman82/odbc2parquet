@@ -201,19 +201,22 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
                 BufferKind::I64,
             ),
-            DataType::Char { length } | DataType::Varchar { length } => (
-                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                BufferKind::Text {
-                    max_str_len: length,
-                },
-            ),
             DataType::Bit => (ptb(PhysicalType::BOOLEAN), BufferKind::Bit),
             DataType::Tinyint => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
                 BufferKind::I32,
             ),
-            DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-                let max_str_len = cursor.col_display_size(index.try_into().unwrap())? as usize;
+            DataType::Char { .. }
+            | DataType::Varchar { .. }
+            | DataType::WVarchar { .. }
+            | DataType::Unknown
+            | DataType::Time { .. }
+            | DataType::Other { .. } => {
+                let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
+                    len
+                } else {
+                    cursor.col_display_size(index.try_into().unwrap())? as usize
+                };
                 (
                     ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
                     BufferKind::Text { max_str_len },
