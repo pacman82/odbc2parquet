@@ -2,6 +2,8 @@ use assert_cmd::Command;
 use predicates::ord::eq;
 use tempfile::tempdir;
 
+const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+
 #[test]
 fn nullable_parquet_buffers() {
     let expected = "\
@@ -25,7 +27,7 @@ fn nullable_parquet_buffers() {
             "query",
             out_str,
             "--connection-string",
-            "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
+            MSSQL,
             "SELECT title,year from Movies order by year",
         ])
         .assert()
@@ -82,7 +84,7 @@ fn parameters_in_query() {
             "query",
             out_str,
             "--connection-string",
-            "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
+            MSSQL,
             "SELECT title,year from Movies where year=?",
             "1968"
         ])
@@ -119,7 +121,7 @@ fn query_sales() {
             "query",
             out_str,
             "--connection-string",
-            "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
+            MSSQL,
             "SELECT day, time, product, price FROM Sales ORDER BY id",
         ])
         .assert()

@@ -12,8 +12,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 
 | ODBC SQL Type         | Parquet Logical Type   |
 |-----------------------|------------------------|
-| Decimal(p=0, s=0) | Decimal(p,s)           |
-| Numeric(p=0, s=0) | Decimal(p,s)           |
+| Decimal(p, s)         | Decimal(p,s)           |
+| Numeric(p, s)         | Decimal(p,s)           |
 | Bit                   | Boolean                |
 | Double                | Double                 |
 | Real                  | Float                  |
@@ -26,7 +26,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Timestamp             | Timestamp Microseconds |
 | All others            | Utf8 Byte Array        |
 
-`p` is short for `precision`. `s` is short for `scale`. Intervals are inclusive the last element.
+`p` is short for `precision`. `s` is short for `scale`.
+
 ## Installation
 
 ### Download binary from GitHub
