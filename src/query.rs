@@ -1,7 +1,7 @@
 use std::{convert::TryInto, fs::File, rc::Rc};
 
 use anyhow::Error;
-use log::{debug, info};
+use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable,
@@ -55,7 +55,8 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
 
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
     let mut writer = SerializedFileWriter::new(file, parquet_schema.clone(), properties)?;
-    let mut odbc_buffer = ColumnarRowSet::new(batch_size, buffer_description.iter().copied());
+    let mut odbc_buffer =
+        ColumnarRowSet::with_column_indices(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
     let mut pb = ParquetBuffer::new(batch_size as usize);
@@ -115,7 +116,7 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
     Ok(())
 }
 
-fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>), Error> {
+fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<(u16, BufferDescription)>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -154,28 +155,34 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
                 BufferKind::Date,
             ),
-            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
-                if scale == 0 && precision < 10 =>
-            {
-                (
-                    ptb(PhysicalType::INT32)
-                        .with_logical_type(LogicalType::DECIMAL)
-                        .with_precision(precision.try_into().unwrap())
-                        .with_scale(scale.try_into().unwrap()),
-                    BufferKind::I32,
-                )
+            DataType::Decimal {
+                scale: 0,
+                precision: p @ 0..=9,
             }
-            DataType::Decimal { scale, precision } | DataType::Numeric { scale, precision }
-                if scale == 0 && precision < 19 =>
-            {
-                (
-                    ptb(PhysicalType::INT64)
-                        .with_logical_type(LogicalType::DECIMAL)
-                        .with_precision(precision.try_into().unwrap())
-                        .with_scale(scale.try_into().unwrap()),
-                    BufferKind::I64,
-                )
+            | DataType::Numeric {
+                scale: 0,
+                precision: p @ 0..=9,
+            } => (
+                ptb(PhysicalType::INT32)
+                    .with_logical_type(LogicalType::DECIMAL)
+                    .with_precision(p as i32)
+                    .with_scale(0),
+                BufferKind::I32,
+            ),
+            DataType::Decimal {
+                scale: 0,
+                precision: p @ 0..=18,
             }
+            | DataType::Numeric {
+                scale: 0,
+                precision: p @ 0..=18,
+            } => (
+                ptb(PhysicalType::INT64)
+                    .with_logical_type(LogicalType::DECIMAL)
+                    .with_precision(p as i32)
+                    .with_scale(0),
+                BufferKind::I64,
+            ),
             DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
                 // Length of the two's complement.
                 let num_binary_digits = precision as f64 * 10f64.log2();
@@ -239,9 +246,19 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<BufferDescription>
             Nullable::NoNulls => Repetition::REQUIRED,
         };
 
-        let field_builder = field_builder.with_repetition(repetition);
-        fields.push(Rc::new(field_builder.build()?));
-        odbc_buffer_desc.push(buffer_description);
+        if matches!(buffer_kind, BufferKind::Text { max_str_len: 0 }) {
+            warn!(
+                "Ignoring column '{}' with index {}. Driver reported a display length of 0. \
+              This can happen for types without a fixed size limit. If you feel this should be \
+              supported open an issue (or PR) at \
+              <https://github.com/pacman82/odbc2parquet/issues>.",
+                name, index
+            );
+        } else {
+            let field_builder = field_builder.with_repetition(repetition);
+            fields.push(Rc::new(field_builder.build()?));
+            odbc_buffer_desc.push((index as u16, buffer_description));
+        }
     }
 
     let schema = Type::group_type_builder("schema")
