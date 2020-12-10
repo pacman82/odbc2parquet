@@ -62,11 +62,7 @@ impl ParquetBuffer {
     }
 
     // Use num big int to calculate the two complements of arbitrary size
-    fn twos_complement_big_int(
-        decimal: &CStr,
-        length: usize,
-        digits: &mut Vec<u8>,
-    ) -> ByteArray {
+    fn twos_complement_big_int(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();

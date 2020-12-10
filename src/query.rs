@@ -19,7 +19,7 @@ use parquet::{
         properties::WriterProperties,
         writer::{FileWriter, RowGroupWriter, SerializedFileWriter},
     },
-    schema::types::Type,
+    schema::types::{Type, TypePtr},
 };
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
@@ -126,7 +126,7 @@ fn cursor_to_parquet(
     Ok(())
 }
 
-fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<(u16, BufferDescription)>), Error> {
+fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescription)>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();

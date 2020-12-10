@@ -169,11 +169,17 @@ fn split_files() {
     // Use the parquet-read tool to verify the output. It can be installed with
     // `cargo install parquet`.
     let mut cmd = Command::new("parquet-read");
-    cmd.arg(out_dir.path().join("out_1.par").to_str().unwrap()).assert().success();
+    cmd.arg(out_dir.path().join("out_1.par").to_str().unwrap())
+        .assert()
+        .success();
 
     let mut cmd = Command::new("parquet-read");
-    cmd.arg(out_dir.path().join("out_2.par").to_str().unwrap()).assert().success();
+    cmd.arg(out_dir.path().join("out_2.par").to_str().unwrap())
+        .assert()
+        .success();
 
     let mut cmd = Command::new("parquet-read");
-    cmd.arg(out_dir.path().join("out_3.par").to_str().unwrap()).assert().success();
+    cmd.arg(out_dir.path().join("out_3.par").to_str().unwrap())
+        .assert()
+        .success();
 }
