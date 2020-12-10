@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+* Introduces option `--batches-per-file` in order to define an upper limit for batches in a single output file and split output across multiple files.
+
 ## 0.5.0
 
 * Fix: Microsoft SQL Server user defined types with unbounded lengths have been mapped to Text columns with length zero. This caused at least one warning per row. These columns are now ignored at the beginning, causing exactly one warning. They also do no longer appear in the output schema.
