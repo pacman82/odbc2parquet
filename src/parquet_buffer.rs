@@ -50,7 +50,7 @@ impl ParquetBuffer {
     }
 
     /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
-    fn to_twos_complement_i128(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
+    fn twos_complement_i128(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
@@ -61,8 +61,8 @@ impl ParquetBuffer {
         num.to_be_bytes()[(16 - length)..].to_owned().into()
     }
 
-    // Use num big int to calculate the two complements of abitrary size
-    fn to_twos_complement_big_int(
+    // Use num big int to calculate the two complements of arbitrary size
+    fn twos_complement_big_int(
         decimal: &CStr,
         length: usize,
         digits: &mut Vec<u8>,
@@ -117,12 +117,12 @@ impl ParquetBuffer {
 
         if precision < 39 {
             self.write_optional_any(cw, source, |item| {
-                Self::to_twos_complement_i128(item, length.try_into().unwrap(), &mut digits)
+                Self::twos_complement_i128(item, length.try_into().unwrap(), &mut digits)
             })
         } else {
             // The big int implementation is slow, let's use it only if we have to
             self.write_optional_any(cw, source, |item| {
-                Self::to_twos_complement_big_int(item, length.try_into().unwrap(), &mut digits)
+                Self::twos_complement_big_int(item, length.try_into().unwrap(), &mut digits)
             })
         }
     }

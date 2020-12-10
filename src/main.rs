@@ -25,7 +25,7 @@ enum Command {
     },
     /// List available drivers and their attributes.
     ListDrivers,
-    /// List preconfigured datasources. Useful to find data source name to connect to database.
+    /// List preconfigured data sources. Useful to find data source name to connect to database.
     ListDataSources,
 }
 
@@ -58,6 +58,13 @@ pub struct QueryOpt {
     /// in memory at once.
     #[structopt(long, default_value = "100000")]
     batch_size: u32,
+    /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
+    /// single output file is produces. Otherwise each output file is closed after the maximum
+    /// number of batches have been written and a new one with the suffix `_n` is started. There n
+    /// is the of the produced output file starting at one for the first one. E.g. `out_1.par`,
+    /// `out_2.par`, ...
+    #[structopt(long, default_value = "0")]
+    batches_per_file: u32,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as

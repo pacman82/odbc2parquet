@@ -1,6 +1,11 @@
-use std::{convert::TryInto, fs::File, rc::Rc};
+use std::{
+    convert::TryInto,
+    fs::File,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
@@ -9,9 +14,10 @@ use odbc_api::{
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
+    errors::ParquetError,
     file::{
         properties::WriterProperties,
-        writer::{FileWriter, SerializedFileWriter},
+        writer::{FileWriter, RowGroupWriter, SerializedFileWriter},
     },
     schema::types::Type,
 };
@@ -26,6 +32,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         parameters,
         query,
         batch_size,
+        batches_per_file,
     } = opt;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
@@ -37,8 +44,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     let odbc_conn = open_connection(&environment, connect_opts)?;
 
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
-        let file = File::create(output)?;
-        cursor_to_parquet(cursor, file, *batch_size)?;
+        cursor_to_parquet(cursor, output, *batch_size, *batches_per_file)?;
     } else {
         eprintln!(
             "Query came back empty (not even a schema has been returned). No file has been created"
@@ -47,14 +53,15 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     Ok(())
 }
 
-fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result<(), Error> {
+fn cursor_to_parquet(
+    cursor: impl Cursor,
+    path: &Path,
+    batch_size: u32,
+    batches_per_file: u32,
+) -> Result<(), Error> {
     info!("Batch size set to {}", batch_size);
-    // Write properties
-    let wpb = WriterProperties::builder();
-    let properties = Rc::new(wpb.build());
 
     let (parquet_schema, buffer_description) = make_schema(&cursor)?;
-    let mut writer = SerializedFileWriter::new(file, parquet_schema.clone(), properties)?;
     let mut odbc_buffer =
         ColumnarRowSet::with_column_indices(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
@@ -62,8 +69,11 @@ fn cursor_to_parquet(cursor: impl Cursor, file: File, batch_size: u32) -> Result
     let mut pb = ParquetBuffer::new(batch_size as usize);
     let mut num_batch = 0;
 
+    let mut writer =
+        ParquetWriter::new(path, batch_size, parquet_schema.clone(), batches_per_file)?;
+
     while let Some(buffer) = row_set_cursor.fetch()? {
-        let mut row_group_writer = writer.next_row_group()?;
+        let mut row_group_writer = writer.next_row_group(num_batch)?;
         let mut col_index = 0;
         num_batch += 1;
         let num_rows = buffer.num_rows();
@@ -266,4 +276,84 @@ fn make_schema(cursor: &impl Cursor) -> Result<(Rc<Type>, Vec<(u16, BufferDescri
         .build()?;
 
     Ok((Rc::new(schema), odbc_buffer_desc))
+}
+
+/// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
+/// batches is reached.
+struct ParquetWriter<'p> {
+    path: &'p Path,
+    schema: Rc<Type>,
+    properties: Rc<WriterProperties>,
+    writer: SerializedFileWriter<File>,
+    batches_per_file: u32,
+}
+
+impl<'p> ParquetWriter<'p> {
+    pub fn new(
+        path: &'p Path,
+        batch_size: u32,
+        schema: Rc<Type>,
+        batches_per_file: u32,
+    ) -> Result<Self, Error> {
+        // Write properties
+        // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
+        // be on the safe side.
+        let wpb = WriterProperties::builder().set_write_batch_size(batch_size as usize);
+        let properties = Rc::new(wpb.build());
+        let file = if batches_per_file == 0 {
+            File::create(path)?
+        } else {
+            File::create(Self::path_with_suffix(path, "_1")?)?
+        };
+        let writer = SerializedFileWriter::new(file, schema.clone(), properties.clone())?;
+
+        Ok(Self {
+            path,
+            schema,
+            properties,
+            writer,
+            batches_per_file,
+        })
+    }
+
+    /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
+    /// previous one is reached.
+    ///
+    /// # Parameters
+    ///
+    /// * `num_batch`: Zero based num batch index
+    pub fn next_row_group(&mut self, num_batch: u32) -> Result<Box<dyn RowGroupWriter>, Error> {
+        // Check if we need to write the next batch into a new file
+        if num_batch != 0 && self.batches_per_file != 0 && num_batch % self.batches_per_file == 0 {
+            self.writer.close()?;
+            let suffix = format!("_{}", (num_batch / self.batches_per_file) + 1);
+            let path = Self::path_with_suffix(self.path, &suffix)?;
+            let file = File::create(path)?;
+            self.writer =
+                SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
+        }
+        Ok(self.writer.next_row_group()?)
+    }
+
+    fn close_row_group(
+        &mut self,
+        row_group_writer: Box<dyn RowGroupWriter>,
+    ) -> Result<(), ParquetError> {
+        self.writer.close_row_group(row_group_writer)
+    }
+
+    pub fn close(&mut self) -> Result<(), ParquetError> {
+        self.writer.close()
+    }
+
+    fn path_with_suffix(path: &Path, suffix: &str) -> Result<PathBuf, Error> {
+        let mut stem = path
+            .file_stem()
+            .ok_or_else(|| format_err!("Output needs To have a file stem."))?
+            .to_owned();
+        stem.push(suffix);
+        let mut path_with_suffix = path.with_file_name(stem);
+        path_with_suffix = path_with_suffix.with_extension("par");
+        Ok(path_with_suffix)
+    }
 }
