@@ -67,7 +67,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Insall latests rust toolchain
+      - name: Install latests rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
@@ -84,3 +84,9 @@ jobs:
           file: target/release/odbc2parquet
           asset_name: odbc2parquet-osx
           tag: ${{ github.ref }}
+
+      - name: Publish to cargo
+        env:
+          CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: |
+          cargo publish --token "${CARGO_TOKEN}"
