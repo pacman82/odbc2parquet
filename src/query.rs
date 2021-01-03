@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
-    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable,
+    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullability,
 };
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -251,9 +251,9 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
             index, buffer_description
         );
 
-        let repetition = match cd.nullable {
-            Nullable::Nullable | Nullable::Unknown => Repetition::OPTIONAL,
-            Nullable::NoNulls => Repetition::REQUIRED,
+        let repetition = match cd.nullability {
+            Nullability::Nullable | Nullability::Unknown => Repetition::OPTIONAL,
+            Nullability::NoNulls => Repetition::REQUIRED,
         };
 
         if matches!(buffer_kind, BufferKind::Text { max_str_len: 0 }) {
