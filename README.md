@@ -91,3 +91,7 @@ out.par  \
 ```
 
 Use `odbc2parquet --help` to see all option.
+
+## Links
+
+Thanks to @samaguire there is a script for Powershell users which helps you to download a bunch of tables to a folder: <https://github.com/samaguire/odbc2parquet-PSscripts>
