@@ -101,10 +101,10 @@ fn parameters_in_query() {
 #[test]
 fn query_sales() {
     let expected_values = "\
-        {day: 2020-09-09 +00:00, time: \"00:05:34.0000000\", product: 54, price: 9.99}\n\
-        {day: 2020-09-10 +00:00, time: \"12:05:32.0000000\", product: 54, price: 9.99}\n\
-        {day: 2020-09-10 +00:00, time: \"14:05:32.0000000\", product: 34, price: 2.00}\n\
-        {day: 2020-09-11 +00:00, time: \"06:05:12.0000000\", product: 12, price: -1.50}\n\
+        {day: 2020-09-09 +00:00, time: \"00:05:34\", product: 54, price: 9.99}\n\
+        {day: 2020-09-10 +00:00, time: \"12:05:32\", product: 54, price: 9.99}\n\
+        {day: 2020-09-10 +00:00, time: \"14:05:32\", product: 34, price: 2.00}\n\
+        {day: 2020-09-11 +00:00, time: \"06:05:12\", product: 12, price: -1.50}\n\
     ";
 
     // A temporary directory, to be removed at the end of the test.

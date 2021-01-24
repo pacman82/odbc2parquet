@@ -27,7 +27,7 @@ CREATE TABLE Sales
 (
     id INT PRIMARY KEY,
     day DATE,
-    time TIME,
+    time TIME(0),
     product INT,
     price DECIMAL(10,2)
 )
