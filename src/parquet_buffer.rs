@@ -8,7 +8,7 @@ use odbc_api::{
 use parquet::{
     basic::Type as PhysicalType,
     column::writer::ColumnWriterImpl,
-    data_type::{ByteArray, DataType, FixedLenByteArrayType},
+    data_type::{ByteArray, DataType, FixedLenByteArrayType, Int64Type},
     schema::types::Type,
 };
 use std::{convert::TryInto, ffi::CStr};
@@ -82,6 +82,47 @@ impl ParquetBuffer {
         out.into()
     }
 
+    fn timestamp_nanos(ts: &Timestamp) -> i64 {
+        let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
+            .and_hms_nano(
+                ts.hour as u32,
+                ts.minute as u32,
+                ts.second as u32,
+                ts.fraction as u32,
+            );
+        datetime.timestamp_nanos()
+    }
+
+    pub fn write_timestamp<'o>(
+        &mut self,
+        cw: &mut ColumnWriterImpl<Int64Type>,
+        source: impl Iterator<Item = Option<&'o Timestamp>>,
+        primitive_type: &Type,
+    ) -> Result<(), Error> {
+        let &precision = match primitive_type {
+            Type::PrimitiveType {
+                basic_info: _,
+                physical_type: pt,
+                type_length: _,
+                scale: _,
+                precision,
+            } => {
+                debug_assert_eq!(*pt, PhysicalType::INT64);
+                precision
+            }
+            Type::GroupType { .. } => panic!("Column must be a primitive type"),
+        };
+
+        if precision <= 3 {
+            // Milliseconds precision
+            self.write_optional_any(cw, source, |ts| Self::timestamp_nanos(ts) / 1_000_000)?;
+        } else {
+            // Microseconds precision
+            self.write_optional_any(cw, source, |ts| Self::timestamp_nanos(ts) / 1_000)?;
+        }
+        Ok(())
+    }
+
     pub fn write_decimal<'o>(
         &mut self,
         cw: &mut ColumnWriterImpl<FixedLenByteArrayType>,
@@ -99,10 +140,7 @@ impl ParquetBuffer {
                 debug_assert_eq!(*pt, PhysicalType::FIXED_LEN_BYTE_ARRAY);
                 (type_length, precision)
             }
-            Type::GroupType {
-                basic_info: _,
-                fields: _,
-            } => panic!("Column must be a primitive type"),
+            Type::GroupType { .. } => panic!("Column must be a primitive type"),
         };
 
         let precision: usize = precision.try_into().unwrap();
@@ -243,19 +281,6 @@ impl IntoPhysical<i32> for &Date {
         let date = NaiveDate::from_ymd(self.year as i32, self.month as u32, self.day as u32);
         let duration = date.signed_duration_since(unix_epoch);
         duration.num_days().try_into().unwrap()
-    }
-}
-
-impl IntoPhysical<i64> for &Timestamp {
-    fn into_physical(self) -> i64 {
-        let datetime = NaiveDate::from_ymd(self.year as i32, self.month as u32, self.day as u32)
-            .and_hms_nano(
-                self.hour as u32,
-                self.minute as u32,
-                self.second as u32,
-                self.fraction as u32,
-            );
-        datetime.timestamp_nanos() / 1000
     }
 }
 

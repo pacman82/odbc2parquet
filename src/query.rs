@@ -92,7 +92,7 @@ fn cursor_to_parquet(
                     pb.write_optional(cw, it)?;
                 }
                 (ColumnWriter::Int64ColumnWriter(cw), AnyColumnView::NullableTimestamp(it)) => {
-                    pb.write_optional(cw, it)?;
+                    pb.write_timestamp(cw, it, &*parquet_schema.get_fields()[col_index])?;
                 }
                 (ColumnWriter::Int64ColumnWriter(cw), AnyColumnView::NullableI64(it)) => {
                     pb.write_optional(cw, it)?;
@@ -210,6 +210,10 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
                     },
                 )
             }
+            DataType::Timestamp { precision: 0..=3 } => (
+                ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MILLIS),
+                BufferKind::Timestamp,
+            ),
             DataType::Timestamp { .. } => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
                 BufferKind::Timestamp,

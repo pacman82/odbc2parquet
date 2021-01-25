@@ -138,6 +138,68 @@ fn query_sales() {
 }
 
 #[test]
+fn query_all_the_types() {
+    let expected_values = "{\
+        my_char: \"abcde\", \
+        my_numeric: 0.12, \
+        my_decimal: 0.12, \
+        my_integer: 42, \
+        my_smallint: 42, \
+        my_float: 1.23, \
+        my_real: 1.23, \
+        my_double: 1.23, \
+        my_varchar: \"Hello, World!\", \
+        my_date: 2020-09-16 +00:00, \
+        my_time: \"03:54:12.0000000\", \
+        my_timestamp: 2020-09-16 03:54:12 +00:00\
+    }\n";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let query = "SELECT \
+        my_char, \
+        my_numeric, \
+        my_decimal, \
+        my_integer, \
+        my_smallint, \
+        my_float, \
+        my_real, \
+        my_double, \
+        my_varchar, \
+        my_date, \
+        my_time, \
+        my_timestamp \
+        FROM AllTheTypes;";
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+}
+
+#[test]
 fn split_files() {
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();

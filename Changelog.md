@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+* Maps ODBC `Timestamp`s with precision <= 3 to parquet `TIMESTAMP_MILLISECONDS`.
+* Updated dependencies
+
 ## 0.5.1
 
 * Introduces option `--batches-per-file` in order to define an upper limit for batches in a single output file and split output across multiple files.
