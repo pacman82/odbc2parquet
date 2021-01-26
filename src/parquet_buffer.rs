@@ -8,20 +8,20 @@ use odbc_api::{
 use parquet::{
     basic::Type as PhysicalType,
     column::writer::ColumnWriterImpl,
-    data_type::{ByteArray, DataType, FixedLenByteArrayType, Int64Type},
+    data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
     schema::types::Type,
 };
 use std::{convert::TryInto, ffi::CStr};
 
+/// Holds preallocated buffers for every possible physical parquet type. This way we do not need to
+/// reallocate them.
 pub struct ParquetBuffer {
-    /// Used to hold date values converted from ODBC `Date` types or int or decimals with scale 0.
     pub values_i32: Vec<i32>,
-    /// Used to hold timestamp values converted from ODBC `Timestamp` types or int or decimal with
-    /// scale 0.
     pub values_i64: Vec<i64>,
     pub values_f32: Vec<f32>,
     pub values_f64: Vec<f64>,
     pub values_bytes_array: Vec<ByteArray>,
+    pub values_fixed_bytes_array: Vec<FixedLenByteArray>,
     pub values_bool: Vec<bool>,
     pub def_levels: Vec<i16>,
 }
@@ -34,6 +34,7 @@ impl ParquetBuffer {
             values_f32: Vec::with_capacity(batch_size),
             values_f64: Vec::with_capacity(batch_size),
             values_bytes_array: Vec::with_capacity(batch_size),
+            values_fixed_bytes_array: Vec::with_capacity(batch_size),
             values_bool: Vec::with_capacity(batch_size),
             def_levels: Vec::with_capacity(batch_size),
         }
@@ -46,11 +47,17 @@ impl ParquetBuffer {
         self.values_f32.resize(num_rows, 0.);
         self.values_f64.resize(num_rows, 0.);
         self.values_bytes_array.resize(num_rows, ByteArray::new());
+        self.values_fixed_bytes_array
+            .resize(num_rows, ByteArray::new().into());
         self.values_bool.resize(num_rows, false);
     }
 
     /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
-    fn twos_complement_i128(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
+    fn twos_complement_i128(
+        decimal: &CStr,
+        length: usize,
+        digits: &mut Vec<u8>,
+    ) -> FixedLenByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
@@ -58,11 +65,18 @@ impl ParquetBuffer {
 
         let (num, _consumed) = i128::from_radix_10_signed(&digits);
 
-        num.to_be_bytes()[(16 - length)..].to_owned().into()
+        let out = num.to_be_bytes()[(16 - length)..].to_owned();
+        // Vec<u8> -> ByteArray -> FixedLenByteArray
+        let out: ByteArray = out.into();
+        out.into()
     }
 
     // Use num big int to calculate the two complements of arbitrary size
-    fn twos_complement_big_int(decimal: &CStr, length: usize, digits: &mut Vec<u8>) -> ByteArray {
+    fn twos_complement_big_int(
+        decimal: &CStr,
+        length: usize,
+        digits: &mut Vec<u8>,
+    ) -> FixedLenByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
@@ -79,6 +93,8 @@ impl ParquetBuffer {
         };
         out.resize(length, fill);
         out.rotate_right(num_leading_bytes);
+        // Vec<u8> -> ByteArray -> FixedByteArray
+        let out: ByteArray = out.into();
         out.into()
     }
 
@@ -256,6 +272,15 @@ impl BufferedDataType for ByteArray {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
         (
             buffer.values_bytes_array.as_mut_slice(),
+            buffer.def_levels.as_mut_slice(),
+        )
+    }
+}
+
+impl BufferedDataType for FixedLenByteArray {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+        (
+            buffer.values_fixed_bytes_array.as_mut_slice(),
             buffer.def_levels.as_mut_slice(),
         )
     }

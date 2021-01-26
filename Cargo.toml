@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 repository = "https://github.com/pacman82/odbc2parquet"
@@ -30,7 +30,7 @@ readme = "README.md"
 
 [dependencies]
 odbc-api = "0.13.1"
-parquet = "2.0.0"
+parquet = "3.0.0"
 anyhow = "1.0.38"
 stderrlog = "0.5.1"
 structopt = "0.3.21"

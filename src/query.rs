@@ -2,7 +2,7 @@ use std::{
     convert::TryInto,
     fs::File,
     path::{Path, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use anyhow::{format_err, Error};
@@ -270,7 +270,7 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
             );
         } else {
             let field_builder = field_builder.with_repetition(repetition);
-            fields.push(Rc::new(field_builder.build()?));
+            fields.push(Arc::new(field_builder.build()?));
             odbc_buffer_desc.push((index as u16, buffer_description));
         }
     }
@@ -279,15 +279,15 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
         .with_fields(&mut fields)
         .build()?;
 
-    Ok((Rc::new(schema), odbc_buffer_desc))
+    Ok((Arc::new(schema), odbc_buffer_desc))
 }
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
 struct ParquetWriter<'p> {
     path: &'p Path,
-    schema: Rc<Type>,
-    properties: Rc<WriterProperties>,
+    schema: Arc<Type>,
+    properties: Arc<WriterProperties>,
     writer: SerializedFileWriter<File>,
     batches_per_file: u32,
 }
@@ -296,14 +296,14 @@ impl<'p> ParquetWriter<'p> {
     pub fn new(
         path: &'p Path,
         batch_size: u32,
-        schema: Rc<Type>,
+        schema: Arc<Type>,
         batches_per_file: u32,
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
         let wpb = WriterProperties::builder().set_write_batch_size(batch_size as usize);
-        let properties = Rc::new(wpb.build());
+        let properties = Arc::new(wpb.build());
         let file = if batches_per_file == 0 {
             File::create(path)?
         } else {

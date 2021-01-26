@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+* Update to `parquet 3.0.0`.
+
 ## 0.5.2
 
 * Maps ODBC `Timestamp`s with precision <= 3 to parquet `TIMESTAMP_MILLISECONDS`.
