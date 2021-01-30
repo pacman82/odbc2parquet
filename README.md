@@ -39,7 +39,7 @@ The tool queries the ODBC Data source for type information and maps it to parque
 
 ### Via Cargo
 
-If you have a rust nightly toolchain installed, you can install this tool via cargo.
+If you have a rust nightly tool chain installed, you can install this tool via cargo.
 
 ```shell script
 cargo +nightly install odbc2parquet
