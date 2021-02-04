@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.4
+
+* Update dependencies
+* Builds with stable Rust
+
 ## 0.5.3
 
 * Update to `parquet 3.0.0`.

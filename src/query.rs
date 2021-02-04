@@ -80,8 +80,8 @@ fn cursor_to_parquet(
         info!("Fetched batch {} with {} rows.", num_batch, num_rows);
         while let Some(mut column_writer) = row_group_writer.next_column()? {
             pb.set_num_rows_fetched(num_rows);
-            let odbc_column = buffer.column(col_index);
-            match (&mut column_writer, odbc_column) {
+            let mut odbc_column = buffer.column(col_index);
+            match (&mut column_writer, &mut odbc_column) {
                 (ColumnWriter::BoolColumnWriter(cw), AnyColumnView::NullableBit(it)) => {
                     pb.write_optional(cw, it)?;
                 }
