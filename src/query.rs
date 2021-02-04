@@ -218,16 +218,18 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::TIMESTAMP_MICROS),
                 BufferKind::Timestamp,
             ),
-            DataType::Bigint => (
+            DataType::BigInt => (
                 ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
                 BufferKind::I64,
             ),
             DataType::Bit => (ptb(PhysicalType::BOOLEAN), BufferKind::Bit),
-            DataType::Tinyint => (
+            DataType::TinyInt => (
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
                 BufferKind::I32,
             ),
             DataType::Char { .. }
+            | DataType::Varbinary { .. }
+            | DataType::Binary { .. }
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
             | DataType::Unknown
