@@ -14,7 +14,7 @@ jobs:
       - name: Insall latests rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           default: true
           override: true
 
