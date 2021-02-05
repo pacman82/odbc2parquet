@@ -208,7 +208,7 @@ impl ParquetBuffer {
     pub fn write_optional<T, S>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
-        source: &mut impl Iterator<Item = Option<S>>,
+        source: impl Iterator<Item = Option<S>>,
     ) -> Result<(), Error>
     where
         T: DataType,
