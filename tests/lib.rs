@@ -1,9 +1,16 @@
 use assert_cmd::Command;
+use lazy_static::lazy_static;
+use odbc_api::{Connection, Environment};
 use predicates::ord::eq;
 use tempfile::tempdir;
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+
+// Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
+lazy_static! {
+    pub static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+}
 
 #[test]
 fn nullable_parquet_buffers() {
@@ -244,4 +251,126 @@ fn split_files() {
     cmd.arg(out_dir.path().join("out_3.par").to_str().unwrap())
         .assert()
         .success();
+}
+
+#[test]
+fn varbinary_column() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+
+    setup_empty_table(&conn, "VarbinaryColumn", &["VARBINARY(10)"]).unwrap();
+    conn.execute(
+        "INSERT INTO VarbinaryColumn (a) Values \
+        (CONVERT(Binary(5), 'Hello')),\
+        (CONVERT(Binary(5), 'World')),\
+        (NULL)",
+        (),
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let query = "SELECT a FROM VarbinaryColumn;";
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected));
+}
+
+#[test]
+fn binary_column() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+
+    setup_empty_table(&conn, "BinaryColumn", &["BINARY(5)"]).unwrap();
+    conn.execute(
+        "INSERT INTO BinaryColumn (a) Values \
+        (CONVERT(Binary(5), 'Hello')),\
+        (CONVERT(Binary(5), 'World')),\
+        (NULL)",
+        (),
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let query = "SELECT a FROM BinaryColumn;";
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected));
+}
+
+
+/// Creates the table and assures it is empty. Columns are named a,b,c, etc.
+pub fn setup_empty_table(
+    conn: &Connection,
+    table_name: &str,
+    column_types: &[&str],
+) -> Result<(), odbc_api::Error> {
+    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+
+    let column_names = &["a", "b", "c", "d", "e"];
+    let cols = column_types
+        .iter()
+        .zip(column_names)
+        .map(|(ty, name)| format!("{} {}", name, ty))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let create_table = format!(
+        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
+        table_name, cols
+    );
+    conn.execute(&drop_table, ())?;
+    conn.execute(&create_table, ())?;
+    Ok(())
 }

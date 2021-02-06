@@ -103,6 +103,12 @@ fn cursor_to_parquet(
                 (ColumnWriter::DoubleColumnWriter(cw), AnyColumnView::NullableF64(it)) => {
                     pb.write_optional(cw, it)?;
                 }
+                (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Binary(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
+                (ColumnWriter::FixedLenByteArrayColumnWriter(cw), AnyColumnView::Binary(it)) => {
+                    pb.write_optional(cw, it)?;
+                }
                 (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
                     pb.write_optional(cw, it)?;
                 }
@@ -227,9 +233,17 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
                 ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
                 BufferKind::I32,
             ),
+            DataType::Binary { length } => (
+                ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
+                    .with_length(length.try_into().unwrap())
+                    .with_logical_type(LogicalType::NONE),
+                BufferKind::Binary { length },
+            ),
+            DataType::Varbinary { length } => (
+                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::NONE),
+                BufferKind::Binary { length },
+            ),
             DataType::Char { .. }
-            | DataType::Varbinary { .. }
-            | DataType::Binary { .. }
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
             | DataType::Unknown

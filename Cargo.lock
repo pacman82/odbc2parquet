@@ -593,6 +593,7 @@ dependencies = [
  "assert_cmd",
  "atoi",
  "chrono",
+ "lazy_static",
  "log",
  "num-bigint",
  "odbc-api",

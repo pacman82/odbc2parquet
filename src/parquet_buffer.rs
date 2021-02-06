@@ -320,3 +320,16 @@ impl IntoPhysical<ByteArray> for &CStr {
         self.to_bytes().to_owned().into()
     }
 }
+
+impl IntoPhysical<ByteArray> for &[u8] {
+    fn into_physical(self) -> ByteArray {
+        self.to_owned().into()
+    }
+}
+
+impl IntoPhysical<FixedLenByteArray> for &[u8] {
+    fn into_physical(self) -> FixedLenByteArray {
+        let byte_array: ByteArray = self.to_owned().into();
+        byte_array.into()
+    }
+}
