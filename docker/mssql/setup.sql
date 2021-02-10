@@ -21,7 +21,7 @@ INSERT INTO BIRTHDAYS
     (name, birthday)
 Values
     ('Keanu Reeves', '1964-09-02'),
-    ('Robin Wiliams', '1951-07-21');
+    ('Robin Williams', '1951-07-21');
 
 CREATE TABLE Sales
 (
