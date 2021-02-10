@@ -71,4 +71,4 @@ CREATE Table AllTheTypes
 INSERT INTO AllTheTypes
     (my_char, my_numeric, my_decimal, my_integer, my_smallint, my_float, my_real, my_double, my_varchar, my_date, my_time, my_timestamp)
 Values
-    ("abcde", 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, "Hello, World!", '2020-09-16', '03:54:12', '2020-09-16 03:54:12');
+    ('abcde', 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, 'Hello, World!', '2020-09-16', '03:54:12', '2020-09-16 03:54:12');
