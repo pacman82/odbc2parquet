@@ -1,5 +1,6 @@
 use anyhow::Error;
 use chrono::NaiveDate;
+use log::warn;
 use num_bigint::BigInt;
 use odbc_api::{
     sys::{Date, Timestamp},
@@ -11,7 +12,7 @@ use parquet::{
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
     schema::types::Type,
 };
-use std::{convert::TryInto, ffi::CStr};
+use std::{borrow::Cow, convert::TryInto, ffi::CStr};
 
 /// Holds preallocated buffers for every possible physical parquet type. This way we do not need to
 /// reallocate them.
@@ -317,7 +318,15 @@ impl IntoPhysical<bool> for &Bit {
 
 impl IntoPhysical<ByteArray> for &CStr {
     fn into_physical(self) -> ByteArray {
-        self.to_bytes().to_owned().into()
+        // Allocate string into a ByteArray and make sure it is all UTF-8 characters
+        let utf8_str = self.to_string_lossy();
+        // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
+        // happened after the to_string_lossy method, it implies we had to use a replacement
+        // character!
+        if matches!(utf8_str, Cow::Owned(_)) {
+            warn!("Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with UTF-8 locale. Value: {}", utf8_str);
+        }
+        utf8_str.into_owned().into_bytes().into()
     }
 }
 
