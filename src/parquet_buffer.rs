@@ -324,7 +324,11 @@ impl IntoPhysical<ByteArray> for &CStr {
         // happened after the to_string_lossy method, it implies we had to use a replacement
         // character!
         if matches!(utf8_str, Cow::Owned(_)) {
-            warn!("Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with UTF-8 locale. Value: {}", utf8_str);
+            warn!(
+                "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
+            UTF-8 locale. Value: {}",
+                utf8_str
+            );
         }
         utf8_str.into_owned().into_bytes().into()
     }

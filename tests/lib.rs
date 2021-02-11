@@ -295,10 +295,7 @@ fn varbinary_column() {
     // Use the parquet-read tool to verify the output. It can be installed with
     // `cargo install parquet`.
     let mut cmd = Command::new("parquet-read");
-    cmd.arg(out_str)
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
 }
 
 #[test]
@@ -343,12 +340,8 @@ fn binary_column() {
     // Use the parquet-read tool to verify the output. It can be installed with
     // `cargo install parquet`.
     let mut cmd = Command::new("parquet-read");
-    cmd.arg(out_str)
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
 }
-
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
 pub fn setup_empty_table(
