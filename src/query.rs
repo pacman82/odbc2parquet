@@ -81,6 +81,14 @@ fn cursor_to_parquet(
         info!("Fetched batch {} with {} rows.", num_batch, num_rows);
         pb.set_num_rows_fetched(num_rows);
         while let Some(mut column_writer) = row_group_writer.next_column()? {
+            let col_name = parquet_schema.get_fields()[col_index]
+                .get_basic_info()
+                .name();
+            debug!(
+                "Writing column with index {} and name '{}'.",
+                col_index, col_name
+            );
+
             let odbc_column = buffer.column(col_index);
             match (&mut column_writer, odbc_column) {
                 (ColumnWriter::BoolColumnWriter(cw), AnyColumnView::NullableBit(it)) => {
