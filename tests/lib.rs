@@ -349,8 +349,12 @@ fn interior_nul_in_varchar() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
 
-    conn.execute("INSERT INTO InteriorNul (a) VALUES (?);", &"a\0b".into_parameter()).unwrap();
-    
+    conn.execute(
+        "INSERT INTO InteriorNul (a) VALUES (?);",
+        &"a\0b".into_parameter(),
+    )
+    .unwrap();
+
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary

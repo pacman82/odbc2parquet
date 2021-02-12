@@ -1,4 +1,10 @@
-use std::{borrow::Cow, convert::TryInto, fs::File, path::{Path, PathBuf}, sync::Arc};
+use std::{
+    borrow::Cow,
+    convert::TryInto,
+    fs::File,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::{format_err, Error};
 use log::{debug, info, warn};
