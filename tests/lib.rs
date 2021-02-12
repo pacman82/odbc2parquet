@@ -1,6 +1,6 @@
 use assert_cmd::Command;
 use lazy_static::lazy_static;
-use odbc_api::{Connection, Environment};
+use odbc_api::{Connection, Environment, IntoParameter};
 use predicates::ord::eq;
 use tempfile::tempdir;
 
@@ -336,6 +336,45 @@ fn binary_column() {
         .success();
 
     let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
+}
+
+/// Strings with interior nuls should be written into parquet file as they are.
+#[test]
+fn interior_nul_in_varchar() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
+
+    conn.execute("INSERT INTO InteriorNul (a) VALUES (?);", &"a\0b".into_parameter()).unwrap();
+    
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let query = "SELECT a FROM InteriorNul;";
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: \"a\0b\"}\n";
 
     // Use the parquet-read tool to verify the output. It can be installed with
     // `cargo install parquet`.

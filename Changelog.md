@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.7
+
+* Fix: Interior nuls within `VARCHAR` values did cause the tool to panic. Now these values are written into parquet as is.
+
 ## 0.5.6
 
 * Fix: Replace non UTF-8 characters with the UTF-8 replacement character (`�`). ODBC encodes string according to the current locale, so this issue could cause non UTF-8 characters to be written into Parquet Text columns on Windows systems. If a non UTF-8 character is encountered a warning is generated hinting at the user to change to a UTF-8 locale.

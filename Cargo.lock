@@ -568,9 +568,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33fe4041dbee3e10f201cf72e9c0504125b925cfaf8c323dda7b55b5295a3e52"
+checksum = "cb65fca4da2b02174aa608c3f56516e12e82645c05fd6c5e56d69b022e2ad1f4"
 dependencies = [
  "force-send-sync",
  "log",
@@ -581,13 +581,13 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "932b876b4927a2c403aeb72c57336faf4349876f6f9d581dc9863b6cc02ae912"
+checksum = "c0c8c768ceb08f5b3738a01ac259f355ec22e0e9b248d31eb691ca3562b170a8"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.5.6"
+version = "0.5.7"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -712,9 +712,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.8"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991431c3519a3f36861882da93630ce66b52918dcf1b8e2fd66b397fc96f28df"
+checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
 dependencies = [
  "proc-macro2",
 ]

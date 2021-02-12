@@ -1,9 +1,4 @@
-use std::{
-    convert::TryInto,
-    fs::File,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{borrow::Cow, convert::TryInto, fs::File, path::{Path, PathBuf}, sync::Arc};
 
 use anyhow::{format_err, Error};
 use log::{debug, info, warn};
@@ -110,7 +105,7 @@ fn cursor_to_parquet(
                     pb.write_optional(cw, it)?;
                 }
                 (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
-                    pb.write_optional(cw, it)?;
+                    pb.write_optional(cw, it.map(|item| item.map(bytes_to_string)))?;
                 }
                 (ColumnWriter::FixedLenByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
                     pb.write_decimal(cw, it, &*parquet_schema.get_fields()[col_index])?;
@@ -376,4 +371,20 @@ impl<'p> ParquetWriter<'p> {
         path_with_suffix = path_with_suffix.with_extension("par");
         Ok(path_with_suffix)
     }
+}
+
+fn bytes_to_string(bytes: &[u8]) -> String {
+    // Allocate string into a ByteArray and make sure it is all UTF-8 characters
+    let utf8_str = String::from_utf8_lossy(bytes);
+    // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
+    // happened after the to_string_lossy method, it implies we had to use a replacement
+    // character!
+    if matches!(utf8_str, Cow::Owned(_)) {
+        warn!(
+            "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
+        UTF-8 locale. Value: {}",
+            utf8_str
+        );
+    }
+    utf8_str.into_owned()
 }

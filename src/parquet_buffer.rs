@@ -1,6 +1,5 @@
 use anyhow::Error;
 use chrono::NaiveDate;
-use log::warn;
 use num_bigint::BigInt;
 use odbc_api::{
     sys::{Date, Timestamp},
@@ -12,7 +11,7 @@ use parquet::{
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
     schema::types::Type,
 };
-use std::{borrow::Cow, convert::TryInto, ffi::CStr};
+use std::convert::TryInto;
 
 /// Holds preallocated buffers for every possible physical parquet type. This way we do not need to
 /// reallocate them.
@@ -55,14 +54,14 @@ impl ParquetBuffer {
 
     /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
     fn twos_complement_i128(
-        decimal: &CStr,
+        decimal: &[u8],
         length: usize,
         digits: &mut Vec<u8>,
     ) -> FixedLenByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
-        digits.extend(decimal.to_bytes().iter().filter(|&&c| c != b'.'));
+        digits.extend(decimal.iter().filter(|&&c| c != b'.'));
 
         let (num, _consumed) = i128::from_radix_10_signed(&digits);
 
@@ -74,14 +73,14 @@ impl ParquetBuffer {
 
     // Use num big int to calculate the two complements of arbitrary size
     fn twos_complement_big_int(
-        decimal: &CStr,
+        decimal: &[u8],
         length: usize,
         digits: &mut Vec<u8>,
     ) -> FixedLenByteArray {
         use atoi::FromRadix10Signed;
 
         digits.clear();
-        digits.extend(decimal.to_bytes().iter().filter(|&&c| c != b'.'));
+        digits.extend(decimal.iter().filter(|&&c| c != b'.'));
 
         let (num, _consumed) = BigInt::from_radix_10_signed(&digits);
         let mut out = num.to_signed_bytes_be();
@@ -143,7 +142,7 @@ impl ParquetBuffer {
     pub fn write_decimal<'o>(
         &mut self,
         cw: &mut ColumnWriterImpl<FixedLenByteArrayType>,
-        source: impl Iterator<Item = Option<&'o CStr>>,
+        source: impl Iterator<Item = Option<&'o [u8]>>,
         primitive_type: &Type,
     ) -> Result<(), Error> {
         let (&length, &precision) = match primitive_type {
@@ -316,21 +315,9 @@ impl IntoPhysical<bool> for &Bit {
     }
 }
 
-impl IntoPhysical<ByteArray> for &CStr {
+impl IntoPhysical<ByteArray> for String {
     fn into_physical(self) -> ByteArray {
-        // Allocate string into a ByteArray and make sure it is all UTF-8 characters
-        let utf8_str = self.to_string_lossy();
-        // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
-        // happened after the to_string_lossy method, it implies we had to use a replacement
-        // character!
-        if matches!(utf8_str, Cow::Owned(_)) {
-            warn!(
-                "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
-            UTF-8 locale. Value: {}",
-                utf8_str
-            );
-        }
-        utf8_str.into_owned().into_bytes().into()
+        self.into_bytes().into()
     }
 }
 
