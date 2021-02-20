@@ -3,6 +3,7 @@ name = "odbc2parquet"
 version = "0.5.7"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
+rust = "1.49"
 repository = "https://github.com/pacman82/odbc2parquet"
 documentation = "https://docs.rs/odbc2parquet/"
 license = "MIT"
