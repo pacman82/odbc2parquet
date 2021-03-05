@@ -37,7 +37,7 @@ stderrlog = "0.5.1"
 structopt = "0.3.21"
 log = "0.4.14"
 chrono = "0.4.19"
-num-bigint = "0.3.1"
+num-bigint = "0.3.2"
 atoi = "0.4.0"
 
 [dev-dependencies]
