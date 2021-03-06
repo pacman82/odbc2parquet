@@ -4,7 +4,7 @@ mod query;
 use anyhow::{bail, Error};
 use odbc_api::{Connection, Environment};
 use std::path::PathBuf;
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
@@ -65,6 +65,14 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[structopt(long, default_value = "0")]
     batches_per_file: u32,
+    /// Determines the encoding used for character data requested from the data source.
+    #[structopt(
+        long,
+        possible_values = &Encoding::variants(),
+        default_value = "System",
+        case_insensitive = true)
+    ]
+    encoding: Encoding,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
@@ -73,6 +81,13 @@ pub struct QueryOpt {
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
     parameters: Vec<String>,
+}
+
+arg_enum! {
+    #[derive(Debug, Clone, Copy)]
+    pub enum Encoding {
+        System
+    }
 }
 
 fn main() -> Result<(), Error> {
