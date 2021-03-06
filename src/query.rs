@@ -23,7 +23,7 @@ use parquet::{
     schema::types::{Type, TypePtr},
 };
 
-use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
+use crate::{open_connection, parquet_buffer::ParquetBuffer, Encoding, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
@@ -34,6 +34,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         query,
         batch_size,
         batches_per_file,
+        encoding,
     } = opt;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
@@ -45,7 +46,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     let odbc_conn = open_connection(&environment, connect_opts)?;
 
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
-        cursor_to_parquet(cursor, output, *batch_size, *batches_per_file)?;
+        cursor_to_parquet(cursor, output, *batch_size, *batches_per_file, *encoding)?;
     } else {
         eprintln!(
             "Query came back empty (not even a schema has been returned). No file has been created"
@@ -59,10 +60,11 @@ fn cursor_to_parquet(
     path: &Path,
     batch_size: u32,
     batches_per_file: u32,
+    encoding: Encoding,
 ) -> Result<(), Error> {
     info!("Batch size set to {}", batch_size);
 
-    let (parquet_schema, buffer_description) = make_schema(&cursor)?;
+    let (parquet_schema, buffer_description) = make_schema(&cursor, encoding)?;
     let mut odbc_buffer =
         ColumnarRowSet::with_column_indices(batch_size, buffer_description.iter().copied());
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
@@ -141,7 +143,10 @@ fn cursor_to_parquet(
     Ok(())
 }
 
-fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescription)>), Error> {
+fn make_schema(
+    cursor: &impl Cursor,
+    encoding: Encoding,
+) -> Result<(TypePtr, Vec<(u16, BufferDescription)>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -252,12 +257,23 @@ fn make_schema(cursor: &impl Cursor) -> Result<(TypePtr, Vec<(u16, BufferDescrip
                 ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::NONE),
                 BufferKind::Binary { length },
             ),
-            DataType::Char { .. }
-            | DataType::Varchar { .. }
-            | DataType::WVarchar { .. }
-            | DataType::Unknown
-            | DataType::Time { .. }
-            | DataType::Other { .. } => {
+            DataType::Char { .. } | DataType::Varchar { .. } | DataType::WVarchar { .. } => {
+                let buffer_desc = match encoding {
+                    Encoding::System => {
+                        let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
+                            len
+                        } else {
+                            cursor.col_display_size(index.try_into().unwrap())? as usize
+                        };
+                        BufferKind::Text { max_str_len }
+                    }
+                };
+                (
+                    ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                    buffer_desc,
+                )
+            }
+            DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
                 let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
                     len
                 } else {
