@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "0.5.7"
+version = "0.5.8"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 rust = "1.49"
