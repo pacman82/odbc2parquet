@@ -430,6 +430,49 @@ fn system_encoding() {
     cmd.arg(out_str).assert().success().stdout(eq(expected));
 }
 
+/// Test non ASCII character with utf16 encoding
+#[test]
+fn utf_16_encoding() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let table_name = "Utf16Encoding";
+    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+
+    conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
+        .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let query = &format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--encoding",
+            "utf16",
+            "--connection-string",
+            MSSQL,
+            out_str,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: \"Ü\"}\n";
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
+}
+
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
 pub fn setup_empty_table(
     conn: &Connection,
