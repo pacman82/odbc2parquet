@@ -1,5 +1,7 @@
 # ODBC to Parquet
 
+[![Minimum required rust version](https://img.shields.io/badge/rust%201.49.0-min%20version-blue)]
+
 A command line tool to query an ODBC data source and write the result into a parquet file.
 
 * Small memory footprint. Only holds one batch at a time in memory.
