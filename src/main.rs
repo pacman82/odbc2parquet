@@ -1,10 +1,12 @@
+mod encoding;
 mod parquet_buffer;
 mod query;
 
+use crate::encoding::EncodingArgument;
 use anyhow::{bail, Error};
 use odbc_api::{Connection, Environment};
 use std::path::PathBuf;
-use structopt::{clap::arg_enum, StructOpt};
+use structopt::StructOpt;
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
@@ -66,13 +68,25 @@ pub struct QueryOpt {
     #[structopt(long, default_value = "0")]
     batches_per_file: u32,
     /// Determines the encoding used for character data requested from the data source.
+    ///
+    /// `Utf16`: The tool will use 16Bit characters for requesting text from the data source,
+    /// implying the use of UTF-16 encoding. This should work well independent of the system
+    /// configuration, but implies additional work since text is always stored as UTF-8 in parquet.
+    ///
+    /// `System`: The tool will use 8Bit characters for requesting text from the data source,
+    /// implying the use of the encoding from the system locale. This only works for non ASCII
+    /// characters if the locales character set is UTF-8.
+    ///
+    /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
+    /// the default option is the same as `System` on non-windows platforms. On windows the default
+    /// is `Utf16`.
     #[structopt(
         long,
-        possible_values = &Encoding::variants(),
-        default_value = "System",
+        possible_values = &EncodingArgument::variants(),
+        default_value = "Auto",
         case_insensitive = true)
     ]
-    encoding: Encoding,
+    encoding: EncodingArgument,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
@@ -81,14 +95,6 @@ pub struct QueryOpt {
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
     parameters: Vec<String>,
-}
-
-arg_enum! {
-    #[derive(Debug, Clone, Copy)]
-    pub enum Encoding {
-        System,
-        Utf16,
-    }
 }
 
 fn main() -> Result<(), Error> {
