@@ -86,7 +86,8 @@ pub struct QueryOpt {
 arg_enum! {
     #[derive(Debug, Clone, Copy)]
     pub enum Encoding {
-        System
+        System,
+        Utf16,
     }
 }
 

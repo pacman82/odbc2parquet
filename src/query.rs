@@ -126,6 +126,18 @@ fn cursor_to_parquet(
                 (ColumnWriter::FixedLenByteArrayColumnWriter(cw), AnyColumnView::Text(it)) => {
                     pb.write_decimal(cw, it, &*parquet_schema.get_fields()[col_index])?;
                 }
+                (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::WText(it)) => {
+                    pb.write_optional(
+                        cw,
+                        it.map(|item| {
+                            item.map(|ustr| {
+                                ustr.to_string().expect(
+                                    "Data source must return valid UTF16 in wide character buffer",
+                                )
+                            })
+                        }),
+                    )?;
+                }
                 // ColumnWriter::Int96ColumnWriter(_) => {}
                 _ => panic!(
                     "Invalid ColumnWriter type. This is not supposed to happen. Please \
@@ -266,6 +278,15 @@ fn make_schema(
                             cursor.col_display_size(index.try_into().unwrap())? as usize
                         };
                         BufferKind::Text { max_str_len }
+                    }
+                    Encoding::Utf16 => {
+                        let max_str_len = match cd.data_type {
+                            DataType::Varchar { length }
+                            | DataType::WVarchar { length }
+                            | DataType::Char { length } => length * 2,
+                            _ => cursor.col_display_size(index.try_into().unwrap())? as usize,
+                        };
+                        BufferKind::WText { max_str_len }
                     }
                 };
                 (
