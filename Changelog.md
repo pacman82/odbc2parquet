@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.8
+
+* Fix: On windows platforms the tool is now using UTF-16 encoding by default to exchange character data with the data source. The behaviour has been changed since on most windows platform the system locale is not configured to use UTF-8. The behaviour can be configuered manually on any platform using the newly introduced `--encoding` option.
+
 ## 0.5.7
 
 * Fix: Interior nuls within `VARCHAR` values did cause the tool to panic. Now these values are written into parquet as is.
