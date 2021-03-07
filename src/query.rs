@@ -275,6 +275,10 @@ fn make_schema(
                 ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::NONE),
                 BufferKind::Binary { length },
             ),
+            // For character data we consider binding to wide (16-Bit) buffers in order to avoid
+            // depending on the system locale being utf-8. For other character buffers we always use
+            // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
+            // represented in ASCII characters.
             DataType::Char { .. } | DataType::Varchar { .. } | DataType::WVarchar { .. } => {
                 let buffer_desc = if use_utf16 {
                     let max_str_len = match cd.data_type {
@@ -436,7 +440,7 @@ fn bytes_to_string(bytes: &[u8]) -> String {
     if matches!(utf8_str, Cow::Owned(_)) {
         warn!(
             "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
-        UTF-8 locale. Value: {}",
+        UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
             utf8_str
         );
     }
