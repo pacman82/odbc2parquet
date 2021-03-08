@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.9
+
+* Fix: Right truncaton of values in fixed sized `NCHAR` columns had occurred if a character in the value did use more than one byte in UTF-8 encoding (or more than two bytes for UTF-16).
+
 ## 0.5.8
 
 * Fix: On windows platforms the tool is now using UTF-16 encoding by default to exchange character data with the data source. The behaviour has been changed since on most windows platform the system locale is not configured to use UTF-8. The behaviour can be configuered manually on any platform using the newly introduced `--encoding` option.

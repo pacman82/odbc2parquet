@@ -27,7 +27,7 @@ use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
-    let QueryOpt {
+    let QueryOpt { 
         connect_opts,
         output,
         parameters,
@@ -279,22 +279,20 @@ fn make_schema(
             // depending on the system locale being utf-8. For other character buffers we always use
             // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
             // represented in ASCII characters.
-            DataType::Char { .. } | DataType::Varchar { .. } | DataType::WVarchar { .. } => {
+            DataType::Char { length }
+            | DataType::Varchar { length }
+            | DataType::WVarchar { length }
+            | DataType::WChar { length } => {
                 let buffer_desc = if use_utf16 {
-                    let max_str_len = match cd.data_type {
-                        DataType::Varchar { length }
-                        | DataType::WVarchar { length }
-                        | DataType::Char { length } => length * 2,
-                        _ => cursor.col_display_size(index.try_into().unwrap())? as usize,
-                    };
-                    BufferKind::WText { max_str_len }
+                    // One UTF-16 code point may consist of up to two bytes.
+                    BufferKind::WText {
+                        max_str_len: length * 2,
+                    }
                 } else {
-                    let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
-                        len
-                    } else {
-                        cursor.col_display_size(index.try_into().unwrap())? as usize
-                    };
-                    BufferKind::Text { max_str_len }
+                    // One UTF-8 code point may consist of up to four bytes.
+                    BufferKind::Text {
+                        max_str_len: length * 4,
+                    }
                 };
                 (
                     ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
