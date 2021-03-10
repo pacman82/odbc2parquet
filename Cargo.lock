@@ -160,9 +160,9 @@ dependencies = [
 
 [[package]]
 name = "byteorder"
-version = "1.4.2"
+version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae44d1a3d5a19df61dd0c8beb138458ac2a53a7ac09eba97d55592540004306b"
+checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cc"
@@ -552,9 +552,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.19.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6bf14127f80f7d4bb979440a7ee524e5f0bb0f934ab0449d3d43691b7574460"
+checksum = "c4a55c4b730e1938188b1b49cc9457a790901f6df5ad1868875965bafc68c71e"
 dependencies = [
  "force-send-sync",
  "log",
@@ -927,9 +927,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.62"
+version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "123a78a3596b24fee53a6464ce52d8ecbf62241e6294c7e7fe12086cd161f512"
+checksum = "8fd9bc7ccc2688b3344c2f48b9b546648b25ce0b20fc717ee7fa7981a8ca9717"
 dependencies = [
  "proc-macro2",
  "quote",
