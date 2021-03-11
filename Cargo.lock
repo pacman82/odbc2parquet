@@ -552,9 +552,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.19.1"
+version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4a55c4b730e1938188b1b49cc9457a790901f6df5ad1868875965bafc68c71e"
+checksum = "a7b42c2aa6560022fdbd22fb01d60d7ac4e6e18d4f55fd60152a9b86d20907f2"
 dependencies = [
  "force-send-sync",
  "log",
