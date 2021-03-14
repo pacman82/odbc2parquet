@@ -6,10 +6,8 @@ use odbc_api::{
     Bit,
 };
 use parquet::{
-    basic::Type as PhysicalType,
     column::writer::ColumnWriterImpl,
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
-    schema::types::Type,
 };
 use std::convert::TryInto;
 
@@ -113,22 +111,8 @@ impl ParquetBuffer {
         &mut self,
         cw: &mut ColumnWriterImpl<Int64Type>,
         source: impl Iterator<Item = Option<&'o Timestamp>>,
-        primitive_type: &Type,
+        precision: i16,
     ) -> Result<(), Error> {
-        let &precision = match primitive_type {
-            Type::PrimitiveType {
-                basic_info: _,
-                physical_type: pt,
-                type_length: _,
-                scale: _,
-                precision,
-            } => {
-                debug_assert_eq!(*pt, PhysicalType::INT64);
-                precision
-            }
-            Type::GroupType { .. } => panic!("Column must be a primitive type"),
-        };
-
         if precision <= 3 {
             // Milliseconds precision
             self.write_optional_any(cw, source, |ts| Self::timestamp_nanos(ts) / 1_000_000)?;
@@ -143,36 +127,21 @@ impl ParquetBuffer {
         &mut self,
         cw: &mut ColumnWriterImpl<FixedLenByteArrayType>,
         source: impl Iterator<Item = Option<&'o [u8]>>,
-        primitive_type: &Type,
+        length_in_bytes: usize,
+        precision: usize,
     ) -> Result<(), Error> {
-        let (&length, &precision) = match primitive_type {
-            Type::PrimitiveType {
-                basic_info: _,
-                physical_type: pt,
-                type_length,
-                scale: _,
-                precision,
-            } => {
-                debug_assert_eq!(*pt, PhysicalType::FIXED_LEN_BYTE_ARRAY);
-                (type_length, precision)
-            }
-            Type::GroupType { .. } => panic!("Column must be a primitive type"),
-        };
-
-        let precision: usize = precision.try_into().unwrap();
-
         // This vec is going to hold the digits with sign, but without the decimal point. It is
         // allocated once and reused for each value.
         let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
 
         if precision < 39 {
             self.write_optional_any(cw, source, |item| {
-                Self::twos_complement_i128(item, length.try_into().unwrap(), &mut digits)
+                Self::twos_complement_i128(item, length_in_bytes, &mut digits)
             })
         } else {
             // The big int implementation is slow, let's use it only if we have to
             self.write_optional_any(cw, source, |item| {
-                Self::twos_complement_big_int(item, length.try_into().unwrap(), &mut digits)
+                Self::twos_complement_big_int(item, length_in_bytes, &mut digits)
             })
         }
     }
