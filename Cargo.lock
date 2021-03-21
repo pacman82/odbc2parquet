@@ -41,9 +41,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.38"
+version = "1.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afddf7f520a80dbf76e6f50a35bca42a2331ef227a28b3b6dc5c2e2338d114b1"
+checksum = "81cddc5f91628367664cc7c69714ff08deee8a3efc54623011c772544d7b2767"
 
 [[package]]
 name = "arrayvec"
@@ -398,9 +398,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.89"
+version = "0.2.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "538c092e5586f4cdd7dd8078c4a79220e3e168880218124dcbce860f0ea938c6"
+checksum = "ba4aede83fc3617411dc6993bc8c70919750c1c257c6ca6a502aed6e0e2394ae"
 
 [[package]]
 name = "log"
@@ -552,9 +552,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.19.3"
+version = "0.19.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d5e8c104585ced967ad169d5aa35e49561583f2616a6b4aa869fa9395ee29d7"
+checksum = "09cafddf4052653476f5b79dae8b02d1aae83b6568b78db76c3dd73797a6a4e5"
 dependencies = [
  "force-send-sync",
  "log",

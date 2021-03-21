@@ -29,9 +29,9 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.19.3"
+odbc-api = "0.19.4"
 parquet = "3.0.0"
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 stderrlog = "0.5.1"
 structopt = "0.3.21"
 log = "0.4.14"
