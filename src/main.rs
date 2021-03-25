@@ -73,7 +73,7 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[structopt(long, default_value = "0")]
     batches_per_file: u32,
-    /// Determines the encoding used for character data requested from the data source.
+    /// Encoding used for character data requested from the data source.
     ///
     /// `Utf16`: The tool will use 16Bit characters for requesting text from the data source,
     /// implying the use of UTF-16 encoding. This should work well independent of the system
@@ -84,8 +84,8 @@ pub struct QueryOpt {
     /// characters if the locales character set is UTF-8.
     ///
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
-    /// the default option is the same as `System` on non-windows platforms. On windows the default
-    /// is `Utf16`.
+    /// default option is the same as `System` on non-windows platforms. On windows the default is
+    /// `Utf16`.
     #[structopt(
         long,
         possible_values = &EncodingArgument::variants(),
@@ -107,6 +107,26 @@ pub struct QueryOpt {
 pub struct InsertOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
+    /// Encoding used for transferring character data to the database.
+    ///
+    /// `Utf16`: Use 16Bit characters to send text text to the database, which implies the using
+    /// UTF-16 encoding. This should work well independent of the system configuration, but requires
+    /// additional work since text is always stored as UTF-8 in parquet.
+    ///
+    /// `System`: Use 8Bit characters for requesting text from the data source, implies using 
+    /// the encoding defined by the system locale. This only works for non ASCII characters if the
+    /// locales character set is UTF-8.
+    ///
+    /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
+    /// default option is the same as `System` on non-windows platforms. On windows the default is
+    /// `Utf16`.
+    #[structopt(
+        long,
+        possible_values = &EncodingArgument::variants(),
+        default_value = "Auto",
+        case_insensitive = true)
+    ]
+    encoding: EncodingArgument,
     /// Path to the input parquet file which is used to fill the database table with values.
     input: PathBuf,
     /// Name of the table to insert the values into. No precautions against SQL injection are

@@ -120,7 +120,7 @@ fn cursor_to_parquet(
 }
 
 /// Function used to copy the contents of `AnyColumnView` into `ColumnWriter`. The concrete instance
-/// (not this signature) is dependent on the specif columns in questions.
+/// (not this signature) is dependent on the specific columns in questions.
 type FnWriteParquetColumn =
     dyn Fn(&mut ParquetBuffer, &mut ColumnWriter, AnyColumnView) -> Result<(), Error>;
 

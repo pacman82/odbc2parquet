@@ -17,7 +17,7 @@ use odbc_api::{
         OptWriter, TextColumnWriter,
     },
     sys::{Date, Timestamp},
-    Bit, Environment,
+    Bit, Environment, U16String,
 };
 use parquet::{
     basic::{LogicalType, Type as PhysicalType},
@@ -43,6 +43,7 @@ const BUG: &str = "This is not supposed to happen. Please open a Bug at \
 /// Read the content of a parquet file and insert it into a table.
 pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Error> {
     let InsertOpt {
+        encoding,
         input,
         connect_opts,
         table,
@@ -57,14 +58,14 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
     let schema_desc = parquet_metadata.file_metadata().schema_descr();
     let num_columns = schema_desc.num_columns();
 
-    let column_descs: Vec<_> = (0..num_columns).map(|i| schema_desc.column(i)).collect();
-    let column_names: Vec<&str> = column_descs
+    let column_descriptions: Vec<_> = (0..num_columns).map(|i| schema_desc.column(i)).collect();
+    let column_names: Vec<&str> = column_descriptions
         .iter()
         .map(|col_desc| col_desc.name())
         .collect();
-    let column_buf_desc: Vec<_> = column_descs
+    let column_buf_desc: Vec<_> = column_descriptions
         .iter()
-        .map(|col_desc| parquet_type_to_odbc_buffer_desc(col_desc))
+        .map(|col_desc| parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16()))
         .collect::<Result<_, _>>()?;
     let insert_statement = insert_statement_text(&table, &column_names);
 
@@ -72,7 +73,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
 
     let num_row_groups = reader.num_row_groups();
 
-    // Start with a small initial batch size and reallocate as we encounter larger rowgroups.
+    // Start with a small initial batch size and reallocate as we encounter larger row groups.
     let mut batch_size = 1;
     let mut odbc_buffer = ColumnarRowSet::new(
         batch_size,
@@ -82,7 +83,10 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
     let mut pb = ParquetBuffer::new(batch_size as usize);
 
     for row_group_index in 0..num_row_groups {
-        info!("Insert rowgroup {} of {}.", row_group_index, num_row_groups);
+        info!(
+            "Insert row group {} of {}.",
+            row_group_index, num_row_groups
+        );
         let row_group_reader = reader.get_row_group(row_group_index)?;
         let num_rows: usize = row_group_reader
             .metadata()
@@ -129,7 +133,7 @@ fn insert_statement_text(table: &str, column_names: &[&str]) -> String {
 }
 
 /// We extend the parquet `DataType` to start of our builder pattern. These builders constructs the
-/// functors we use to transfer data from parqute to ODBC.
+/// functors we use to transfer data from Parquet to ODBC.
 trait InserterBuilderStart: DataType + Sized {
     fn map_to_text<F>(f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
     where
@@ -163,6 +167,48 @@ trait InserterBuilderStart: DataType + Sized {
                       column_writer: AnyColumnViewMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Text::unwrap_writer_optional(column_writer);
+                    let it = pb.read_required(&mut cr, num_rows)?;
+                    for (index, value) in it.enumerate() {
+                        f(value, index, &mut cw);
+                    }
+                    Ok(())
+                },
+            )
+        }
+    }
+
+    fn map_to_wtext<F>(f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
+    where
+        F: Fn(&Self::T, usize, &mut TextColumnWriter<u16>) + 'static,
+        Self::T: BufferedDataType,
+    {
+        if nullable {
+            Box::new(
+                move |num_rows: usize,
+                      pb: &mut ParquetBuffer,
+                      column_reader: ColumnReader,
+                      column_writer: AnyColumnViewMut| {
+                    let mut cr = Self::get_column_reader(column_reader).expect(BUG);
+                    let mut cw = WText::unwrap_writer_optional(column_writer);
+                    let it = pb.read_optional(&mut cr, num_rows)?;
+                    for (index, opt) in it.enumerate() {
+                        if let Some(value) = opt {
+                            f(value, index, &mut cw);
+                        } else {
+                            cw.set_value(index, None);
+                        }
+                    }
+                    Ok(())
+                },
+            )
+        } else {
+            Box::new(
+                move |num_rows: usize,
+                      pb: &mut ParquetBuffer,
+                      column_reader: ColumnReader,
+                      column_writer: AnyColumnViewMut| {
+                    let mut cr = Self::get_column_reader(column_reader).expect(BUG);
+                    let mut cw = WText::unwrap_writer_optional(column_writer);
                     let it = pb.read_required(&mut cr, num_rows)?;
                     for (index, value) in it.enumerate() {
                         f(value, index, &mut cw);
@@ -269,7 +315,7 @@ struct ParquetToOdbcBuilder<Pdt: ?Sized, Odt> {
 }
 
 impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
-    /// Generates a function which extracts values from a parquet column, appies a transformation
+    /// Generates a function which extracts values from a parquet column, applies a transformation
     /// and writes into an odbc buffer. This macro assumes there to be a plain slice in the ODBC
     /// buffer in case of a required column.
     fn with<F, E>(&self, f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
@@ -311,8 +357,11 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
     }
 }
 
+/// Takes a parquet column descriptor and chooses a strategy for inserting the column into the
+/// database.
 fn parquet_type_to_odbc_buffer_desc(
     col_desc: &ColumnDescriptor,
+    use_utf16: bool,
 ) -> Result<(BufferDescription, Box<FnParquetToOdbcCol>), Error> {
     // Column name. Used in error messages.
     let name = col_desc.self_type().name();
@@ -489,15 +538,37 @@ fn parquet_type_to_odbc_buffer_desc(
             _ => unexpected(),
         },
         PhysicalType::BYTE_ARRAY => {
-            // Start small. We'll rebind the buffer as we encounter larger values in the file.
             match lt {
-                LogicalType::UTF8 | LogicalType::JSON | LogicalType::ENUM => (
-                    BufferKind::Text { max_str_len: 1 },
-                    ByteArrayType::map_to_text(
-                        |text, index, odbc_buf| odbc_buf.append(index, Some(text.data())),
-                        nullable,
-                    ),
-                ),
+                LogicalType::UTF8 | LogicalType::JSON | LogicalType::ENUM => {
+                    // Start small. We rebind the buffer as we encounter larger values in the file.
+                    let max_str_len = 1;
+                    if use_utf16 {
+                        (
+                            BufferKind::WText { max_str_len },
+                            ByteArrayType::map_to_wtext(
+                                move |text, index, odbc_buf| {
+                                    // This allocation is not strictly neccessary, we could just as
+                                    // write directly into the buffer or at least preallocate the
+                                    // U16String.
+                                    let value = U16String::from_str(
+                                        text.as_utf8()
+                                            .expect("Invalid UTF-8 sequence in parquet file."),
+                                    );
+                                    odbc_buf.append(index, Some(value.as_slice()))
+                                },
+                                nullable,
+                            ),
+                        )
+                    } else {
+                        (
+                            BufferKind::Text { max_str_len },
+                            ByteArrayType::map_to_text(
+                                |text, index, odbc_buf| odbc_buf.append(index, Some(text.data())),
+                                nullable,
+                            ),
+                        )
+                    }
+                }
                 LogicalType::NONE | LogicalType::BSON => (
                     BufferKind::Binary { length: 1 },
                     ByteArrayType::map_to_binary(
@@ -654,12 +725,12 @@ where
         text[0] = b'+';
     }
 
-    // Number of digits + one decimal seperator (`.`)
+    // Number of digits + one decimal separator (`.`)
     let str_len = if scale == 0 { precision } else { precision + 1 };
 
     let ten = I::from_u8(10).unwrap();
     for index in (0..str_len).rev() {
-        // The seperator will not be printed in case of scale == 0 since index is never going to
+        // The separator will not be printed in case of scale == 0 since index is never going to
         // reach `precision`.
         let char = if index == precision - scale {
             b'.'
@@ -681,6 +752,26 @@ impl<'a> OdbcDataType<'a> for Text {
 
     fn unwrap_writer_required(column_writer: AnyColumnViewMut<'a>) -> Self::Required {
         if let AnyColumnViewMut::Text(inner) = column_writer {
+            inner
+        } else {
+            panic!("Unexpected column writer. Expected text column writer. This is a Bug.")
+        }
+    }
+
+    fn unwrap_writer_optional(column_writer: AnyColumnViewMut<'a>) -> Self::Optional {
+        // Both implementations are identical since the buffer for text is the same.
+        Self::unwrap_writer_required(column_writer)
+    }
+}
+
+struct WText;
+
+impl<'a> OdbcDataType<'a> for WText {
+    type Required = TextColumnWriter<'a, u16>;
+    type Optional = TextColumnWriter<'a, u16>;
+
+    fn unwrap_writer_required(column_writer: AnyColumnViewMut<'a>) -> Self::Required {
+        if let AnyColumnViewMut::WText(inner) = column_writer {
             inner
         } else {
             panic!("Unexpected column writer. Expected text column writer. This is a Bug.")

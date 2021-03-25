@@ -189,7 +189,7 @@ impl ParquetBuffer {
 
     /// Iterate over the elements of a column reader over an optional column.
     ///
-    /// Be carfeful with calling this method on required columns as the bound definition buffer will
+    /// Be careful with calling this method on required columns as the bound definition buffer will
     /// always be filled with zeros, which will make all elements `None`.
     pub fn read_optional<'a, T>(
         &'a mut self,

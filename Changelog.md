@@ -1,12 +1,16 @@
 # Changelog
 
+## 0.6.0
+
+* Add new sub command `insert`.
+
 ## 0.5.9
 
-* Fix: Right truncaton of values in fixed sized `NCHAR` columns had occurred if a character in the value did use more than one byte in UTF-8 encoding (or more than two bytes for UTF-16).
+* Fix: Right truncation of values in fixed sized `NCHAR` columns had occurred if a character in the value did use more than one byte in UTF-8 encoding (or more than two bytes for UTF-16).
 
 ## 0.5.8
 
-* Fix: On windows platforms the tool is now using UTF-16 encoding by default to exchange character data with the data source. The behaviour has been changed since on most windows platform the system locale is not configured to use UTF-8. The behaviour can be configuered manually on any platform using the newly introduced `--encoding` option.
+* Fix: On windows platforms the tool is now using UTF-16 encoding by default to exchange character data with the data source. The behaviour has been changed since on most windows platform the system locale is not configured to use UTF-8. The behaviour can be configured manually on any platform using the newly introduced `--encoding` option.
 
 ## 0.5.7
 
@@ -42,7 +46,7 @@
 
 * Fix: Microsoft SQL Server user defined types with unbounded lengths have been mapped to Text columns with length zero. This caused at least one warning per row. These columns are now ignored at the beginning, causing exactly one warning. They also do no longer appear in the output schema.
 * Fix: Allocate extra space in text column for multi byte UTF-8 characters.
-* SQL Numeric and Decimal are now always mapped to the parquet Decimal independent of the precision or scale. The 32Bit or 62Bit "physical" Integer epresentation is choosen for SQL types with Scale Null and a precision smaller ten or 19, otherwise the "physical" type is to be a fixed size byte array.
+* SQL Numeric and Decimal are now always mapped to the parquet Decimal independent of the precision or scale. The 32Bit or 62Bit "physical" Integer representation is chosen for SQL types with Scale Null and a precision smaller ten or 19, otherwise the "physical" type is to be a fixed size byte array.
 
 ## 0.4.2
 

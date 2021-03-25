@@ -10,7 +10,7 @@ arg_enum! {
 }
 
 impl EncodingArgument {
-    /// Transalte the command line option to a boolean indicating wether or not wide character
+    /// Translate the command line option to a boolean indicating whether or not wide character
     /// buffers, should be bound.
     pub fn use_utf16(self) -> bool {
         match self {

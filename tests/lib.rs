@@ -47,7 +47,7 @@ fn nullable_parquet_buffers() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -104,7 +104,7 @@ fn parameters_in_query() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -188,7 +188,7 @@ fn query_all_the_types() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = "SELECT \
         my_char, \
@@ -235,7 +235,7 @@ fn split_files() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -294,7 +294,7 @@ fn varbinary_column() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = "SELECT a FROM VarbinaryColumn;";
 
@@ -339,7 +339,7 @@ fn binary_column() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = "SELECT a FROM BinaryColumn;";
 
@@ -382,7 +382,7 @@ fn interior_nul_in_varchar() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = "SELECT a FROM InteriorNul;";
 
@@ -424,7 +424,7 @@ fn nchar_not_truncated() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = &format!("SELECT a FROM {};", table_name);
 
@@ -468,7 +468,7 @@ fn system_encoding() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = &format!("SELECT a FROM {};", table_name);
 
@@ -511,7 +511,7 @@ fn utf_16_encoding() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = &format!("SELECT a FROM {};", table_name);
 
@@ -554,7 +554,7 @@ fn auto_encoding() {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = &format!("SELECT a FROM {};", table_name);
 
@@ -849,6 +849,112 @@ pub fn insert_optional_utf8() {
             "insert",
             "--connection-string",
             MSSQL,
+            input_path.to_str().unwrap(),
+            table_name,
+        ])
+        .assert()
+        .success();
+
+    // Query table and check for expected result
+    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("Hello, World!\nNULL\nHallo, Welt!", actual);
+}
+
+#[test]
+pub fn insert_utf16() {
+    let table_name = "InsertUtf16";
+    // Prepare table
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+
+    // Prepare file
+
+    // A temporary directory, to be removed at the end of the test.
+    let tmp_dir = tempdir().unwrap();
+    // The name of the input parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let input_path = tmp_dir.path().join("input.par");
+
+    let message_type = "
+        message schema {
+            REQUIRED BYTE_ARRAY a (UTF8);
+        }
+    ";
+
+    let text: ByteArray = "Hello, World!".into();
+    write_values_to_file(
+        message_type,
+        &input_path,
+        &[text, "Hallo, Welt!".into(), "Bonjour, Monde!".into()],
+        None,
+    );
+
+    // Insert file into table
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "--encoding",
+            "Utf16",
+            input_path.to_str().unwrap(),
+            table_name,
+        ])
+        .assert()
+        .success();
+
+    // Query table and check for expected result
+    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("Hello, World!\nHallo, Welt!\nBonjour, Monde!", actual);
+}
+
+#[test]
+pub fn insert_optional_utf16() {
+    let table_name = "InsertOptionalUtf16";
+    // Prepare table
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+
+    // Prepare file
+
+    // A temporary directory, to be removed at the end of the test.
+    let tmp_dir = tempdir().unwrap();
+    // The name of the input parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let input_path = tmp_dir.path().join("input.par");
+
+    let message_type = "
+        message schema {
+            OPTIONAL BYTE_ARRAY a (UTF8);
+        }
+    ";
+
+    let text: ByteArray = "Hello, World!".into();
+    write_values_to_file(
+        message_type,
+        &input_path,
+        &[text, "Hallo, Welt!".into()],
+        Some(&[1, 0, 1]),
+    );
+
+    // Insert file into table
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "--encoding",
+            "Utf16",
             input_path.to_str().unwrap(),
             table_name,
         ])
@@ -2355,7 +2461,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let in_path = format!("tests/{}", file);
 
@@ -2404,7 +2510,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     cmd.arg(out_str).assert().success().stdout(expectation)
 }
 
-/// Consumens a cursor and generates a CSV string from the result set.
+/// Consumes a cursor and generates a CSV string from the result set.
 fn cursor_to_string(cursor: impl Cursor) -> String {
     let batch_size = 20;
     let mut buffer = TextRowSet::for_cursor(batch_size, &cursor, None).unwrap();
