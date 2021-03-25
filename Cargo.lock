@@ -398,9 +398,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.90"
+version = "0.2.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba4aede83fc3617411dc6993bc8c70919750c1c257c6ca6a502aed6e0e2394ae"
+checksum = "8916b1f6ca17130ec6568feccee27c156ad12037880833a3b842a823236502e7"
 
 [[package]]
 name = "log"
@@ -571,7 +571,7 @@ checksum = "85587df816f3873030065fd459457acab61a2f5085eed680365ca83079e9875e"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.5.9"
+version = "0.5.10"
 dependencies = [
  "anyhow",
  "assert_cmd",
