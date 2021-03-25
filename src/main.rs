@@ -113,7 +113,7 @@ pub struct InsertOpt {
     /// UTF-16 encoding. This should work well independent of the system configuration, but requires
     /// additional work since text is always stored as UTF-8 in parquet.
     ///
-    /// `System`: Use 8Bit characters for requesting text from the data source, implies using 
+    /// `System`: Use 8Bit characters for requesting text from the data source, implies using
     /// the encoding defined by the system locale. This only works for non ASCII characters if the
     /// locales character set is UTF-8.
     ///

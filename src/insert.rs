@@ -101,10 +101,9 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
-        for column_index in 0..num_columns {
+        for (column_index, (_, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
             let column_reader = row_group_reader.get_column_reader(column_index)?;
             let column_writer = odbc_buffer.column_mut(column_index);
-            let (_, ref parquet_to_odbc_col) = column_buf_desc[column_index];
             parquet_to_odbc_col(num_rows, &mut pb, column_reader, column_writer)?;
         }
 

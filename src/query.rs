@@ -76,7 +76,7 @@ fn cursor_to_parquet(
         batch_size,
         buffer_description
             .iter()
-            .map(|(index, desc, _write_column)| (*index, *desc)),
+            .map(|strategy| (strategy.index, strategy.buffer_description)),
     );
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
@@ -104,7 +104,7 @@ fn cursor_to_parquet(
 
             let odbc_column = buffer.column(col_index);
 
-            let (_, _, ref odbc_to_parquet_col) = buffer_description[col_index];
+            let odbc_to_parquet_col = &buffer_description[col_index].odbc_to_parquet;
 
             odbc_to_parquet_col(&mut pb, &mut column_writer, odbc_column)?;
 
@@ -221,16 +221,20 @@ fn panic_invalid_cw() -> ! {
     )
 }
 
+/// All information required to fetch a column from odbc and transfer its data to Parquet.
+struct ColumnFetchStrategy {
+    /// One based index of the column.
+    index: u16,
+    /// Description of the buffer bound to the ODBC data source.
+    buffer_description: BufferDescription,
+    /// Function writing the data from an ODBC buffer with a parquet column writer.
+    odbc_to_parquet: Box<FnWriteParquetColumn>,
+}
+
 fn make_schema(
     cursor: &impl Cursor,
     use_utf16: bool,
-) -> Result<
-    (
-        TypePtr,
-        Vec<(u16, BufferDescription, Box<FnWriteParquetColumn>)>,
-    ),
-    Error,
-> {
+) -> Result<(TypePtr, Vec<ColumnFetchStrategy>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -254,179 +258,176 @@ fn make_schema(
 
         let ptb = |physical_type| Type::primitive_type_builder(&name, physical_type);
 
-        let (field_builder, buffer_kind, odbc_to_parquet_column): (
-            _,
-            _,
-            Box<FnWriteParquetColumn>,
-        ) = match cd.data_type {
-            DataType::Double => (
-                ptb(PhysicalType::DOUBLE),
-                BufferKind::F64,
-                optional_col_writer!(DoubleColumnWriter, NullableF64),
-            ),
-            DataType::Float | DataType::Real => (
-                ptb(PhysicalType::FLOAT),
-                BufferKind::F32,
-                optional_col_writer!(FloatColumnWriter, NullableF32),
-            ),
-            DataType::SmallInt => (
-                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
-                BufferKind::I32,
-                optional_col_writer!(Int32ColumnWriter, NullableI32),
-            ),
-            DataType::Integer => (
-                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_32),
-                BufferKind::I32,
-                optional_col_writer!(Int32ColumnWriter, NullableI32),
-            ),
-            DataType::Date => (
-                ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
-                BufferKind::Date,
-                optional_col_writer!(Int32ColumnWriter, NullableDate),
-            ),
-            DataType::Decimal {
-                scale: 0,
-                precision: p @ 0..=9,
-            }
-            | DataType::Numeric {
-                scale: 0,
-                precision: p @ 0..=9,
-            } => (
-                ptb(PhysicalType::INT32)
-                    .with_logical_type(LogicalType::DECIMAL)
-                    .with_precision(p as i32)
-                    .with_scale(0),
-                BufferKind::I32,
-                optional_col_writer!(Int32ColumnWriter, NullableI32),
-            ),
-            DataType::Decimal {
-                scale: 0,
-                precision: p @ 0..=18,
-            }
-            | DataType::Numeric {
-                scale: 0,
-                precision: p @ 0..=18,
-            } => (
-                ptb(PhysicalType::INT64)
-                    .with_logical_type(LogicalType::DECIMAL)
-                    .with_precision(p as i32)
-                    .with_scale(0),
-                BufferKind::I64,
-                optional_col_writer!(Int64ColumnWriter, NullableI64),
-            ),
-            DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-                // Length of the two's complement.
-                let num_binary_digits = precision as f64 * 10f64.log2();
-                // Plus one bit for the sign (+/-)
-                let length_in_bits = num_binary_digits + 1.0;
-                let length_in_bytes = (length_in_bits / 8.0).ceil() as i32;
-                (
-                    ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                        .with_length(length_in_bytes)
+        let (field_builder, buffer_kind, odbc_to_parquet): (_, _, Box<FnWriteParquetColumn>) =
+            match cd.data_type {
+                DataType::Double => (
+                    ptb(PhysicalType::DOUBLE),
+                    BufferKind::F64,
+                    optional_col_writer!(DoubleColumnWriter, NullableF64),
+                ),
+                DataType::Float | DataType::Real => (
+                    ptb(PhysicalType::FLOAT),
+                    BufferKind::F32,
+                    optional_col_writer!(FloatColumnWriter, NullableF32),
+                ),
+                DataType::SmallInt => (
+                    ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_16),
+                    BufferKind::I32,
+                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                ),
+                DataType::Integer => (
+                    ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_32),
+                    BufferKind::I32,
+                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                ),
+                DataType::Date => (
+                    ptb(PhysicalType::INT32).with_logical_type(LogicalType::DATE),
+                    BufferKind::Date,
+                    optional_col_writer!(Int32ColumnWriter, NullableDate),
+                ),
+                DataType::Decimal {
+                    scale: 0,
+                    precision: p @ 0..=9,
+                }
+                | DataType::Numeric {
+                    scale: 0,
+                    precision: p @ 0..=9,
+                } => (
+                    ptb(PhysicalType::INT32)
                         .with_logical_type(LogicalType::DECIMAL)
-                        .with_precision(precision.try_into().unwrap())
-                        .with_scale(scale.try_into().unwrap()),
-                    BufferKind::Text {
-                        max_str_len: cd.data_type.column_size(),
-                    },
+                        .with_precision(p as i32)
+                        .with_scale(0),
+                    BufferKind::I32,
+                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                ),
+                DataType::Decimal {
+                    scale: 0,
+                    precision: p @ 0..=18,
+                }
+                | DataType::Numeric {
+                    scale: 0,
+                    precision: p @ 0..=18,
+                } => (
+                    ptb(PhysicalType::INT64)
+                        .with_logical_type(LogicalType::DECIMAL)
+                        .with_precision(p as i32)
+                        .with_scale(0),
+                    BufferKind::I64,
+                    optional_col_writer!(Int64ColumnWriter, NullableI64),
+                ),
+                DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
+                    // Length of the two's complement.
+                    let num_binary_digits = precision as f64 * 10f64.log2();
+                    // Plus one bit for the sign (+/-)
+                    let length_in_bits = num_binary_digits + 1.0;
+                    let length_in_bytes = (length_in_bits / 8.0).ceil() as i32;
+                    (
+                        ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
+                            .with_length(length_in_bytes)
+                            .with_logical_type(LogicalType::DECIMAL)
+                            .with_precision(precision.try_into().unwrap())
+                            .with_scale(scale.try_into().unwrap()),
+                        BufferKind::Text {
+                            max_str_len: cd.data_type.column_size(),
+                        },
+                        Box::new(
+                            move |pb: &mut ParquetBuffer,
+                                  column_writer: &mut ColumnWriter,
+                                  column_reader: AnyColumnView| {
+                                write_decimal_col(
+                                    pb,
+                                    column_writer,
+                                    column_reader,
+                                    length_in_bytes.try_into().unwrap(),
+                                    precision,
+                                )
+                            },
+                        ),
+                    )
+                }
+                DataType::Timestamp { precision } => (
+                    ptb(PhysicalType::INT64).with_logical_type(if precision <= 3 {
+                        LogicalType::TIMESTAMP_MILLIS
+                    } else {
+                        LogicalType::TIMESTAMP_MICROS
+                    }),
+                    BufferKind::Timestamp,
                     Box::new(
                         move |pb: &mut ParquetBuffer,
                               column_writer: &mut ColumnWriter,
                               column_reader: AnyColumnView| {
-                            write_decimal_col(
-                                pb,
-                                column_writer,
-                                column_reader,
-                                length_in_bytes.try_into().unwrap(),
-                                precision,
-                            )
+                            write_timestamp_col(pb, column_writer, column_reader, precision)
                         },
                     ),
-                )
-            }
-            DataType::Timestamp { precision } => (
-                ptb(PhysicalType::INT64).with_logical_type(if precision <= 3 {
-                    LogicalType::TIMESTAMP_MILLIS
-                } else {
-                    LogicalType::TIMESTAMP_MICROS
-                }),
-                BufferKind::Timestamp,
-                Box::new(
-                    move |pb: &mut ParquetBuffer,
-                          column_writer: &mut ColumnWriter,
-                          column_reader: AnyColumnView| {
-                        write_timestamp_col(pb, column_writer, column_reader, precision)
-                    },
                 ),
-            ),
-            DataType::BigInt => (
-                ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
-                BufferKind::I64,
-                optional_col_writer!(Int64ColumnWriter, NullableI64),
-            ),
-            DataType::Bit => (
-                ptb(PhysicalType::BOOLEAN),
-                BufferKind::Bit,
-                optional_col_writer!(BoolColumnWriter, NullableBit),
-            ),
-            DataType::TinyInt => (
-                ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
-                BufferKind::I32,
-                optional_col_writer!(Int32ColumnWriter, NullableI32),
-            ),
-            DataType::Binary { length } => (
-                ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                    .with_length(length.try_into().unwrap())
-                    .with_logical_type(LogicalType::NONE),
-                BufferKind::Binary { length },
-                optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
-            ),
-            DataType::Varbinary { length } => (
-                ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::NONE),
-                BufferKind::Binary { length },
-                optional_col_writer!(ByteArrayColumnWriter, Binary),
-            ),
-            // For character data we consider binding to wide (16-Bit) buffers in order to avoid
-            // depending on the system locale being utf-8. For other character buffers we always use
-            // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
-            // represented in ASCII characters.
-            DataType::Char { length }
-            | DataType::Varchar { length }
-            | DataType::WVarchar { length }
-            | DataType::WChar { length } => {
-                if use_utf16 {
+                DataType::BigInt => (
+                    ptb(PhysicalType::INT64).with_logical_type(LogicalType::INT_64),
+                    BufferKind::I64,
+                    optional_col_writer!(Int64ColumnWriter, NullableI64),
+                ),
+                DataType::Bit => (
+                    ptb(PhysicalType::BOOLEAN),
+                    BufferKind::Bit,
+                    optional_col_writer!(BoolColumnWriter, NullableBit),
+                ),
+                DataType::TinyInt => (
+                    ptb(PhysicalType::INT32).with_logical_type(LogicalType::INT_8),
+                    BufferKind::I32,
+                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                ),
+                DataType::Binary { length } => (
+                    ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
+                        .with_length(length.try_into().unwrap())
+                        .with_logical_type(LogicalType::NONE),
+                    BufferKind::Binary { length },
+                    optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
+                ),
+                DataType::Varbinary { length } => (
+                    ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::NONE),
+                    BufferKind::Binary { length },
+                    optional_col_writer!(ByteArrayColumnWriter, Binary),
+                ),
+                // For character data we consider binding to wide (16-Bit) buffers in order to avoid
+                // depending on the system locale being utf-8. For other character buffers we always use
+                // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
+                // represented in ASCII characters.
+                DataType::Char { length }
+                | DataType::Varchar { length }
+                | DataType::WVarchar { length }
+                | DataType::WChar { length } => {
+                    if use_utf16 {
+                        (
+                            ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                            BufferKind::WText {
+                                // One UTF-16 code point may consist of up to two bytes.
+                                max_str_len: length * 2,
+                            },
+                            Box::new(write_utf16_to_utf8),
+                        )
+                    } else {
+                        (
+                            ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
+                            BufferKind::Text {
+                                // One UTF-8 code point may consist of up to four bytes.
+                                max_str_len: length * 4,
+                            },
+                            Box::new(write_utf8),
+                        )
+                    }
+                }
+                DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
+                    let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
+                        len
+                    } else {
+                        cursor.col_display_size(index.try_into().unwrap())? as usize
+                    };
                     (
                         ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                        BufferKind::WText {
-                            // One UTF-16 code point may consist of up to two bytes.
-                            max_str_len: length * 2,
-                        },
-                        Box::new(write_utf16_to_utf8),
-                    )
-                } else {
-                    (
-                        ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                        BufferKind::Text {
-                            // One UTF-8 code point may consist of up to four bytes.
-                            max_str_len: length * 4,
-                        },
+                        BufferKind::Text { max_str_len },
                         Box::new(write_utf8),
                     )
                 }
-            }
-            DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-                let max_str_len = if let Some(len) = cd.data_type.utf8_len() {
-                    len
-                } else {
-                    cursor.col_display_size(index.try_into().unwrap())? as usize
-                };
-                (
-                    ptb(PhysicalType::BYTE_ARRAY).with_logical_type(LogicalType::UTF8),
-                    BufferKind::Text { max_str_len },
-                    Box::new(write_utf8),
-                )
-            }
-        };
+            };
 
         let buffer_description = BufferDescription {
             kind: buffer_kind,
@@ -454,7 +455,11 @@ fn make_schema(
         } else {
             let field_builder = field_builder.with_repetition(repetition);
             fields.push(Arc::new(field_builder.build()?));
-            odbc_buffer_desc.push((index as u16, buffer_description, odbc_to_parquet_column));
+            odbc_buffer_desc.push(ColumnFetchStrategy {
+                index: index as u16,
+                buffer_description,
+                odbc_to_parquet,
+            });
         }
     }
 
