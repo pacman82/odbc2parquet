@@ -580,6 +580,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-bigint 0.4.0",
+ "num-traits",
  "odbc-api",
  "parquet",
  "predicates",

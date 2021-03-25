@@ -8,7 +8,7 @@ A command line tool to query an ODBC data source and write the result into a par
 * Fast. Makes efficient use of ODBC bulk reads, to lower IO overhead.
 * Flexible. Query any ODBC data source you have a driver for. MySQL, MS SQL, Excel, ...
 
-## Mapping of types
+## Mapping of types in queries
 
 The tool queries the ODBC Data source for type information and maps it to parquet type as such:
 
@@ -93,6 +93,15 @@ odbc2parquet query \
 out.par  \
 "SELECT * FROM Birthdays WHERE year > ? and year < ?" \
 1990 2010
+```
+
+### Inserting data into a database
+
+```shell
+odbc2parquet insert \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+input.par \
+MyTable
 ```
 
 Use `odbc2parquet --help` to see all option.
