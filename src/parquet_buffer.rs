@@ -6,7 +6,7 @@ use odbc_api::{
     Bit,
 };
 use parquet::{
-    column::writer::ColumnWriterImpl,
+    column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
 };
 use std::convert::TryInto;
@@ -185,6 +185,53 @@ impl ParquetBuffer {
         S: IntoPhysical<T::T>,
     {
         self.write_optional_any(cw, source, |s| s.into_physical())
+    }
+
+    /// Iterate over the elements of a column reader over an optional column.
+    ///
+    /// Be carfeful with calling this method on required columns as the bound definition buffer will
+    /// always be filled with zeros, which will make all elements `None`.
+    pub fn read_optional<'a, T>(
+        &'a mut self,
+        cr: &mut ColumnReaderImpl<T>,
+        batch_size: usize,
+    ) -> Result<impl Iterator<Item = Option<&T::T>> + 'a, Error>
+    where
+        T: DataType,
+        T::T: BufferedDataType,
+    {
+        let (values, def_levels) = T::T::mut_buf(self);
+        let (_num_val, _num_lvl) = cr.read_batch(batch_size, Some(def_levels), None, values)?;
+        let it = def_levels
+            .iter()
+            .scan(&values[..], |values, def| match def {
+                0 => Some(None),
+                1 => {
+                    let val = &values[0];
+                    *values = &values[1..];
+                    Some(Some(val))
+                }
+                _ => panic!("Only definition level 0 and 1 are supported"),
+            });
+
+        Ok(it)
+    }
+
+    /// Iterate over the elements of a column reader over a required column.
+    pub fn read_required<'a, T>(
+        &'a mut self,
+        cr: &mut ColumnReaderImpl<T>,
+        batch_size: usize,
+    ) -> Result<impl Iterator<Item = &T::T> + 'a, Error>
+    where
+        T: DataType,
+        T::T: BufferedDataType,
+    {
+        let (values, _def_levels) = T::T::mut_buf(self);
+        let (_num_val, _num_lvl) = cr.read_batch(batch_size, None, None, values)?;
+        let it = values.iter();
+
+        Ok(it)
     }
 }
 
