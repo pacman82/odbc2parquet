@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.11 (next version)
+
+* Requires at least Rust 1.51.0 to build.
+
 ## 0.5.10
 
 * Add new sub command `insert`.
