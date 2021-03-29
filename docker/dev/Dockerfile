@@ -1,6 +1,8 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.148.0/containers/rust/.devcontainer/base.Dockerfile
+# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.163.1/containers/debian/.devcontainer/base.Dockerfile
 
-FROM mcr.microsoft.com/vscode/devcontainers/rust:0-1
+# [Choice] Debian version: buster, stretch
+ARG VARIANT="buster"
+FROM mcr.microsoft.com/vscode/devcontainers/base:0-${VARIANT}
 
 # Install Microsoft ODBC SQL Drivers (msodbcsql17 package) for Debian 10
 # https://docs.microsoft.com/de-de/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver15
@@ -10,4 +12,19 @@ RUN echo msodbcsql17 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections
 
 # [Optional] Uncomment this section to install additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends unixodbc-dev msodbcsql17
+    && apt-get -y install --no-install-recommends \
+    build-essential \
+    unixodbc-dev \
+    msodbcsql17
+
+# Setup cargo and install cargo packages required for tests
+USER vscode
+
+# There is also a rust devcontainer, yet this way we get a toolchain
+# which is updatable with rustup.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+
+# We need 'parquet-read' to run the tests. At the moment I do not
+# know a way to specify cargo installable executables as build
+# dependencies.
+RUN /home/vscode/.cargo/bin/cargo install parquet
