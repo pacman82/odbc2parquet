@@ -23,6 +23,39 @@ lazy_static! {
     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
+/// Query MSSQL database, yet do not specify username and password in the connection string, but
+/// pass them as separate command line options.
+#[test]
+fn append_user_and_password_to_connection_string() {
+    // Connection string without user name and password.
+    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            connection_string,
+            "--user",
+            "SA",
+            "--password",
+            "<YourStrong@Passw0rd>",
+            out_str,
+            "SELECT title, year from Movies",
+        ])
+        .assert()
+        .success();
+}
+
 #[test]
 fn insert() {
     roundtrip("insert.par", "odbc2parquet_insert").success();

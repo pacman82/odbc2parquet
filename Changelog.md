@@ -3,6 +3,7 @@
 ## 0.5.11 (next version)
 
 * Requires at least Rust 1.51.0 to build.
+* Command line parameters `user` and `password` will no longer be ignored then passed together with a connection string. Instead their values will be appended as `UID` and `PWD` attributes at the end.
 
 ## 0.5.10
 

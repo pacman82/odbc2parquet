@@ -5,7 +5,7 @@ mod query;
 
 use crate::encoding::EncodingArgument;
 use anyhow::{bail, Error};
-use odbc_api::{Connection, Environment};
+use odbc_api::{escape_attribute_value, Connection, Environment};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -40,19 +40,22 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
-    /// The connection string used to connect to the ODBC data source. Alternatively you may
-    /// specify the ODBC dsn.
+    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
+    /// the ODBC dsn.
     #[structopt(long, short = "c")]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
     #[structopt(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
-    /// User used to access the datasource specified in dsn.
+    /// User used to access the datasource specified in dsn. Should you specify a connection string
+    /// instead of a Data Source Name the user name is going to be appended at the end of it as the
+    /// `UID` attribute.
     #[structopt(long, short = "u", env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
-    /// connection string.
+    /// connection string. Should you specify a Connection string instead of a Data Source Name the
+    /// password is going to be appended at the end of it as the `PWD` attribute.
     #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
@@ -197,7 +200,16 @@ fn open_connection<'e>(
             opt.password.as_deref().unwrap_or(""),
         )?
     } else if let Some(connection_string) = &opt.connection_string {
-        odbc_env.connect_with_connection_string(&connection_string)?
+        // Append user and or password to connection string
+        let mut cs = connection_string.to_owned();
+        if let Some(uid) = opt.user.as_deref() {
+            cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
+        }
+        if let Some(pwd) = opt.password.as_deref() {
+            cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
+        }
+
+        odbc_env.connect_with_connection_string(&cs)?
     } else {
         bail!("Please specify a data source either using --dsn or --connection-string.");
     };
