@@ -78,6 +78,18 @@ fn cursor_to_parquet(
             .iter()
             .map(|strategy| (strategy.index, strategy.buffer_description)),
     );
+    let mem_usage_odbc_buffer_per_row: usize = buffer_description
+        .iter()
+        .map(|strategy| strategy.buffer_description.bytes_per_row())
+        .sum();
+    let total_mem_usage_per_row =
+        mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
+    info!(
+        "Memory usage per row is {} bytes. This excludes memory directly allocated by the ODBC \
+        driver.",
+        total_mem_usage_per_row,
+    );
+
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
     let mut pb = ParquetBuffer::new(batch_size as usize);

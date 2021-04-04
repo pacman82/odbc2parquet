@@ -27,7 +27,7 @@
 
 ## 0.5.5
 
-* `VARBIANRY` and `BINARY` SQL columns are now mapped unto `BYTE_ARRAY` and `FIXED_LEN_BYTE_ARRAY` parquet physical types.
+* `VARBINARY` and `BINARY` SQL columns are now mapped unto `BYTE_ARRAY` and `FIXED_LEN_BYTE_ARRAY` parquet physical types.
 
 ## 0.5.4
 

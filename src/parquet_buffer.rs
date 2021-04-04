@@ -9,7 +9,7 @@ use parquet::{
     column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
 };
-use std::convert::TryInto;
+use std::{convert::TryInto, mem::size_of};
 
 /// Holds preallocated buffers for every possible physical parquet type. This way we do not need to
 /// reallocate them.
@@ -25,6 +25,17 @@ pub struct ParquetBuffer {
 }
 
 impl ParquetBuffer {
+    /// Memory usage of this buffer per row. Used together with the size of the ODBC buffer to
+    /// estimate good batch sizes.
+    pub const MEMORY_USAGE_BYTES_PER_ROW: usize = size_of::<i32>()
+        + size_of::<i64>()
+        + size_of::<f32>()
+        + size_of::<f64>()
+        + size_of::<ByteArray>()
+        + size_of::<FixedLenByteArrayType>()
+        + size_of::<bool>()
+        + size_of::<i16>();
+
     pub fn new(batch_size: usize) -> ParquetBuffer {
         ParquetBuffer {
             values_i32: Vec::with_capacity(batch_size),
@@ -347,5 +358,18 @@ impl IntoPhysical<FixedLenByteArray> for &[u8] {
     fn into_physical(self) -> FixedLenByteArray {
         let byte_array: ByteArray = self.to_owned().into();
         byte_array.into()
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::ParquetBuffer;
+
+    
+    #[test]
+    #[cfg(target_pointer_width = "64")] // Memory usage is platform dependent
+    fn memory_usage() {
+        assert_eq!(59, ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW);
     }
 }
