@@ -152,7 +152,7 @@ fn main() -> Result<(), Error> {
         .unwrap();
 
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
-    let mut odbc_env = unsafe { Environment::new() }?;
+    let odbc_env = unsafe { Environment::new() }?;
 
     match opt.command {
         Command::Query { query_opt } => {
