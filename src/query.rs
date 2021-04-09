@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error};
 use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
@@ -26,6 +26,11 @@ use parquet::{
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
+#[cfg(target_pointer_width="64")]
+const DEFAULT_BATCH_SIZE_BYTES: usize = 2 * 1024 * 1024 * 1024; // 2GB
+#[cfg(target_pointer_width="32")]
+const DEFAULT_BATCH_SIZE_BYTES: usize = 1024 * 1024 * 1024; // 1GB
+
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     let QueryOpt {
@@ -33,7 +38,8 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         output,
         parameters,
         query,
-        batch_size,
+        batch_size_row,
+        batch_size_mib,
         batches_per_file,
         encoding,
     } = opt;
@@ -46,11 +52,24 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 
     let odbc_conn = open_connection(&environment, connect_opts)?;
 
+    let batch_size = match (*batch_size_row, *batch_size_mib) {
+        (Some(rows), None) => BatchSizeLimit::Rows(rows),
+        (None, Some(mib)) => BatchSizeLimit::Bytes(mib as usize * 1024 * 1024),
+        // User specified nothing => Use default
+        (None, None) => BatchSizeLimit::Bytes(DEFAULT_BATCH_SIZE_BYTES),
+        (Some(_), Some(_)) => {
+            bail!(
+                "Please limit the batch size by either number of rows, or memory consumption, but \
+                not both."
+            )
+        }
+    };
+
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
         cursor_to_parquet(
             cursor,
             output,
-            *batch_size,
+            batch_size,
             *batches_per_file,
             encoding.use_utf16(),
         )?;
@@ -65,19 +84,16 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 fn cursor_to_parquet(
     cursor: impl Cursor,
     path: &Path,
-    batch_size: u32,
+    batch_size: BatchSizeLimit,
     batches_per_file: u32,
     use_utf16: bool,
 ) -> Result<(), Error> {
-    info!("Batch size set to {}", batch_size);
-
     let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16)?;
-    let mut odbc_buffer = ColumnarRowSet::with_column_indices(
-        batch_size,
-        buffer_description
-            .iter()
-            .map(|strategy| (strategy.index, strategy.buffer_description)),
-    );
+
+    if buffer_description.is_empty() {
+        bail!("Resulting parquet file would not have any columns!")
+    }
+
     let mem_usage_odbc_buffer_per_row: usize = buffer_description
         .iter()
         .map(|strategy| strategy.buffer_description.bytes_per_row())
@@ -90,13 +106,43 @@ fn cursor_to_parquet(
         total_mem_usage_per_row,
     );
 
+    let batch_size_row = match batch_size {
+        BatchSizeLimit::Rows(rows) => rows,
+        BatchSizeLimit::Bytes(num_bytes) => {
+            let rows = (num_bytes / total_mem_usage_per_row).try_into().unwrap();
+            if rows == 0 {
+                bail!(
+                    "Memory required to hold a single row is to larger than the limit. Memory \
+                    Limit: {} bytes, Memory per row: {} bytes.\nYou can use either \n
+                    --batch-size-row or --batch-size-mib to raise the limit.",
+                    num_bytes,
+                    total_mem_usage_per_row
+                )
+            }
+            rows
+        }
+    };
+
+    info!("Batch size set to {}", batch_size_row);
+
+    let mut odbc_buffer = ColumnarRowSet::with_column_indices(
+        batch_size_row,
+        buffer_description
+            .iter()
+            .map(|strategy| (strategy.index, strategy.buffer_description)),
+    );
+
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
-    let mut pb = ParquetBuffer::new(batch_size as usize);
+    let mut pb = ParquetBuffer::new(batch_size_row as usize);
     let mut num_batch = 0;
 
-    let mut writer =
-        ParquetWriter::new(path, batch_size, parquet_schema.clone(), batches_per_file)?;
+    let mut writer = ParquetWriter::new(
+        path,
+        batch_size_row,
+        parquet_schema.clone(),
+        batches_per_file,
+    )?;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
         let mut row_group_writer = writer.next_row_group(num_batch)?;
@@ -129,6 +175,11 @@ fn cursor_to_parquet(
     writer.close()?;
 
     Ok(())
+}
+
+enum BatchSizeLimit {
+    Rows(u32),
+    Bytes(usize),
 }
 
 /// Function used to copy the contents of `AnyColumnView` into `ColumnWriter`. The concrete instance
