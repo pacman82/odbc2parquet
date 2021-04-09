@@ -66,9 +66,15 @@ pub struct QueryOpt {
     connect_opts: ConnectOpts,
     /// Size of a single batch in rows. The content of the data source is written into the output
     /// parquet files in batches. This way the content does never need to be materialized completely
-    /// in memory at once.
-    #[structopt(long, default_value = "100000")]
-    batch_size: u32,
+    /// in memory at once. Incompatible with `batch-size-mib`.
+    #[structopt(long)]
+    batch_size_row: Option<u32>,
+    /// Limits the size of a single batch. It does so by calculating the amount of memory each row
+    /// requires in the allocated buffers and then limits the maximum number of rows so that the
+    /// maximum buffer size comes as close as possbile, but does not exceed the specified amount.
+    /// Default is 2 GiB on 64 Bit platforms and 1 GiB on 32 Bit Platforms.
+    #[structopt(long)]
+    batch_size_mib: Option<u32>,
     /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
     /// single output file is produces. Otherwise each output file is closed after the maximum
     /// number of batches have been written and a new one with the suffix `_n` is started. There n

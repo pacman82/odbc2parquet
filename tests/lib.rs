@@ -278,7 +278,7 @@ fn split_files() {
             out_str,
             "--connection-string",
             MSSQL,
-            "--batch-size",
+            "--batch-size-row",
             "1",
             "--batches-per-file",
             "1",
@@ -350,6 +350,46 @@ fn varbinary_column() {
     // `cargo install parquet`.
     let mut cmd = Command::new("parquet-read");
     cmd.arg(out_str).assert().success().stdout(eq(expected));
+}
+
+#[test]
+fn query_varchar_max() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let table_name = "QueryVarcharMax";
+
+    setup_empty_table(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
+    conn.execute(
+        &format!(
+            "INSERT INTO {} (a) Values ('Hello'), ('World');",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            out_str,
+            &query,
+        ])
+        .assert()
+        .failure();
 }
 
 #[test]
