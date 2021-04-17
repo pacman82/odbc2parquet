@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+* Introduced `--column-compression-default` in order to allow users to specify column compression.
+* Default column compression is now `gzip`.
+
 ## 0.6.0
 
 * Requires at least Rust 1.51.0 to build.

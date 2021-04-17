@@ -1,11 +1,12 @@
-mod encoding;
+mod enum_args;
 mod insert;
 mod parquet_buffer;
 mod query;
 
-use crate::encoding::EncodingArgument;
+use crate::enum_args::{compression_from_str, EncodingArgument, COMPRESSION_VARIANTS};
 use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, Environment};
+use parquet::basic::Compression;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -82,6 +83,14 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[structopt(long, default_value = "0")]
     batches_per_file: u32,
+    /// Default compression used by the parquet file writer.
+    #[structopt(
+        long,
+        possible_values=COMPRESSION_VARIANTS,
+        default_value="gzip",
+        parse(try_from_str=compression_from_str)
+    )]
+    column_compression_default: Compression,
     /// Encoding used for character data requested from the data source.
     ///
     /// `Utf16`: The tool will use 16Bit characters for requesting text from the data source,

@@ -14,7 +14,7 @@ use odbc_api::{
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullability,
 };
 use parquet::{
-    basic::{LogicalType, Repetition, Type as PhysicalType},
+    basic::{Compression, LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
     errors::ParquetError,
     file::{
@@ -26,9 +26,9 @@ use parquet::{
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
-#[cfg(target_pointer_width="64")]
+#[cfg(target_pointer_width = "64")]
 const DEFAULT_BATCH_SIZE_BYTES: usize = 2 * 1024 * 1024 * 1024; // 2GB
-#[cfg(target_pointer_width="32")]
+#[cfg(target_pointer_width = "32")]
 const DEFAULT_BATCH_SIZE_BYTES: usize = 1024 * 1024 * 1024; // 1GB
 
 /// Execute a query and writes the result to parquet.
@@ -42,6 +42,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         batch_size_mib,
         batches_per_file,
         encoding,
+        column_compression_default,
     } = opt;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
@@ -71,6 +72,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             output,
             batch_size,
             *batches_per_file,
+            *column_compression_default,
             encoding.use_utf16(),
         )?;
     } else {
@@ -86,6 +88,7 @@ fn cursor_to_parquet(
     path: &Path,
     batch_size: BatchSizeLimit,
     batches_per_file: u32,
+    column_compression_default: Compression,
     use_utf16: bool,
 ) -> Result<(), Error> {
     let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16)?;
@@ -142,6 +145,7 @@ fn cursor_to_parquet(
         batch_size_row,
         parquet_schema.clone(),
         batches_per_file,
+        column_compression_default,
     )?;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
@@ -549,11 +553,14 @@ impl<'p> ParquetWriter<'p> {
         batch_size: u32,
         schema: Arc<Type>,
         batches_per_file: u32,
+        column_compression_default: Compression,
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
-        let wpb = WriterProperties::builder().set_write_batch_size(batch_size as usize);
+        let wpb = WriterProperties::builder()
+            .set_write_batch_size(batch_size as usize)
+            .set_compression(column_compression_default);
         let properties = Arc::new(wpb.build());
         let file = if batches_per_file == 0 {
             File::create(path)?
