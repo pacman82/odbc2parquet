@@ -1,3 +1,5 @@
+use anyhow::{bail, Error};
+use parquet::basic::Compression;
 use structopt::clap::arg_enum;
 
 arg_enum! {
@@ -24,4 +26,28 @@ impl EncodingArgument {
             EncodingArgument::Auto => false,
         }
     }
+}
+
+pub const COMPRESSION_VARIANTS: &[&str] = &[
+    "uncompressed",
+    "gzip",
+    "lz4",
+    "lz0",
+    "zstd",
+    "snappy",
+    "brotli",
+];
+
+pub fn compression_from_str(source: &str) -> Result<Compression, Error> {
+    let compression = match source {
+        "uncompressed" => Compression::UNCOMPRESSED,
+        "gzip" => Compression::GZIP,
+        "lz4" => Compression::LZ4,
+        "lz0" => Compression::LZO,
+        "zstd" => Compression::ZSTD,
+        "snappy" => Compression::SNAPPY,
+        "brotli" => Compression::BROTLI,
+        _ => bail!("Sorry, I do not know this compression identifier."),
+    };
+    Ok(compression)
 }

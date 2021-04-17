@@ -366,7 +366,6 @@ mod test {
 
     use super::ParquetBuffer;
 
-    
     #[test]
     #[cfg(target_pointer_width = "64")] // Memory usage is platform dependent
     fn memory_usage() {
