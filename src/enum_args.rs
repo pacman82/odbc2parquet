@@ -28,6 +28,7 @@ impl EncodingArgument {
     }
 }
 
+/// Used to display a number of valid values for the compression argumet to the user.
 pub const COMPRESSION_VARIANTS: &[&str] = &[
     "uncompressed",
     "gzip",
@@ -38,6 +39,7 @@ pub const COMPRESSION_VARIANTS: &[&str] = &[
     "brotli",
 ];
 
+/// Used to parse the compression from the command line argument.
 pub fn compression_from_str(source: &str) -> Result<Compression, Error> {
     let compression = match source {
         "uncompressed" => Compression::UNCOMPRESSED,
