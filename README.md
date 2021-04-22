@@ -35,6 +35,30 @@ The tool queries the ODBC Data source for type information and maps it to parque
 
 ## Installation
 
+### Prerequisites
+
+To work with this tool you need an ODBC driver manager and an ODBC driver for the data source you want to access.
+
+#### Windows
+
+An ODBC driver manager is already preinstalled on windows. So is the `ODBC data sources (64Bit)` and `ODBC data sources (32Bit)` app which you can use to discover which drivers are already available on your system.
+
+#### Linux
+
+This tool links both at runtime and during build against `libodbc.so`. To get it you should install [unixODBC](http://www.unixodbc.org/). You can do this using your systems packet manager. For *ubuntu* you run:
+
+```
+sudo apt install unixodbc-dev
+```
+
+#### OS-X
+
+This tool links both at runtime and during build against `libodbc.so`. To get it you should install [unixODBC](http://www.unixodbc.org/). To install it I recommend the [homebrew](https://brew.sh/) packet manager, which allows you to install it using:
+
+```
+brew install unixodbc
+```
+
 ### Download binary from GitHub
 
 <https://github.com/pacman82/odbc2parquet/releases/latest>
