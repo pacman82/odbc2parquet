@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+* Introduced support for connecting via GUI on windows platforms via `--prompt` flag.
+
 ## 0.6.1
 
 * Introduced `--column-compression-default` in order to allow users to specify column compression.

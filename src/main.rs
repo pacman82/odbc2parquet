@@ -10,6 +10,14 @@ use parquet::basic::Compression;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+#[cfg(target_os = "windows")]
+use winit::{
+    event_loop::EventLoop,
+    window::{Window, WindowBuilder},
+};
+#[cfg(target_os = "windows")]
+use odbc_api::DriverCompleteOption;
+
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
 struct Cli {
@@ -41,6 +49,10 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
+    #[structopt(long, conflicts_with = "dsn")]
+    /// Prompts the user for missing information from the connection string. Only supported on
+    /// windows platform.
+    prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
     #[structopt(long, short = "c")]
@@ -208,25 +220,50 @@ fn open_connection<'e>(
     odbc_env: &'e Environment,
     opt: &ConnectOpts,
 ) -> Result<Connection<'e>, Error> {
-    let conn = if let Some(dsn) = &opt.dsn {
-        odbc_env.connect(
-            &dsn,
+    if let Some(dsn) = opt.dsn.as_deref() {
+        let conn = odbc_env.connect(
+            dsn,
             opt.user.as_deref().unwrap_or(""),
             opt.password.as_deref().unwrap_or(""),
-        )?
-    } else if let Some(connection_string) = &opt.connection_string {
-        // Append user and or password to connection string
-        let mut cs = connection_string.to_owned();
-        if let Some(uid) = opt.user.as_deref() {
-            cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
-        }
-        if let Some(pwd) = opt.password.as_deref() {
-            cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
-        }
+        )?;
+        return Ok(conn);
+    }
 
-        odbc_env.connect_with_connection_string(&cs)?
-    } else {
-        bail!("Please specify a data source either using --dsn or --connection-string.");
-    };
+    // Append user and or password to connection string
+    let mut cs = opt.connection_string.clone().unwrap_or_default();
+    if let Some(uid) = opt.user.as_deref() {
+        cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
+    }
+    if let Some(pwd) = opt.password.as_deref() {
+        cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
+    }
+
+    #[cfg(target_os = "windows")]
+    if opt.prompt {
+        let window = message_only_window().unwrap();
+        let conn = odbc_env.driver_connect(&cs, None, DriverCompleteOption::Complete(&window))?;
+        return Ok(conn);
+    }
+
+    // Would rather use conditional compilation on the flag itself. While this works fine, it does
+    // mess with rust analyzer, so I keep it and panic here to keep development experience smooth.
+    #[cfg(not(target_os = "windows"))]
+    if opt.prompt {
+        bail!("--prompt is only supported on windows.")
+    }
+
+    if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
+        bail!("Either DSN, connection string or prompt must be specified.")
+    }
+
+    let conn = odbc_env.connect_with_connection_string(&cs)?;
     Ok(conn)
+}
+
+#[cfg(target_os = "windows")]
+fn message_only_window() -> Result<Window, Error> {
+    let window = WindowBuilder::new()
+        .with_visible(false)
+        .build(&EventLoop::new())?;
+    Ok(window)
 }
