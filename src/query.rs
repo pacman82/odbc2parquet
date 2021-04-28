@@ -14,7 +14,10 @@ use odbc_api::{
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullability,
 };
 use parquet::{
-    basic::{Compression, ConvertedType, Repetition, Type as PhysicalType},
+    basic::{
+        Compression, DateType, DecimalType, IntType, LogicalType, Repetition, StringType, TimeUnit,
+        TimestampType, Type as PhysicalType,
+    },
     column::writer::ColumnWriter,
     errors::ParquetError,
     file::{
@@ -338,17 +341,28 @@ fn make_schema(
                     optional_col_writer!(FloatColumnWriter, NullableF32),
                 ),
                 DataType::SmallInt => (
-                    ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_16),
+                    ptb(PhysicalType::INT32).with_logical_type(Some(LogicalType::INTEGER(
+                        IntType {
+                            bit_width: 16,
+                            is_signed: true,
+                        },
+                    ))),
                     BufferKind::I32,
                     optional_col_writer!(Int32ColumnWriter, NullableI32),
                 ),
                 DataType::Integer => (
-                    ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_32),
+                    ptb(PhysicalType::INT32).with_logical_type(Some(LogicalType::INTEGER(
+                        IntType {
+                            bit_width: 16,
+                            is_signed: true,
+                        },
+                    ))),
                     BufferKind::I32,
                     optional_col_writer!(Int32ColumnWriter, NullableI32),
                 ),
                 DataType::Date => (
-                    ptb(PhysicalType::INT32).with_converted_type(ConvertedType::DATE),
+                    ptb(PhysicalType::INT32)
+                        .with_logical_type(Some(LogicalType::DATE(DateType {}))),
                     BufferKind::Date,
                     optional_col_writer!(Int32ColumnWriter, NullableDate),
                 ),
@@ -361,7 +375,10 @@ fn make_schema(
                     precision: p @ 0..=9,
                 } => (
                     ptb(PhysicalType::INT32)
-                        .with_converted_type(ConvertedType::DECIMAL)
+                        .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
+                            scale: 0,
+                            precision: p as i32,
+                        })))
                         .with_precision(p as i32)
                         .with_scale(0),
                     BufferKind::I32,
@@ -376,7 +393,10 @@ fn make_schema(
                     precision: p @ 0..=18,
                 } => (
                     ptb(PhysicalType::INT64)
-                        .with_converted_type(ConvertedType::DECIMAL)
+                        .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
+                            scale: 0,
+                            precision: p as i32,
+                        })))
                         .with_precision(p as i32)
                         .with_scale(0),
                     BufferKind::I64,
@@ -391,7 +411,10 @@ fn make_schema(
                     (
                         ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
                             .with_length(length_in_bytes)
-                            .with_converted_type(ConvertedType::DECIMAL)
+                            .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
+                                scale: scale.try_into().unwrap(),
+                                precision: precision.try_into().unwrap(),
+                            })))
                             .with_precision(precision.try_into().unwrap())
                             .with_scale(scale.try_into().unwrap()),
                         BufferKind::Text {
@@ -413,11 +436,16 @@ fn make_schema(
                     )
                 }
                 DataType::Timestamp { precision } => (
-                    ptb(PhysicalType::INT64).with_converted_type(if precision <= 3 {
-                        ConvertedType::TIMESTAMP_MILLIS
-                    } else {
-                        ConvertedType::TIMESTAMP_MICROS
-                    }),
+                    ptb(PhysicalType::INT64).with_logical_type(Some(LogicalType::TIMESTAMP(
+                        TimestampType {
+                            is_adjusted_to_u_t_c: false,
+                            unit: if precision <= 3 {
+                                TimeUnit::MILLIS(Default::default())
+                            } else {
+                                TimeUnit::MICROS(Default::default())
+                            },
+                        },
+                    ))),
                     BufferKind::Timestamp,
                     Box::new(
                         move |pb: &mut ParquetBuffer,
@@ -428,7 +456,12 @@ fn make_schema(
                     ),
                 ),
                 DataType::BigInt => (
-                    ptb(PhysicalType::INT64).with_converted_type(ConvertedType::INT_64),
+                    ptb(PhysicalType::INT64).with_logical_type(Some(LogicalType::INTEGER(
+                        IntType {
+                            bit_width: 64,
+                            is_signed: true,
+                        },
+                    ))),
                     BufferKind::I64,
                     optional_col_writer!(Int64ColumnWriter, NullableI64),
                 ),
@@ -438,19 +471,24 @@ fn make_schema(
                     optional_col_writer!(BoolColumnWriter, NullableBit),
                 ),
                 DataType::TinyInt => (
-                    ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_8),
+                    ptb(PhysicalType::INT32).with_logical_type(Some(LogicalType::INTEGER(
+                        IntType {
+                            bit_width: 8,
+                            is_signed: true,
+                        },
+                    ))),
                     BufferKind::I32,
                     optional_col_writer!(Int32ColumnWriter, NullableI32),
                 ),
                 DataType::Binary { length } => (
                     ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
                         .with_length(length.try_into().unwrap())
-                        .with_converted_type(ConvertedType::NONE),
+                        .with_logical_type(None),
                     BufferKind::Binary { length },
                     optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
                 ),
                 DataType::Varbinary { length } => (
-                    ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
+                    ptb(PhysicalType::BYTE_ARRAY).with_logical_type(None),
                     BufferKind::Binary { length },
                     optional_col_writer!(ByteArrayColumnWriter, Binary),
                 ),
@@ -464,7 +502,8 @@ fn make_schema(
                 | DataType::WChar { length } => {
                     if use_utf16 {
                         (
-                            ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::UTF8),
+                            ptb(PhysicalType::BYTE_ARRAY)
+                                .with_logical_type(Some(LogicalType::STRING(StringType {}))),
                             BufferKind::WText {
                                 // One UTF-16 code point may consist of up to two bytes.
                                 max_str_len: length * 2,
@@ -473,7 +512,8 @@ fn make_schema(
                         )
                     } else {
                         (
-                            ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::UTF8),
+                            ptb(PhysicalType::BYTE_ARRAY)
+                                .with_logical_type(Some(LogicalType::STRING(StringType {}))),
                             BufferKind::Text {
                                 // One UTF-8 code point may consist of up to four bytes.
                                 max_str_len: length * 4,
@@ -489,7 +529,8 @@ fn make_schema(
                         cursor.col_display_size(index.try_into().unwrap())? as usize
                     };
                     (
-                        ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::UTF8),
+                        ptb(PhysicalType::BYTE_ARRAY)
+                            .with_logical_type(Some(LogicalType::STRING(StringType {}))),
                         BufferKind::Text { max_str_len },
                         Box::new(write_utf8),
                     )

@@ -11,12 +11,12 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[cfg(target_os = "windows")]
+use odbc_api::DriverCompleteOption;
+#[cfg(target_os = "windows")]
 use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
 };
-#[cfg(target_os = "windows")]
-use odbc_api::DriverCompleteOption;
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]

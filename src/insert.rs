@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::{bail, Error};
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
-use log::info;
+use log::{info, debug};
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
@@ -20,7 +20,7 @@ use odbc_api::{
     Bit, Environment, U16String,
 };
 use parquet::{
-    basic::{ConvertedType, Type as PhysicalType},
+    basic::{ConvertedType, IntType, LogicalType, TimeType, TimeUnit, Type as PhysicalType},
     column::reader::ColumnReader,
     data_type::{
         AsBytes, BoolType, ByteArrayType, DataType, DoubleType, FixedLenByteArrayType, FloatType,
@@ -373,19 +373,28 @@ fn parquet_type_to_odbc_buffer_desc(
     }
     let nullable = col_desc.self_type().is_optional();
 
-    let lt = col_desc.converted_type();
+    let ct = col_desc.converted_type();
+    let lt = col_desc.logical_type();
     let pt = col_desc.physical_type();
+
+    debug!("Column with name '{}' has physical type '{}'.", name, pt);
+    debug!("Column with name '{}' has converted type '{}'.", name, ct);
+    if let Some(lt) = &lt {
+        debug!("Column with name '{}' has logical type '{:?}'.", name, lt);
+    } else {
+        debug!("Column with name '{}' has no logical type.", name);
+    }
 
     let unexpected = || {
         panic!(
             "Unexpected combination of Physical and Logical type. {:?} {:?}",
-            pt, lt
+            pt, ct
         )
     };
 
     let (kind, parquet_to_odbc): (_, Box<FnParquetToOdbcCol>) = match pt {
         PhysicalType::BOOLEAN => match lt {
-            ConvertedType::NONE => (
+            None => (
                 BufferKind::Bit,
                 BoolType::map_to::<Bit>().with(|&b| Bit(b as u8), nullable),
             ),
@@ -394,14 +403,15 @@ fn parquet_type_to_odbc_buffer_desc(
         PhysicalType::INT32 => match lt {
             // As buffer type int32 is perfectly ok, eventually we could be more precise with the
             // SQLDataType for the smaller integer variants.
-            ConvertedType::NONE
-            | ConvertedType::INT_32
-            | ConvertedType::UINT_32
-            | ConvertedType::INT_16
-            | ConvertedType::UINT_16
-            | ConvertedType::INT_8
-            | ConvertedType::UINT_8 => (BufferKind::I32, Int32Type::map_identity(nullable)),
-            ConvertedType::TIME_MILLIS => (
+            None
+            | Some(LogicalType::INTEGER(IntType {
+                bit_width: 8..=32, // 8, 16 and 32 bits
+                is_signed: _,
+            })) => (BufferKind::I32, Int32Type::map_identity(nullable)),
+            Some(LogicalType::TIME(TimeType {
+                is_adjusted_to_u_t_c: _,
+                unit: TimeUnit::MILLIS(_),
+            })) => (
                 // Time represented in format hh:mm:ss.fff
                 BufferKind::Text { max_str_len: 12 },
                 Int32Type::map_to_text(
@@ -414,11 +424,11 @@ fn parquet_type_to_odbc_buffer_desc(
                     nullable,
                 ),
             ),
-            ConvertedType::DATE => (
+            Some(LogicalType::DATE(_)) => (
                 BufferKind::Date,
                 Int32Type::map_to::<Date>().with(|&i| days_since_epoch_to_odbc_date(i), nullable),
             ),
-            ConvertedType::DECIMAL => {
+            Some(LogicalType::DECIMAL(_)) => {
                 let precision: usize = col_desc.type_precision().try_into().unwrap();
                 let scale: usize = col_desc.type_scale().try_into().unwrap();
                 // We need one character for each digit and maybe an additional character for the
@@ -441,7 +451,7 @@ fn parquet_type_to_odbc_buffer_desc(
             }
             _ => unexpected(),
         },
-        PhysicalType::INT64 => match lt {
+        PhysicalType::INT64 => match ct {
             ConvertedType::NONE | ConvertedType::INT_64 | ConvertedType::UINT_64 => {
                 (BufferKind::I64, Int64Type::map_identity(nullable))
             }
@@ -528,16 +538,16 @@ fn parquet_type_to_odbc_buffer_desc(
             If you feel that it should, please raise an issue at \
             https://github.com/pacman82/odbc2parquet/issues."
         ),
-        PhysicalType::FLOAT => match lt {
+        PhysicalType::FLOAT => match ct {
             ConvertedType::NONE => (BufferKind::F32, FloatType::map_identity(nullable)),
             _ => unexpected(),
         },
-        PhysicalType::DOUBLE => match lt {
+        PhysicalType::DOUBLE => match ct {
             ConvertedType::NONE => (BufferKind::F64, DoubleType::map_identity(nullable)),
             _ => unexpected(),
         },
         PhysicalType::BYTE_ARRAY => {
-            match lt {
+            match ct {
                 ConvertedType::UTF8 | ConvertedType::JSON | ConvertedType::ENUM => {
                     // Start small. We rebind the buffer as we encounter larger values in the file.
                     let max_str_len = 1;
@@ -606,7 +616,7 @@ fn parquet_type_to_odbc_buffer_desc(
         }
         PhysicalType::FIXED_LEN_BYTE_ARRAY => {
             let length = col_desc.type_length().try_into().unwrap();
-            match lt {
+            match ct {
                 ConvertedType::NONE => (
                     BufferKind::Binary { length },
                     FixedLenByteArrayType::map_to_binary(
