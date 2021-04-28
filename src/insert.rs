@@ -20,7 +20,7 @@ use odbc_api::{
     Bit, Environment, U16String,
 };
 use parquet::{
-    basic::{LogicalType, Type as PhysicalType},
+    basic::{ConvertedType, Type as PhysicalType},
     column::reader::ColumnReader,
     data_type::{
         AsBytes, BoolType, ByteArrayType, DataType, DoubleType, FixedLenByteArrayType, FloatType,
@@ -373,7 +373,7 @@ fn parquet_type_to_odbc_buffer_desc(
     }
     let nullable = col_desc.self_type().is_optional();
 
-    let lt = col_desc.logical_type();
+    let lt = col_desc.converted_type();
     let pt = col_desc.physical_type();
 
     let unexpected = || {
@@ -385,7 +385,7 @@ fn parquet_type_to_odbc_buffer_desc(
 
     let (kind, parquet_to_odbc): (_, Box<FnParquetToOdbcCol>) = match pt {
         PhysicalType::BOOLEAN => match lt {
-            LogicalType::NONE => (
+            ConvertedType::NONE => (
                 BufferKind::Bit,
                 BoolType::map_to::<Bit>().with(|&b| Bit(b as u8), nullable),
             ),
@@ -394,14 +394,14 @@ fn parquet_type_to_odbc_buffer_desc(
         PhysicalType::INT32 => match lt {
             // As buffer type int32 is perfectly ok, eventually we could be more precise with the
             // SQLDataType for the smaller integer variants.
-            LogicalType::NONE
-            | LogicalType::INT_32
-            | LogicalType::UINT_32
-            | LogicalType::INT_16
-            | LogicalType::UINT_16
-            | LogicalType::INT_8
-            | LogicalType::UINT_8 => (BufferKind::I32, Int32Type::map_identity(nullable)),
-            LogicalType::TIME_MILLIS => (
+            ConvertedType::NONE
+            | ConvertedType::INT_32
+            | ConvertedType::UINT_32
+            | ConvertedType::INT_16
+            | ConvertedType::UINT_16
+            | ConvertedType::INT_8
+            | ConvertedType::UINT_8 => (BufferKind::I32, Int32Type::map_identity(nullable)),
+            ConvertedType::TIME_MILLIS => (
                 // Time represented in format hh:mm:ss.fff
                 BufferKind::Text { max_str_len: 12 },
                 Int32Type::map_to_text(
@@ -414,11 +414,11 @@ fn parquet_type_to_odbc_buffer_desc(
                     nullable,
                 ),
             ),
-            LogicalType::DATE => (
+            ConvertedType::DATE => (
                 BufferKind::Date,
                 Int32Type::map_to::<Date>().with(|&i| days_since_epoch_to_odbc_date(i), nullable),
             ),
-            LogicalType::DECIMAL => {
+            ConvertedType::DECIMAL => {
                 let precision: usize = col_desc.type_precision().try_into().unwrap();
                 let scale: usize = col_desc.type_scale().try_into().unwrap();
                 // We need one character for each digit and maybe an additional character for the
@@ -442,10 +442,10 @@ fn parquet_type_to_odbc_buffer_desc(
             _ => unexpected(),
         },
         PhysicalType::INT64 => match lt {
-            LogicalType::NONE | LogicalType::INT_64 | LogicalType::UINT_64 => {
+            ConvertedType::NONE | ConvertedType::INT_64 | ConvertedType::UINT_64 => {
                 (BufferKind::I64, Int64Type::map_identity(nullable))
             }
-            LogicalType::TIME_MICROS => (
+            ConvertedType::TIME_MICROS => (
                 // Time represented in format hh:mm::ss.ffffff
                 BufferKind::Text { max_str_len: 15 },
                 Int64Type::map_to_text(
@@ -458,7 +458,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     nullable,
                 ),
             ),
-            LogicalType::TIMESTAMP_MICROS => (
+            ConvertedType::TIMESTAMP_MICROS => (
                 BufferKind::Timestamp,
                 Int64Type::map_to::<Timestamp>().with(
                     |&microseconds_since_epoch| {
@@ -479,7 +479,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     nullable,
                 ),
             ),
-            LogicalType::TIMESTAMP_MILLIS => (
+            ConvertedType::TIMESTAMP_MILLIS => (
                 BufferKind::Timestamp,
                 Int64Type::map_to::<Timestamp>().with(
                     |&milliseconds_since_epoch| {
@@ -500,7 +500,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     nullable,
                 ),
             ),
-            LogicalType::DECIMAL => {
+            ConvertedType::DECIMAL => {
                 let precision: usize = col_desc.type_precision().try_into().unwrap();
                 let scale: usize = col_desc.type_scale().try_into().unwrap();
                 // We need one character for each digit and maybe an additional character for the
@@ -529,16 +529,16 @@ fn parquet_type_to_odbc_buffer_desc(
             https://github.com/pacman82/odbc2parquet/issues."
         ),
         PhysicalType::FLOAT => match lt {
-            LogicalType::NONE => (BufferKind::F32, FloatType::map_identity(nullable)),
+            ConvertedType::NONE => (BufferKind::F32, FloatType::map_identity(nullable)),
             _ => unexpected(),
         },
         PhysicalType::DOUBLE => match lt {
-            LogicalType::NONE => (BufferKind::F64, DoubleType::map_identity(nullable)),
+            ConvertedType::NONE => (BufferKind::F64, DoubleType::map_identity(nullable)),
             _ => unexpected(),
         },
         PhysicalType::BYTE_ARRAY => {
             match lt {
-                LogicalType::UTF8 | LogicalType::JSON | LogicalType::ENUM => {
+                ConvertedType::UTF8 | ConvertedType::JSON | ConvertedType::ENUM => {
                     // Start small. We rebind the buffer as we encounter larger values in the file.
                     let max_str_len = 1;
                     if use_utf16 {
@@ -568,14 +568,14 @@ fn parquet_type_to_odbc_buffer_desc(
                         )
                     }
                 }
-                LogicalType::NONE | LogicalType::BSON => (
+                ConvertedType::NONE | ConvertedType::BSON => (
                     BufferKind::Binary { length: 1 },
                     ByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| odbc_buf.append(index, Some(bytes.as_bytes())),
                         nullable,
                     ),
                 ),
-                LogicalType::DECIMAL => {
+                ConvertedType::DECIMAL => {
                     let precision: usize = col_desc.type_precision().try_into().unwrap();
                     // 128 * log(2) = 38.~
                     if precision > 38 {
@@ -607,14 +607,14 @@ fn parquet_type_to_odbc_buffer_desc(
         PhysicalType::FIXED_LEN_BYTE_ARRAY => {
             let length = col_desc.type_length().try_into().unwrap();
             match lt {
-                LogicalType::NONE => (
+                ConvertedType::NONE => (
                     BufferKind::Binary { length },
                     FixedLenByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| odbc_buf.append(index, Some(bytes.as_bytes())),
                         nullable,
                     ),
                 ),
-                LogicalType::DECIMAL => {
+                ConvertedType::DECIMAL => {
                     let precision: usize = col_desc.type_precision().try_into().unwrap();
                     // 128 * log(2) = 38.~
                     if precision > 38 {
@@ -640,7 +640,7 @@ fn parquet_type_to_odbc_buffer_desc(
                         ),
                     )
                 }
-                LogicalType::INTERVAL => bail!(
+                ConvertedType::INTERVAL => bail!(
                     "
                     Inserting interval types is currently not supported. There is no reason for \
                     this besides the fact, that nobody has implemented it so far. Please raise an \
