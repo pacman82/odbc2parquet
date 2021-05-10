@@ -27,4 +27,4 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --defau
 # We need 'parquet-read' to run the tests. At the moment I do not
 # know a way to specify cargo installable executables as build
 # dependencies.
-RUN /home/vscode/.cargo/bin/cargo install parquet
+RUN /home/vscode/.cargo/bin/cargo install parquet --features cli
