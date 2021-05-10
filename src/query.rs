@@ -511,7 +511,10 @@ fn make_schema(
             Nullability::NoNulls => Repetition::REQUIRED,
         };
 
-        if matches!(buffer_kind, BufferKind::Text { max_str_len: 0 }) {
+        if matches!(
+            buffer_kind,
+            BufferKind::Text { max_str_len: 0 } | BufferKind::WText { max_str_len: 0 }
+        ) {
             warn!(
                 "Ignoring column '{}' with index {}. Driver reported a display length of 0. \
               This can happen for types without a fixed size limit. If you feel this should be \

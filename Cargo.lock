@@ -1102,7 +1102,7 @@ checksum = "74579a55ae5f527c655dc02cc1992677adb3c3e59bbeddccca800dfff7fe026f"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "assert_cmd",
