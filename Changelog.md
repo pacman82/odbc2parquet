@@ -3,6 +3,7 @@
 ## 0.6.4
 
 * Default log level is now warning. `--quiet` flag has been introduced to supress warnings, if desired.
+* Introduce the `--prefer-varbinary` flag to the `query` subcommand. It allows for mapping `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has been introduced in an effort to increase the compatibility of the output with spark.
 
 ## 0.6.3
 

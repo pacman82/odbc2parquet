@@ -42,6 +42,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         batch_size_mib,
         batches_per_file,
         encoding,
+        prefer_varbinary,
         column_compression_default,
     } = opt;
 
@@ -74,6 +75,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             *batches_per_file,
             *column_compression_default,
             encoding.use_utf16(),
+            *prefer_varbinary,
         )?;
     } else {
         eprintln!(
@@ -90,8 +92,9 @@ fn cursor_to_parquet(
     batches_per_file: u32,
     column_compression_default: Compression,
     use_utf16: bool,
+    prefer_varbinary: bool,
 ) -> Result<(), Error> {
-    let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16)?;
+    let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16, prefer_varbinary)?;
 
     if buffer_description.is_empty() {
         bail!("Resulting parquet file would not have any columns!")
@@ -301,6 +304,7 @@ struct ColumnFetchStrategy {
 fn make_schema(
     cursor: &impl Cursor,
     use_utf16: bool,
+    prefer_varbinary: bool,
 ) -> Result<(TypePtr, Vec<ColumnFetchStrategy>), Error> {
     let num_cols = cursor.num_result_cols()?;
 
@@ -442,13 +446,23 @@ fn make_schema(
                     BufferKind::I32,
                     optional_col_writer!(Int32ColumnWriter, NullableI32),
                 ),
-                DataType::Binary { length } => (
-                    ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                        .with_length(length.try_into().unwrap())
-                        .with_converted_type(ConvertedType::NONE),
-                    BufferKind::Binary { length },
-                    optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
-                ),
+                DataType::Binary { length } => {
+                    if prefer_varbinary {
+                        (
+                            ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
+                            BufferKind::Binary { length },
+                            optional_col_writer!(ByteArrayColumnWriter, Binary),
+                        )
+                    } else {
+                        (
+                            ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
+                                .with_length(length.try_into().unwrap())
+                                .with_converted_type(ConvertedType::NONE),
+                            BufferKind::Binary { length },
+                            optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
+                        )
+                    }
+                }
                 DataType::Varbinary { length } => (
                     ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
                     BufferKind::Binary { length },

@@ -131,6 +131,10 @@ pub struct QueryOpt {
         case_insensitive = true)
     ]
     encoding: EncodingArgument,
+    /// Map `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
+    /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
+    #[structopt(long)]
+    prefer_varbinary: bool,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
