@@ -21,7 +21,15 @@ use odbc_api::DriverCompleteOption;
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
 struct Cli {
+    /// Only print errors to standard error stream. Supresses warnings and all other log levels
+    /// independent of the verbose mode.
+    #[structopt(short = "q",long)]
+    quiet: bool,
     /// Verbose mode (-v, -vv, -vvv, etc)
+    ///
+    /// 'v': Info level logging
+    /// 'vv': Debug level logging
+    /// 'vvv': Trace level logging
     #[structopt(short = "v", long, parse(from_occurrences))]
     verbose: usize,
     #[structopt(subcommand)]
@@ -168,12 +176,20 @@ pub struct InsertOpt {
 fn main() -> Result<(), Error> {
     let opt = Cli::from_args();
 
+    let verbose = if opt.quiet {
+        // Log errors, but nothing else
+        1
+    } else {
+        // Log warnings and one additional log level for each `-v` passed in the command line.
+        opt.verbose + 2
+    };
+
     // Initialize logging
     stderrlog::new()
         .module(module_path!())
         .module("odbc_api")
-        .quiet(false)
-        .verbosity(opt.verbose)
+        .quiet(false) // Even if `opt.quiet` is true, we still want to print errors 
+        .verbosity(verbose)
         .timestamp(stderrlog::Timestamp::Second)
         .init()
         .unwrap();
