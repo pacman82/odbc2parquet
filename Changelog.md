@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.4
+
+* Default log level is now warning. `--quiet` flag has been introduced to supress warnings, if desired.
+
 ## 0.6.3
 
 * Fix: Columns for which the driver reported size zero were not ignored then UTF-16 encoding had been enabled. This is the default setting for Windows. These columns are now complete missing from the output file, instead of the column being present with all values being NULL or empty strings.
