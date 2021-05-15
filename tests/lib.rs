@@ -12,7 +12,7 @@ use parquet::{
     },
     schema::parser::parse_message_type,
 };
-use predicates::ord::eq;
+use predicates::{ord::eq, str::contains};
 use tempfile::tempdir;
 
 const MSSQL: &str =
@@ -478,6 +478,65 @@ fn binary_column() {
     // `cargo install parquet`.
     let mut cmd = Command::new("parquet-read");
     cmd.arg(out_str).assert().success().stdout(eq(expected));
+}
+
+/// The prefer-varbinary flag must enforce mapping of binary colmuns to BYTE_ARRAY instead of
+/// FIXED_LEN_BYTE_ARRAY.
+#[test]
+fn prefer_varbinary() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+
+    let table_name = "PreferVarbinary";
+
+    setup_empty_table(&conn, table_name, &["BINARY(5)"]).unwrap();
+    conn.execute(
+        &format!(
+            "INSERT INTO {} (a) Values \
+        (CONVERT(Binary(5), 'Hello')),\
+        (CONVERT(Binary(5), 'World')),\
+        (NULL)",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--prefer-varbinary",
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str).assert().success().stdout(eq(expected));
+
+    let mut cmd = Command::new("parquet-schema");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(contains("OPTIONAL BYTE_ARRAY a;"));
 }
 
 /// Strings with interior nuls should be written into parquet file as they are.
