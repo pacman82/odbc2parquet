@@ -27,9 +27,13 @@ lazy_static! {
 /// pass them as separate command line options.
 #[test]
 fn append_user_and_password_to_connection_string() {
+    // Setup table for test
+    let table_name = "AppendUserAndPasswordToConnectionString";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+
     // Connection string without user name and password.
     let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
-
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -37,6 +41,8 @@ fn append_user_and_password_to_connection_string() {
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {}", table_name);
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -50,7 +56,7 @@ fn append_user_and_password_to_connection_string() {
             "--password",
             "<YourStrong@Passw0rd>",
             out_str,
-            "SELECT title, year from Movies",
+            &query,
         ])
         .assert()
         .success();
@@ -68,10 +74,21 @@ fn insert_empty_document() {
 
 #[test]
 fn nullable_parquet_buffers() {
+    // Setup table for test
+    let table_name = "NullableParquetBuffers";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {} (A) VALUES('Hello'),(NULL),('World'),(NULL)",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
     let expected = "\
-        {title: \"Interstellar\", year: null}\n\
-        {title: \"2001: A Space Odyssey\", year: 1968}\n\
-        {title: \"Jurassic Park\", year: 1993}\n\
+        {a: \"Hello\"}\n\
+        {a: null}\n\
+        {a: \"World\"}\n\
+        {a: null}\n\
     ";
 
     // A temporary directory, to be removed at the end of the test.
@@ -82,6 +99,8 @@ fn nullable_parquet_buffers() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
+    let query = format!("SELECT a FROM {}", table_name);
+
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args(&[
@@ -90,7 +109,7 @@ fn nullable_parquet_buffers() {
             out_str,
             "--connection-string",
             MSSQL,
-            "SELECT title,year from Movies order by year",
+            &query,
         ])
         .assert()
         .success();
@@ -127,8 +146,18 @@ fn foobar_connection_string() {
 
 #[test]
 fn parameters_in_query() {
+    // Setup table for test
+    let table_name = "ParamtersInQuery";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(10)", "INTEGER"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {} (A,B) VALUES('Wrong', 5),('Right', 42)",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
     let expected = "\
-        {title: \"2001: A Space Odyssey\", year: 1968}\n\
+        {a: \"Right\", b: 42}\n\
     ";
 
     // A temporary directory, to be removed at the end of the test.
@@ -139,6 +168,8 @@ fn parameters_in_query() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
+    let query = format!("SELECT a,b FROM {} WHERE b=?", table_name);
+
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args(&[
@@ -147,8 +178,8 @@ fn parameters_in_query() {
             out_str,
             "--connection-string",
             MSSQL,
-            "SELECT title,year from Movies where year=?",
-            "1968",
+            &query,
+            "42",
         ])
         .assert()
         .success();
@@ -161,12 +192,35 @@ fn parameters_in_query() {
 
 #[test]
 fn query_sales() {
+    // Setup table for test
+    let table_name = "QuerySales";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        table_name,
+        &["DATE", "TIME(0)", "INT", "DECIMAL(10,2)"],
+    )
+    .unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a,b,c,d)
+        VALUES
+        ('2020-09-09', '00:05:34', 54, 9.99),
+        ('2020-09-10', '12:05:32', 54, 9.99),
+        ('2020-09-10', '14:05:32', 34, 2.00),
+        ('2020-09-11', '06:05:12', 12, -1.50);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
     let expected_values = "\
-        {day: 2020-09-09 +00:00, time: \"00:05:34\", product: 54, price: 9.99}\n\
-        {day: 2020-09-10 +00:00, time: \"12:05:32\", product: 54, price: 9.99}\n\
-        {day: 2020-09-10 +00:00, time: \"14:05:32\", product: 34, price: 2.00}\n\
-        {day: 2020-09-11 +00:00, time: \"06:05:12\", product: 12, price: -1.50}\n\
+        {a: 2020-09-09 +00:00, b: \"00:05:34\", c: 54, d: 9.99}\n\
+        {a: 2020-09-10 +00:00, b: \"12:05:32\", c: 54, d: 9.99}\n\
+        {a: 2020-09-10 +00:00, b: \"14:05:32\", c: 34, d: 2.00}\n\
+        {a: 2020-09-11 +00:00, b: \"06:05:12\", c: 12, d: -1.50}\n\
     ";
+
+    let query = format!("SELECT a,b,c,d FROM {} ORDER BY id", table_name);
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -184,7 +238,7 @@ fn query_sales() {
             out_str,
             "--connection-string",
             MSSQL,
-            "SELECT day, time, product, price FROM Sales ORDER BY id",
+            &query,
         ])
         .assert()
         .success();
@@ -200,19 +254,50 @@ fn query_sales() {
 
 #[test]
 fn query_all_the_types() {
+    // Setup table for test
+    let table_name = "AllTheTypes";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        table_name,
+        &[
+            "CHAR(5) NOT NULL",
+            "NUMERIC(3,2) NOT NULL",
+            "DECIMAL(3,2) NOT NULL",
+            "INTEGER NOT NULL",
+            "SMALLINT NOT NULL",
+            "FLOAT(3) NOT NULL",
+            "REAL NOT NULL",
+            "DOUBLE PRECISION NOT NULL",
+            "VARCHAR(100) NOT NULL",
+            "DATE NOT NULL",
+            "TIME NOT NULL",
+            "DATETIME NOT NULL",
+        ],
+    )
+    .unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a,b,c,d,e,f,g,h,i,j,k,l)
+        VALUES
+        ('abcde', 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, 'Hello, World!', '2020-09-16', '03:54:12', '2020-09-16 03:54:12');",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
     let expected_values = "{\
-        my_char: \"abcde\", \
-        my_numeric: 0.12, \
-        my_decimal: 0.12, \
-        my_integer: 42, \
-        my_smallint: 42, \
-        my_float: 1.23, \
-        my_real: 1.23, \
-        my_double: 1.23, \
-        my_varchar: \"Hello, World!\", \
-        my_date: 2020-09-16 +00:00, \
-        my_time: \"03:54:12.0000000\", \
-        my_timestamp: 2020-09-16 03:54:12 +00:00\
+        a: \"abcde\", \
+        b: 0.12, \
+        c: 0.12, \
+        d: 42, \
+        e: 42, \
+        f: 1.23, \
+        g: 1.23, \
+        h: 1.23, \
+        i: \"Hello, World!\", \
+        j: 2020-09-16 +00:00, \
+        k: \"03:54:12.0000000\", \
+        l: 2020-09-16 03:54:12 +00:00\
     }\n";
 
     // A temporary directory, to be removed at the end of the test.
@@ -223,20 +308,7 @@ fn query_all_the_types() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = "SELECT \
-        my_char, \
-        my_numeric, \
-        my_decimal, \
-        my_integer, \
-        my_smallint, \
-        my_float, \
-        my_real, \
-        my_double, \
-        my_varchar, \
-        my_date, \
-        my_time, \
-        my_timestamp \
-        FROM AllTheTypes;";
+    let query = format!("SELECT a,b,c,d,e,f,g,h,i,j,k,l FROM {};", table_name);
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -246,7 +318,7 @@ fn query_all_the_types() {
             out_str,
             "--connection-string",
             MSSQL,
-            query,
+            &query,
         ])
         .assert()
         .success();
@@ -262,6 +334,13 @@ fn query_all_the_types() {
 
 #[test]
 fn split_files() {
+    // Setup table for test
+    let table_name = "SplitFiles";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
+    conn.execute(&insert, ()).unwrap();
+
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -269,6 +348,8 @@ fn split_files() {
     let out_path = out_dir.path().join("out.par");
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {}", table_name);
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -282,7 +363,7 @@ fn split_files() {
             "1",
             "--batches-per-file",
             "1",
-            "SELECT title FROM Movies ORDER BY year",
+            &query,
         ])
         .assert()
         .success();
@@ -2592,7 +2673,7 @@ pub fn setup_empty_table(
 ) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
 
-    let column_names = &["a", "b", "c", "d", "e"];
+    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
     let cols = column_types
         .iter()
         .zip(column_names)
