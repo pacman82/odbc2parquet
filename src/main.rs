@@ -11,19 +11,19 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[cfg(target_os = "windows")]
+use odbc_api::DriverCompleteOption;
+#[cfg(target_os = "windows")]
 use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
 };
-#[cfg(target_os = "windows")]
-use odbc_api::DriverCompleteOption;
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
 struct Cli {
     /// Only print errors to standard error stream. Supresses warnings and all other log levels
     /// independent of the verbose mode.
-    #[structopt(short = "q",long)]
+    #[structopt(short = "q", long)]
     quiet: bool,
     /// Verbose mode (-v, -vv, -vvv, etc)
     ///
@@ -192,7 +192,7 @@ fn main() -> Result<(), Error> {
     stderrlog::new()
         .module(module_path!())
         .module("odbc_api")
-        .quiet(false) // Even if `opt.quiet` is true, we still want to print errors 
+        .quiet(false) // Even if `opt.quiet` is true, we still want to print errors
         .verbosity(verbose)
         .timestamp(stderrlog::Timestamp::Second)
         .init()
