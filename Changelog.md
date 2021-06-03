@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+* Updated dependencies.
+* Better error message in case unixODBC version is outdated.
+
 ## 0.6.4
 
 * Default log level is now warning. `--quiet` flag has been introduced to supress warnings, if desired.
