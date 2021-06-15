@@ -1117,9 +1117,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8984b66361c726cd10f112103899f403184601c61841df30372d95ca674e5e3"
+checksum = "de3086eaa7f78eafd18db973d9bcc278bba93a35ca0d389d3fc4186b55f7fd20"
 dependencies = [
  "force-send-sync",
  "log",
@@ -1131,9 +1131,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.18.2"
+version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74579a55ae5f527c655dc02cc1992677adb3c3e59bbeddccca800dfff7fe026f"
+checksum = "4bf75dbebf403cda403932ec745d25c3c309197788484d209892afe52e8bf8ed"
 
 [[package]]
 name = "odbc2parquet"
