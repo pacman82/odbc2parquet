@@ -13,16 +13,10 @@ use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullability,
 };
-use parquet::{
-    basic::{Compression, ConvertedType, Repetition, Type as PhysicalType},
-    column::writer::ColumnWriter,
-    errors::ParquetError,
-    file::{
+use parquet::{basic::{Compression, ConvertedType, Encoding, Repetition, Type as PhysicalType}, column::writer::ColumnWriter, errors::ParquetError, file::{
         properties::WriterProperties,
         writer::{FileWriter, RowGroupWriter, SerializedFileWriter},
-    },
-    schema::types::{Type, TypePtr},
-};
+    }, schema::types::{ColumnPath, Type, TypePtr}};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
@@ -44,6 +38,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         encoding,
         prefer_varbinary,
         column_compression_default,
+        parquet_column_encoding,
     } = opt;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
@@ -76,6 +71,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             *column_compression_default,
             encoding.use_utf16(),
             *prefer_varbinary,
+            parquet_column_encoding.clone(),
         )?;
     } else {
         eprintln!(
@@ -93,6 +89,7 @@ fn cursor_to_parquet(
     column_compression_default: Compression,
     use_utf16: bool,
     prefer_varbinary: bool,
+    column_encodings: Vec<(String, Encoding)>,
 ) -> Result<(), Error> {
     let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16, prefer_varbinary)?;
 
@@ -149,6 +146,7 @@ fn cursor_to_parquet(
         parquet_schema.clone(),
         batches_per_file,
         column_compression_default,
+        column_encodings,
     )?;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
@@ -571,13 +569,18 @@ impl<'p> ParquetWriter<'p> {
         schema: Arc<Type>,
         batches_per_file: u32,
         column_compression_default: Compression,
+        column_encodings: Vec<(String, Encoding)>
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
-        let wpb = WriterProperties::builder()
+        let mut wpb = WriterProperties::builder()
             .set_write_batch_size(batch_size as usize)
             .set_compression(column_compression_default);
+        for (column_name, encoding) in column_encodings {
+            let col = ColumnPath::new(vec![column_name]);
+            wpb = wpb.set_column_encoding(col, encoding)
+        }
         let properties = Arc::new(wpb.build());
         let file = if batches_per_file == 0 {
             File::create(path)?

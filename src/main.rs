@@ -3,10 +3,12 @@ mod insert;
 mod parquet_buffer;
 mod query;
 
-use crate::enum_args::{compression_from_str, EncodingArgument, COMPRESSION_VARIANTS};
+use crate::enum_args::{
+    column_encoding_from_str, compression_from_str, EncodingArgument, COMPRESSION_VARIANTS,
+};
 use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, Environment};
-use parquet::basic::Compression;
+use parquet::basic::{Compression, Encoding};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -135,6 +137,9 @@ pub struct QueryOpt {
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
     #[structopt(long)]
     prefer_varbinary: bool,
+    /// Specify the encoding of the parquet output column
+    #[structopt(long, multiple=true, parse(try_from_str=column_encoding_from_str))]
+    parquet_column_encoding: Vec<(String, Encoding)>,
     /// Name of the output parquet file.
     output: PathBuf,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
