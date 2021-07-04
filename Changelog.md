@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.6
+
+* Updated dependencies
+* Allow specifyig fallback encodings for output parquet files then using the `query` subcommand.
+
 ## 0.6.5
 
 * Updated dependencies.

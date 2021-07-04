@@ -1,7 +1,7 @@
 [package]
 name = "odbc2parquet"
-version = "0.6.5"
-authors = ["Markus Klein <markus-klein@live.de>"]
+version = "0.6.6"
+authors = ["Markus Klein"]
 edition = "2018"
 repository = "https://github.com/pacman82/odbc2parquet"
 documentation = "https://docs.rs/odbc2parquet/"

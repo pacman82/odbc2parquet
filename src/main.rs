@@ -287,6 +287,7 @@ fn open_connection<'e>(
     Ok(conn)
 }
 
+/// Used as a parent window for the prompt by the ODBC driver manager on windows systems.
 #[cfg(target_os = "windows")]
 fn message_only_window() -> Result<Window, Error> {
     let window = WindowBuilder::new()
