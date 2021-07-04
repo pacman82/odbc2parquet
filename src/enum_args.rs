@@ -65,13 +65,18 @@ pub fn encoding_from_str(source: &str) -> Result<Encoding, Error> {
         "rle" => Encoding::RLE,
         // ommitted, not a valid fallback encoding
         //"rle-dictionary" => Encoding::RLE_DICTIONARY,
-        _ => bail!("Sorry, I do not know a column encoding called '{}'.", source)
+        _ => bail!(
+            "Sorry, I do not know a column encoding called '{}'.",
+            source
+        ),
     };
     Ok(encoding)
 }
 
 pub fn column_encoding_from_str(source: &str) -> Result<(String, Encoding), Error> {
-    let pos = source.rfind(':').ok_or(anyhow!("Column encoding must be parsed in format: 'COLUMN_NAME:ENCODING'"))?;
+    let pos = source.rfind(':').ok_or_else(|| {
+        anyhow!("Column encoding must be parsed in format: 'COLUMN_NAME:ENCODING'")
+    })?;
     let (name, encoding) = source.split_at(pos);
     Ok((name.to_owned(), encoding_from_str(&encoding[1..])?))
 }

@@ -137,7 +137,9 @@ pub struct QueryOpt {
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
     #[structopt(long)]
     prefer_varbinary: bool,
-    /// Specify the encoding of the parquet output column
+    /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
+    /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
+    /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
     #[structopt(long, multiple=true, parse(try_from_str=column_encoding_from_str))]
     parquet_column_encoding: Vec<(String, Encoding)>,
     /// Name of the output parquet file.
