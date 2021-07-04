@@ -13,10 +13,16 @@ use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet},
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullability,
 };
-use parquet::{basic::{Compression, ConvertedType, Encoding, Repetition, Type as PhysicalType}, column::writer::ColumnWriter, errors::ParquetError, file::{
+use parquet::{
+    basic::{Compression, ConvertedType, Encoding, Repetition, Type as PhysicalType},
+    column::writer::ColumnWriter,
+    errors::ParquetError,
+    file::{
         properties::WriterProperties,
         writer::{FileWriter, RowGroupWriter, SerializedFileWriter},
-    }, schema::types::{ColumnPath, Type, TypePtr}};
+    },
+    schema::types::{ColumnPath, Type, TypePtr},
+};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
@@ -62,16 +68,20 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         }
     };
 
+    let parquet_format_options = ParquetFormatOptions {
+        column_compression_default: *column_compression_default,
+        column_encodings: parquet_column_encoding.clone(),
+    };
+
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
         cursor_to_parquet(
             cursor,
             output,
             batch_size,
             *batches_per_file,
-            *column_compression_default,
             encoding.use_utf16(),
             *prefer_varbinary,
-            parquet_column_encoding.clone(),
+            parquet_format_options,
         )?;
     } else {
         eprintln!(
@@ -81,15 +91,20 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     Ok(())
 }
 
+/// Options influencing the output parquet format.
+struct ParquetFormatOptions {
+    column_compression_default: Compression,
+    column_encodings: Vec<(String, Encoding)>,
+}
+
 fn cursor_to_parquet(
     cursor: impl Cursor,
     path: &Path,
     batch_size: BatchSizeLimit,
     batches_per_file: u32,
-    column_compression_default: Compression,
     use_utf16: bool,
     prefer_varbinary: bool,
-    column_encodings: Vec<(String, Encoding)>,
+    parquet_format_options: ParquetFormatOptions,
 ) -> Result<(), Error> {
     let (parquet_schema, buffer_description) = make_schema(&cursor, use_utf16, prefer_varbinary)?;
 
@@ -145,8 +160,7 @@ fn cursor_to_parquet(
         batch_size_row,
         parquet_schema.clone(),
         batches_per_file,
-        column_compression_default,
-        column_encodings,
+        parquet_format_options,
     )?;
 
     while let Some(buffer) = row_set_cursor.fetch()? {
@@ -568,16 +582,15 @@ impl<'p> ParquetWriter<'p> {
         batch_size: u32,
         schema: Arc<Type>,
         batches_per_file: u32,
-        column_compression_default: Compression,
-        column_encodings: Vec<(String, Encoding)>
+        format_options: ParquetFormatOptions,
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
         let mut wpb = WriterProperties::builder()
             .set_write_batch_size(batch_size as usize)
-            .set_compression(column_compression_default);
-        for (column_name, encoding) in column_encodings {
+            .set_compression(format_options.column_compression_default);
+        for (column_name, encoding) in format_options.column_encodings {
             let col = ColumnPath::new(vec![column_name]);
             wpb = wpb.set_column_encoding(col, encoding)
         }

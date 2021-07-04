@@ -652,7 +652,7 @@ fn parquet_type_to_odbc_buffer_desc(
         }
     };
 
-    Ok((BufferDescription { kind, nullable }, parquet_to_odbc))
+    Ok((BufferDescription { nullable, kind }, parquet_to_odbc))
 }
 
 trait OdbcDataType<'a> {
