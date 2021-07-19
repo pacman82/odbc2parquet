@@ -2777,11 +2777,11 @@ fn cursor_to_string(cursor: impl Cursor) -> String {
     while let Some(row_set) = row_set_cursor.fetch().unwrap() {
         for row_index in 0..row_set.num_rows() {
             if row_index != 0 {
-                text.push_str("\n");
+                text.push('\n');
             }
             for col_index in 0..row_set.num_cols() {
                 if col_index != 0 {
-                    text.push_str(",");
+                    text.push(',');
                 }
                 text.push_str(
                     row_set
