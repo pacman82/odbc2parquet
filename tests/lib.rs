@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Arc};
+use std::{fs::File, path::Path, sync::Arc};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
@@ -2647,7 +2647,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
 /// Writes a parquet file with one row group and one column.
 fn write_values_to_file<T>(
     message_type: &str,
-    input_path: &std::path::PathBuf,
+    input_path: &Path,
     values: &[T],
     def_levels: Option<&[i16]>,
 ) where

@@ -475,7 +475,7 @@ fn make_schema(
                         )
                     }
                 }
-                DataType::Varbinary { length } => (
+                DataType::Varbinary { length } | DataType::LongVarbinary { length } => (
                     ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
                     BufferKind::Binary { length },
                     optional_col_writer!(ByteArrayColumnWriter, Binary),
@@ -487,6 +487,7 @@ fn make_schema(
                 DataType::Char { length }
                 | DataType::Varchar { length }
                 | DataType::WVarchar { length }
+                | DataType::LongVarchar { length }
                 | DataType::WChar { length } => {
                     if use_utf16 {
                         (
