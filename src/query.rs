@@ -47,14 +47,6 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         parquet_column_encoding,
     } = opt;
 
-    // Convert the input strings into parameters suitable to for use with ODBC.
-    let params: Vec<_> = parameters
-        .iter()
-        .map(|param| param.as_str().into_parameter())
-        .collect();
-
-    let odbc_conn = open_connection(&environment, connect_opts)?;
-
     let batch_size = match (*batch_size_row, *batch_size_mib) {
         (Some(rows), None) => BatchSizeLimit::Rows(rows),
         (None, Some(mib)) => BatchSizeLimit::Bytes(mib as usize * 1024 * 1024),
@@ -67,6 +59,14 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             )
         }
     };
+
+    // Convert the input strings into parameters suitable for use with ODBC.
+    let params: Vec<_> = parameters
+        .iter()
+        .map(|param| param.as_str().into_parameter())
+        .collect();
+
+    let odbc_conn = open_connection(&environment, connect_opts)?;
 
     let parquet_format_options = ParquetFormatOptions {
         column_compression_default: *column_compression_default,
@@ -130,9 +130,11 @@ fn cursor_to_parquet(
             let rows = (num_bytes / total_mem_usage_per_row).try_into().unwrap();
             if rows == 0 {
                 bail!(
-                    "Memory required to hold a single row is to larger than the limit. Memory \
-                    Limit: {} bytes, Memory per row: {} bytes.\nYou can use either \n
-                    --batch-size-row or --batch-size-mib to raise the limit.",
+                    "Memory required to hold a single row is larger than the limit. Memory Limit: \
+                    {} bytes, Memory per row: {} bytes.\nYou can use either '--batch-size-row' or \
+                    '--batch-size-mib' to raise the limit. You may also try more verbose output to \
+                    see which columns require so much memory and consider casting them into \
+                    something smaller.",
                     num_bytes,
                     total_mem_usage_per_row
                 )
