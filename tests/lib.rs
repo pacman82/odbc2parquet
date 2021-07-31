@@ -333,6 +333,61 @@ fn query_all_the_types() {
 }
 
 #[test]
+fn query_bits() {
+    // Setup table for test
+    let table_name = "QueryBits";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (0), (1), (NULL), (1), (0);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let expected_values = "\
+        {a: false}\n\
+        {a: true}\n\
+        {a: null}\n\
+        {a: true}\n\
+        {a: false}\n\
+    ";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+}
+
+#[test]
 fn split_files() {
     // Setup table for test
     let table_name = "SplitFiles";
