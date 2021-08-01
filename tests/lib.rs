@@ -1,8 +1,11 @@
-use std::{fs::File, path::Path, sync::Arc};
+use std::{fs::File, iter, path::Path, sync::Arc};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
-use odbc_api::{buffers::TextRowSet, Connection, Cursor, Environment, IntoParameter};
+use odbc_api::{
+    buffers::{BufferDescription, ColumnarRowSet, TextRowSet},
+    Connection, Cursor, Environment, IntoParameter,
+};
 use parquet::{
     column::writer::ColumnWriter,
     data_type::{ByteArray, FixedLenByteArray},
@@ -330,6 +333,58 @@ fn query_all_the_types() {
         .assert()
         .success()
         .stdout(eq(expected_values));
+}
+
+/// This did not work in earlier versions there we set the batch write size of the parquet writer to
+/// the ODBC batch size.
+#[test]
+fn query_4097_bits() {
+
+    let num_bits = 4097;
+
+    // Setup table for test
+    let table_name = "Query4097Bits";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    
+    // Insert 4097 bits "false" (default constructed) into the table
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (?);",
+        table_name
+    );
+    let desc = BufferDescription {
+        nullable: false,
+        kind: odbc_api::buffers::BufferKind::Bit,
+    };
+    let mut parameter_buffer = ColumnarRowSet::new(num_bits, iter::once(desc));
+    parameter_buffer.set_num_rows(num_bits as usize);
+    conn.execute(&insert, &parameter_buffer).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
 }
 
 #[test]
