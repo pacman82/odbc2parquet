@@ -178,7 +178,7 @@ impl ParquetBuffer {
                 0
             }
         }
-        cw.write_batch(values, Some(&def_levels), None)?;
+        cw.write_batch(values, Some(def_levels), None)?;
         Ok(())
     }
 

@@ -159,7 +159,6 @@ fn cursor_to_parquet(
 
     let mut writer = ParquetWriter::new(
         path,
-        batch_size_row,
         parquet_schema.clone(),
         batches_per_file,
         parquet_format_options,
@@ -582,7 +581,6 @@ struct ParquetWriter<'p> {
 impl<'p> ParquetWriter<'p> {
     pub fn new(
         path: &'p Path,
-        batch_size: u32,
         schema: Arc<Type>,
         batches_per_file: u32,
         format_options: ParquetFormatOptions,
@@ -591,7 +589,6 @@ impl<'p> ParquetWriter<'p> {
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
         let mut wpb = WriterProperties::builder()
-            .set_write_batch_size(batch_size as usize)
             .set_compression(format_options.column_compression_default);
         for (column_name, encoding) in format_options.column_encodings {
             let col = ColumnPath::new(vec![column_name]);
