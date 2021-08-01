@@ -3,6 +3,7 @@
 ## 0.6.8
 
 * Fixed an issue where large batch sizes could cause failures writing Boolean columns.
+* Updated dependencies
 
 ## 0.6.7
 
