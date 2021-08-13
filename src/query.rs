@@ -198,7 +198,7 @@ fn cursor_to_parquet(
 }
 
 enum BatchSizeLimit {
-    Rows(u32),
+    Rows(usize),
     Bytes(usize),
 }
 

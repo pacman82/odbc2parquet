@@ -91,7 +91,7 @@ pub struct QueryOpt {
     /// parquet files in batches. This way the content does never need to be materialized completely
     /// in memory at once. Incompatible with `batch-size-mib`.
     #[structopt(long)]
-    batch_size_row: Option<u32>,
+    batch_size_row: Option<usize>,
     /// Limits the size of a single batch. It does so by calculating the amount of memory each row
     /// requires in the allocated buffers and then limits the maximum number of rows so that the
     /// maximum buffer size comes as close as possbile, but does not exceed the specified amount.
