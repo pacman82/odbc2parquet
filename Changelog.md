@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.6.9
 
 * Both `--batch-size-row` and `--batch-size-mib` can now be both specified together.
 * If no `--batch-size-*` limit is specified. A row limit of 65535 is now also applied by default, next to the size limit.

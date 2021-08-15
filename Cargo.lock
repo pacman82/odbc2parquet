@@ -60,9 +60,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.42"
+version = "1.0.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595d3cfa7a60d4555cb5067b99f07142a08ea778de5cf993f7b75c7d8fabc486"
+checksum = "28ae2b3dec75a406790005a200b1bd89785afc02517a00ca99ecfe093ee9e6cf"
 
 [[package]]
 name = "arrayvec"
@@ -1135,7 +1135,7 @@ checksum = "a1ab8b3dc2e38a8cc9a192c19d5edc854fc171aea34a07f3e298e00590099169"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.6.8"
+version = "0.6.9"
 dependencies = [
  "anyhow",
  "assert_cmd",
