@@ -7,6 +7,12 @@ const DEFAULT_BATCH_SIZE_BYTES: usize = 2 * 1024 * 1024 * 1024; // 2GB
 #[cfg(target_pointer_width = "32")]
 const DEFAULT_BATCH_SIZE_BYTES: usize = 1024 * 1024 * 1024; // 1GB
 
+/// We limit the maximum numbers of rows to 65535 by default to avoid trouble with ODBC drivers
+/// using a 16Bit integer to represent fetch size. Most drivers work fine though with larger
+/// batches. Anyway the trade off seems worth it because 65535 is already a pretty large batch size
+/// for most applications, and this way the tool runs fine out of the box in even more situations.
+const DEFAULT_BATCH_SIZE_ROWS: usize = u16::MAX as usize; // 65535 rows
+
 /// Batches can be limitied by either number of rows or the total size of the rows in the batch in
 /// bytes.
 pub enum BatchSizeLimit {
@@ -22,7 +28,10 @@ impl BatchSizeLimit {
             (Some(rows), None) => BatchSizeLimit::Rows(rows),
             (None, Some(bytes)) => BatchSizeLimit::Bytes(bytes),
             // User specified nothing => Use default
-            (None, None) => BatchSizeLimit::Bytes(DEFAULT_BATCH_SIZE_BYTES),
+            (None, None) => BatchSizeLimit::Both {
+                rows: DEFAULT_BATCH_SIZE_ROWS,
+                bytes: DEFAULT_BATCH_SIZE_BYTES,
+            },
             (Some(rows), Some(bytes)) => BatchSizeLimit::Both { rows, bytes },
         }
     }
