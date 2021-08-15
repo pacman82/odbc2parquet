@@ -95,7 +95,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
             .expect("Number of rows in row group of parquet file must be non negative");
         // Ensure that num rows is less than batch size of originally created buffers.
         if num_rows > batch_size as usize {
-            batch_size = num_rows.try_into().unwrap();
+            batch_size = num_rows;
             odbc_buffer =
                 ColumnarRowSet::new(batch_size, column_buf_desc.iter().map(|(desc, _)| *desc));
         }

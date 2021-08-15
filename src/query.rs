@@ -1,3 +1,7 @@
+mod batch_size_limit;
+
+use self::batch_size_limit::BatchSizeLimit;
+
 use core::panic;
 use std::{
     borrow::Cow,
@@ -26,11 +30,6 @@ use parquet::{
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
-#[cfg(target_pointer_width = "64")]
-const DEFAULT_BATCH_SIZE_BYTES: usize = 2 * 1024 * 1024 * 1024; // 2GB
-#[cfg(target_pointer_width = "32")]
-const DEFAULT_BATCH_SIZE_BYTES: usize = 1024 * 1024 * 1024; // 1GB
-
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     let QueryOpt {
@@ -47,18 +46,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         parquet_column_encoding,
     } = opt;
 
-    let batch_size = match (*batch_size_row, *batch_size_mib) {
-        (Some(rows), None) => BatchSizeLimit::Rows(rows),
-        (None, Some(mib)) => BatchSizeLimit::Bytes(mib as usize * 1024 * 1024),
-        // User specified nothing => Use default
-        (None, None) => BatchSizeLimit::Bytes(DEFAULT_BATCH_SIZE_BYTES),
-        (Some(_), Some(_)) => {
-            bail!(
-                "Please limit the batch size by either number of rows, or memory consumption, but \
-                not both."
-            )
-        }
-    };
+    let batch_size = BatchSizeLimit::new(*batch_size_row, *batch_size_mib);
 
     // Convert the input strings into parameters suitable for use with ODBC.
     let params: Vec<_> = parameters
@@ -124,26 +112,9 @@ fn cursor_to_parquet(
         total_mem_usage_per_row,
     );
 
-    let batch_size_row = match batch_size {
-        BatchSizeLimit::Rows(rows) => rows,
-        BatchSizeLimit::Bytes(num_bytes) => {
-            let rows = (num_bytes / total_mem_usage_per_row).try_into().unwrap();
-            if rows == 0 {
-                bail!(
-                    "Memory required to hold a single row is larger than the limit. Memory Limit: \
-                    {} bytes, Memory per row: {} bytes.\nYou can use either '--batch-size-row' or \
-                    '--batch-size-mib' to raise the limit. You may also try more verbose output to \
-                    see which columns require so much memory and consider casting them into \
-                    something smaller.",
-                    num_bytes,
-                    total_mem_usage_per_row
-                )
-            }
-            rows
-        }
-    };
+    let batch_size_row = batch_size.batch_size_in_rows(total_mem_usage_per_row)?;
 
-    info!("Batch size set to {}", batch_size_row);
+    info!("Batch size set to {} rows.", batch_size_row);
 
     let mut odbc_buffer = ColumnarRowSet::with_column_indices(
         batch_size_row,
@@ -195,11 +166,6 @@ fn cursor_to_parquet(
     writer.close()?;
 
     Ok(())
-}
-
-enum BatchSizeLimit {
-    Rows(usize),
-    Bytes(usize),
 }
 
 /// Function used to copy the contents of `AnyColumnView` into `ColumnWriter`. The concrete instance
@@ -588,8 +554,8 @@ impl<'p> ParquetWriter<'p> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
-        let mut wpb = WriterProperties::builder()
-            .set_compression(format_options.column_compression_default);
+        let mut wpb =
+            WriterProperties::builder().set_compression(format_options.column_compression_default);
         for (column_name, encoding) in format_options.column_encodings {
             let col = ColumnPath::new(vec![column_name]);
             wpb = wpb.set_column_encoding(col, encoding)

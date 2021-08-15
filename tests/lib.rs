@@ -339,14 +339,13 @@ fn query_all_the_types() {
 /// the ODBC batch size.
 #[test]
 fn query_4097_bits() {
-
     let num_bits = 4097;
 
     // Setup table for test
     let table_name = "Query4097Bits";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
-    
+
     // Insert 4097 bits "false" (default constructed) into the table
     let insert = format!(
         "INSERT INTO {}

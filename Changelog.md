@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Both `--batch-size-row` and `--batch-size-mib` can now be specified
+
 ## 0.6.8
 
 * Fixed an issue where large batch sizes could cause failures writing Boolean columns.
