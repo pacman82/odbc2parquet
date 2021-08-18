@@ -54,7 +54,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         .map(|param| param.as_str().into_parameter())
         .collect();
 
-    let odbc_conn = open_connection(&environment, connect_opts)?;
+    let odbc_conn = open_connection(environment, connect_opts)?;
 
     let parquet_format_options = ParquetFormatOptions {
         column_compression_default: *column_compression_default,

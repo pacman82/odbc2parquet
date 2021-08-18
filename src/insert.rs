@@ -67,7 +67,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         .iter()
         .map(|col_desc| parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16()))
         .collect::<Result<_, _>>()?;
-    let insert_statement = insert_statement_text(&table, &column_names);
+    let insert_statement = insert_statement_text(table, &column_names);
 
     let mut statement = odbc_conn.prepare(&insert_statement)?;
 

@@ -72,7 +72,7 @@ impl ParquetBuffer {
         digits.clear();
         digits.extend(decimal.iter().filter(|&&c| c != b'.'));
 
-        let (num, _consumed) = i128::from_radix_10_signed(&digits);
+        let (num, _consumed) = i128::from_radix_10_signed(digits);
 
         let out = num.to_be_bytes()[(16 - length)..].to_owned();
         // Vec<u8> -> ByteArray -> FixedLenByteArray
@@ -91,7 +91,7 @@ impl ParquetBuffer {
         digits.clear();
         digits.extend(decimal.iter().filter(|&&c| c != b'.'));
 
-        let (num, _consumed) = BigInt::from_radix_10_signed(&digits);
+        let (num, _consumed) = BigInt::from_radix_10_signed(digits);
         let mut out = num.to_signed_bytes_be();
 
         let num_leading_bytes = length - out.len();

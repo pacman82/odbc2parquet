@@ -2794,7 +2794,7 @@ pub fn setup_empty_table(
         "CREATE TABLE {} (id int IDENTITY(1,1),{});",
         table_name, cols
     );
-    conn.execute(&drop_table, ())?;
+    conn.execute(drop_table, ())?;
     conn.execute(&create_table, ())?;
     Ok(())
 }
