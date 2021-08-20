@@ -19,7 +19,10 @@ use odbc_api::{
 };
 use parquet::{
     basic::{Compression, ConvertedType, Encoding, Repetition, Type as PhysicalType},
-    column::writer::ColumnWriter,
+    column::writer::{get_typed_column_writer_mut, ColumnWriter},
+    data_type::{
+        BoolType, ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type, Int64Type,
+    },
     errors::ParquetError,
     file::{
         properties::WriterProperties,
@@ -174,14 +177,13 @@ type FnWriteParquetColumn =
     dyn Fn(&mut ParquetBuffer, &mut ColumnWriter, AnyColumnView) -> Result<(), Error>;
 
 macro_rules! optional_col_writer {
-    ($cw_variant:ident, $cr_variant:ident) => {
+    ($pdt:ident, $cr_variant:ident) => {
         Box::new(
             move |pb: &mut ParquetBuffer,
                   column_writer: &mut ColumnWriter,
                   column_reader: AnyColumnView| {
-                if let (ColumnWriter::$cw_variant(cw), AnyColumnView::$cr_variant(it)) =
-                    (column_writer, column_reader)
-                {
+                let cw = get_typed_column_writer_mut::<$pdt>(column_writer);
+                if let AnyColumnView::$cr_variant(it) = column_reader {
                     pb.write_optional(cw, it)?
                 } else {
                     panic_invalid_cw()
@@ -313,27 +315,27 @@ fn make_schema(
                 DataType::Double => (
                     ptb(PhysicalType::DOUBLE),
                     BufferKind::F64,
-                    optional_col_writer!(DoubleColumnWriter, NullableF64),
+                    optional_col_writer!(DoubleType, NullableF64),
                 ),
                 DataType::Float | DataType::Real => (
                     ptb(PhysicalType::FLOAT),
                     BufferKind::F32,
-                    optional_col_writer!(FloatColumnWriter, NullableF32),
+                    optional_col_writer!(FloatType, NullableF32),
                 ),
                 DataType::SmallInt => (
                     ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_16),
                     BufferKind::I32,
-                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                    optional_col_writer!(Int32Type, NullableI32),
                 ),
                 DataType::Integer => (
                     ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_32),
                     BufferKind::I32,
-                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                    optional_col_writer!(Int32Type, NullableI32),
                 ),
                 DataType::Date => (
                     ptb(PhysicalType::INT32).with_converted_type(ConvertedType::DATE),
                     BufferKind::Date,
-                    optional_col_writer!(Int32ColumnWriter, NullableDate),
+                    optional_col_writer!(Int32Type, NullableDate),
                 ),
                 DataType::Decimal {
                     scale: 0,
@@ -348,7 +350,7 @@ fn make_schema(
                         .with_precision(p as i32)
                         .with_scale(0),
                     BufferKind::I32,
-                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                    optional_col_writer!(Int32Type, NullableI32),
                 ),
                 DataType::Decimal {
                     scale: 0,
@@ -363,7 +365,7 @@ fn make_schema(
                         .with_precision(p as i32)
                         .with_scale(0),
                     BufferKind::I64,
-                    optional_col_writer!(Int64ColumnWriter, NullableI64),
+                    optional_col_writer!(Int64Type, NullableI64),
                 ),
                 DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
                     // Length of the two's complement.
@@ -413,24 +415,24 @@ fn make_schema(
                 DataType::BigInt => (
                     ptb(PhysicalType::INT64).with_converted_type(ConvertedType::INT_64),
                     BufferKind::I64,
-                    optional_col_writer!(Int64ColumnWriter, NullableI64),
+                    optional_col_writer!(Int64Type, NullableI64),
                 ),
                 DataType::Bit => (
                     ptb(PhysicalType::BOOLEAN),
                     BufferKind::Bit,
-                    optional_col_writer!(BoolColumnWriter, NullableBit),
+                    optional_col_writer!(BoolType, NullableBit),
                 ),
                 DataType::TinyInt => (
                     ptb(PhysicalType::INT32).with_converted_type(ConvertedType::INT_8),
                     BufferKind::I32,
-                    optional_col_writer!(Int32ColumnWriter, NullableI32),
+                    optional_col_writer!(Int32Type, NullableI32),
                 ),
                 DataType::Binary { length } => {
                     if prefer_varbinary {
                         (
                             ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
                             BufferKind::Binary { length },
-                            optional_col_writer!(ByteArrayColumnWriter, Binary),
+                            optional_col_writer!(ByteArrayType, Binary),
                         )
                     } else {
                         (
@@ -438,14 +440,14 @@ fn make_schema(
                                 .with_length(length.try_into().unwrap())
                                 .with_converted_type(ConvertedType::NONE),
                             BufferKind::Binary { length },
-                            optional_col_writer!(FixedLenByteArrayColumnWriter, Binary),
+                            optional_col_writer!(FixedLenByteArrayType, Binary),
                         )
                     }
                 }
                 DataType::Varbinary { length } | DataType::LongVarbinary { length } => (
                     ptb(PhysicalType::BYTE_ARRAY).with_converted_type(ConvertedType::NONE),
                     BufferKind::Binary { length },
-                    optional_col_writer!(ByteArrayColumnWriter, Binary),
+                    optional_col_writer!(ByteArrayType, Binary),
                 ),
                 // For character data we consider binding to wide (16-Bit) buffers in order to avoid
                 // depending on the system locale being utf-8. For other character buffers we always use
