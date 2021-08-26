@@ -3,7 +3,7 @@ mod strategy;
 
 use self::{
     batch_size_limit::BatchSizeLimit,
-    strategy::{strategy_from_column_description, FnWriteParquetColumn},
+    strategy::{strategy_from_column_description, ColumnFetchStrategy},
 };
 
 use std::{
@@ -14,10 +14,7 @@ use std::{
 
 use anyhow::{bail, format_err, Error};
 use log::{debug, info};
-use odbc_api::{
-    buffers::{BufferDescription, ColumnarRowSet},
-    ColumnDescription, Cursor, Environment, IntoParameter,
-};
+use odbc_api::{buffers::ColumnarRowSet, ColumnDescription, Cursor, Environment, IntoParameter};
 use parquet::{
     basic::{Compression, Encoding},
     errors::ParquetError,
@@ -104,7 +101,7 @@ fn cursor_to_parquet(
 
     let mem_usage_odbc_buffer_per_row: usize = strategies
         .iter()
-        .map(|strategy| strategy.buffer_description.bytes_per_row())
+        .map(|(_index, strategy)| strategy.buffer_description.bytes_per_row())
         .sum();
     let total_mem_usage_per_row =
         mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
@@ -122,7 +119,7 @@ fn cursor_to_parquet(
         batch_size_row,
         strategies
             .iter()
-            .map(|strategy| (strategy.index, strategy.buffer_description)),
+            .map(|&(index, ref strategy)| (index, strategy.buffer_description)),
     );
 
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
@@ -155,7 +152,7 @@ fn cursor_to_parquet(
 
             let odbc_column = buffer.column(col_index);
 
-            let odbc_to_parquet_col = &strategies[col_index].odbc_to_parquet;
+            let odbc_to_parquet_col = &strategies[col_index].1.odbc_to_parquet;
 
             odbc_to_parquet_col(&mut pb, &mut column_writer, odbc_column)?;
 
@@ -170,27 +167,14 @@ fn cursor_to_parquet(
     Ok(())
 }
 
-/// All information required to fetch a column from odbc and transfer its data to Parquet.
-struct ColumnFetchStrategy {
-    /// One based index of the column.
-    index: u16,
-    /// Parquet column type
-    parquet_type: Type,
-    /// Description of the buffer bound to the ODBC data source.
-    buffer_description: BufferDescription,
-    /// Function writing the data from an ODBC buffer with a parquet column writer.
-    odbc_to_parquet: Box<FnWriteParquetColumn>,
-}
-
 fn make_schema(
     cursor: &impl Cursor,
     use_utf16: bool,
     prefer_varbinary: bool,
-) -> Result<Vec<ColumnFetchStrategy>, Error> {
+) -> Result<Vec<(u16, ColumnFetchStrategy)>, Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
-    let mut fields = Vec::new();
 
     for index in 1..(num_cols + 1) {
         let mut cd = ColumnDescription::default();
@@ -208,7 +192,7 @@ fn make_schema(
             name
         };
 
-        if let Some((parquet_type, odbc_to_parquet, buffer_description)) =
+        if let Some(column_fetch_strategy) =
             strategy_from_column_description(
                 &cd,
                 &name,
@@ -218,23 +202,20 @@ fn make_schema(
                 index,
             )?
         {
-            fields.push(Arc::new(parquet_type.clone()));
-            odbc_buffer_desc.push(ColumnFetchStrategy {
-                index: index as u16,
-                parquet_type,
-                buffer_description,
-                odbc_to_parquet,
-            });
+            odbc_buffer_desc.push((
+                index as u16,
+                column_fetch_strategy
+            ));
         }
     }
 
     Ok(odbc_buffer_desc)
 }
 
-fn parquet_schema_from_strategies(strategies: &[ColumnFetchStrategy]) -> TypePtr {
+fn parquet_schema_from_strategies(strategies: &[(u16, ColumnFetchStrategy)]) -> TypePtr {
     let mut fields = strategies
         .iter()
-        .map(|s| Arc::new(s.parquet_type.clone()))
+        .map(|(_index, s)| Arc::new(s.parquet_type.clone()))
         .collect();
     Arc::new(
         Type::group_type_builder("schema")

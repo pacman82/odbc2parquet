@@ -22,6 +22,16 @@ use crate::parquet_buffer::ParquetBuffer;
 pub type FnWriteParquetColumn =
     dyn Fn(&mut ParquetBuffer, &mut ColumnWriter, AnyColumnView) -> Result<(), Error>;
 
+/// All information required to fetch a column from odbc and transfer its data to Parquet.
+pub struct ColumnFetchStrategy {
+    /// Parquet column type used in parquet schema
+    pub parquet_type: Type,
+    /// Description of the buffer bound to the ODBC data source.
+    pub buffer_description: BufferDescription,
+    /// Function writing the data from an ODBC buffer with a parquet column writer.
+    pub odbc_to_parquet: Box<FnWriteParquetColumn>,
+}
+
 macro_rules! optional_col_writer {
     ($pdt:ident, $cr_variant:ident) => {
         Box::new(
@@ -47,14 +57,7 @@ pub fn strategy_from_column_description(
     use_utf16: bool,
     cursor: &impl Cursor,
     index: i16,
-) -> Result<
-    Option<(
-        Type,
-        Box<FnWriteParquetColumn>,
-        BufferDescription,
-    )>,
-    Error,
-> {
+) -> Result<Option<ColumnFetchStrategy>, Error> {
     let ptb = |physical_type| Type::primitive_type_builder(name, physical_type);
 
     let (field_builder, buffer_kind, odbc_to_parquet): (_, _, Box<FnWriteParquetColumn>) =
@@ -267,13 +270,13 @@ pub fn strategy_from_column_description(
 
         Ok(None)
     } else {
-        let parquet_schema_type = field_builder.with_repetition(repetition).build()?;
+        let parquet_type = field_builder.with_repetition(repetition).build()?;
 
-        Ok(Some((
-            parquet_schema_type,
-            odbc_to_parquet,
+        Ok(Some(ColumnFetchStrategy {
+            parquet_type,
             buffer_description,
-        )))
+            odbc_to_parquet,
+        }))
     }
 }
 
