@@ -1,5 +1,6 @@
 mod batch_size_limit;
 mod strategy;
+mod odbc_buffer_item;
 
 use self::{
     batch_size_limit::BatchSizeLimit,
