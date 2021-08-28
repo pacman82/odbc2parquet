@@ -1,11 +1,17 @@
 use std::convert::TryInto;
 
+use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind},
     sys::Date as OdbcDate,
 };
-use parquet::{basic::{ConvertedType, Repetition, Type as PhysicalType}, column::writer::{get_typed_column_writer_mut, ColumnWriter}, data_type::Int32Type, schema::types::Type};
+use parquet::{
+    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    column::writer::{get_typed_column_writer_mut, ColumnWriter},
+    data_type::Int32Type,
+    schema::types::Type,
+};
 
 use crate::parquet_buffer::ParquetBuffer;
 
@@ -17,12 +23,14 @@ pub struct Date {
 
 impl Date {
     pub fn new(repetetion: Repetition) -> Self {
-        Self { repetition: repetetion }
+        Self {
+            repetition: repetetion,
+        }
     }
 }
 
 impl ColumnFetchStrategy for Date {
-    fn parquet_type(&self, name: &str) -> parquet::schema::types::Type {
+    fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT32)
             .with_repetition(self.repetition)
             .with_converted_type(ConvertedType::DATE)
@@ -30,7 +38,7 @@ impl ColumnFetchStrategy for Date {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> odbc_api::buffers::BufferDescription {
+    fn buffer_description(&self) -> BufferDescription {
         BufferDescription {
             nullable: true,
             kind: BufferKind::Date,
@@ -42,7 +50,7 @@ impl ColumnFetchStrategy for Date {
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
         column_view: AnyColumnView,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         let it = OdbcDate::nullable_buffer(column_view);
         let column_writer = get_typed_column_writer_mut::<Int32Type>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|date| date.map(days_since_epoch)))?;

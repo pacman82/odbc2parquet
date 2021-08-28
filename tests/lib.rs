@@ -263,10 +263,7 @@ fn query_decimals() {
     setup_empty_table(
         &conn,
         table_name,
-        &[
-            "NUMERIC(3,2) NOT NULL",
-            "DECIMAL(3,2) NOT NULL",
-        ],
+        &["NUMERIC(3,2) NOT NULL", "DECIMAL(3,2) NOT NULL"],
     )
     .unwrap();
     let insert = format!(
