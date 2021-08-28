@@ -1,4 +1,8 @@
-use odbc_api::{Bit, buffers::{AnyColumnView, BufferKind, OptIt}, sys::Date};
+use odbc_api::{
+    buffers::{AnyColumnView, BufferKind, OptIt},
+    sys::Date,
+    Bit,
+};
 
 pub trait OdbcBufferItem: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`.
@@ -13,17 +17,17 @@ pub trait OdbcBufferItem: Sized + Copy {
 }
 
 macro_rules! impl_fixed_sized_item {
-    ($t:ident, $plain:ident, $null:ident) => {  
+    ($t:ident, $plain:ident, $null:ident) => {
         impl OdbcBufferItem for $t {
             const BUFFER_KIND: BufferKind = BufferKind::$plain;
-        
+
             fn plain_buffer(variant: AnyColumnView<'_>) -> &[Self] {
                 match variant {
                     AnyColumnView::$plain(vals) => vals,
                     _ => panic!("Unexepected variant in AnyColumnView."),
                 }
             }
-        
+
             fn nullable_buffer(variant: AnyColumnView<'_>) -> OptIt<Self> {
                 match variant {
                     AnyColumnView::$null(vals) => vals,

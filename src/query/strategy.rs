@@ -4,7 +4,6 @@ use anyhow::Error;
 use log::{debug, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind},
-    sys::Date,
     Bit, ColumnDescription, Cursor, DataType, Nullability,
 };
 use parquet::{
@@ -18,7 +17,10 @@ use parquet::{
 };
 
 use super::odbc_buffer_item::OdbcBufferItem;
-use crate::parquet_buffer::{BufferedDataType, IntoPhysical, ParquetBuffer};
+use crate::{
+    parquet_buffer::{BufferedDataType, IntoPhysical, ParquetBuffer},
+    query::{date::Date, identical::FetchIdentical, decimal::Decimal},
+};
 
 /// Function used to copy the contents of `AnyColumnView` into `ColumnWriter`. The concrete instance
 /// (not this signature) is dependent on the specific columns in questions.
@@ -44,13 +46,18 @@ macro_rules! optional_col_writer {
 }
 
 pub trait ColumnFetchStrategy {
-    fn parquet_type(&self) -> Type;
+    fn parquet_type(&self, name: &str) -> Type;
     fn buffer_description(&self) -> BufferDescription;
-    fn odbc_to_parquet(&self) -> &Box<FnWriteParquetColumn>;
+    fn copy_odbc_to_parquet(
+        &self,
+        parquet_buffer: &mut ParquetBuffer,
+        column_writer: &mut ColumnWriter,
+        column_view: AnyColumnView,
+    ) -> Result<(), Error>;
 }
 
 impl ColumnFetchStrategy for ColumnFetchStrategyImpl {
-    fn parquet_type(&self) -> Type {
+    fn parquet_type(&self, name: &str) -> Type {
         self.parquet_type.clone()
     }
 
@@ -58,8 +65,13 @@ impl ColumnFetchStrategy for ColumnFetchStrategyImpl {
         self.buffer_description
     }
 
-    fn odbc_to_parquet(&self) -> &Box<FnWriteParquetColumn> {
-        &self.odbc_to_parquet
+    fn copy_odbc_to_parquet(
+        &self,
+        parquet_buffer: &mut ParquetBuffer,
+        column_writer: &mut ColumnWriter,
+        column_view: AnyColumnView,
+    ) -> Result<(), Error> {
+        (self.odbc_to_parquet)(parquet_buffer, column_writer, column_view)
     }
 }
 
@@ -76,28 +88,6 @@ struct ColumnFetchStrategyImpl {
 }
 
 impl ColumnFetchStrategyImpl {
-    /// Columnar fetch strategy to be applied if Parquet and Odbc value type are binary identical.
-    /// Generic argument is a parquet data type.
-    fn trivial<Pdt>(name: &str, nullability: Nullability) -> Self
-    where
-        Pdt: ParquetDataType,
-        Pdt::T: OdbcBufferItem + BufferedDataType,
-    {
-        Self::with_converted_type::<Pdt>(name, nullability, ConvertedType::NONE)
-    }
-
-    fn with_converted_type<Pdt>(
-        name: &str,
-        nullability: Nullability,
-        converted_type: ConvertedType,
-    ) -> Self
-    where
-        Pdt: ParquetDataType,
-        Pdt::T: OdbcBufferItem + BufferedDataType,
-    {
-        Self::with_conversion::<Pdt, Pdt::T>(name, nullability, converted_type)
-    }
-
     fn with_conversion<Pdt, Obt>(
         name: &str,
         nullability: Nullability,
@@ -184,29 +174,20 @@ pub fn strategy_from_column_description(
 ) -> Result<Option<Box<dyn ColumnFetchStrategy>>, Error> {
     let ptb = |physical_type| Type::primitive_type_builder(name, physical_type);
 
-    let strategy = match cd.data_type {
-        DataType::Double => Box::new(ColumnFetchStrategyImpl::trivial::<DoubleType>(
-            name,
-            cd.nullability,
-        )),
-        DataType::Float | DataType::Real => Box::new(
-            ColumnFetchStrategyImpl::trivial::<FloatType>(name, cd.nullability),
-        ),
-        DataType::SmallInt => Box::new(ColumnFetchStrategyImpl::with_converted_type::<Int32Type>(
-            name,
-            cd.nullability,
+    let repetition = to_repetition(cd.nullability);
+
+    let strategy: Box<dyn ColumnFetchStrategy> = match cd.data_type {
+        DataType::Double => Box::new(FetchIdentical::<DoubleType>::new(repetition)),
+        DataType::Float | DataType::Real => Box::new(FetchIdentical::<FloatType>::new(repetition)),
+        DataType::SmallInt => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
+            repetition,
             ConvertedType::INT_16,
         )),
-        DataType::Integer => Box::new(ColumnFetchStrategyImpl::with_converted_type::<Int32Type>(
-            name,
-            cd.nullability,
+        DataType::Integer => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
+            repetition,
             ConvertedType::INT_32,
         )),
-        DataType::Date => Box::new(ColumnFetchStrategyImpl::with_conversion::<Int32Type, Date>(
-            name,
-            cd.nullability,
-            ConvertedType::DATE,
-        )),
+        DataType::Date => Box::new(Date::new(repetition)),
         DataType::Decimal {
             scale: 0,
             precision: p @ 0..=9,
@@ -214,12 +195,8 @@ pub fn strategy_from_column_description(
         | DataType::Numeric {
             scale: 0,
             precision: p @ 0..=9,
-        } => Box::new(ColumnFetchStrategyImpl::new::<Int32Type, i32>(
-            name,
-            cd.nullability,
-            ConvertedType::DECIMAL,
-            Some(p as i32),
-            Some(0),
+        } => Box::new(FetchIdentical::<Int32Type>::decimal_with_precision(
+            repetition, p as i32,
         )),
         DataType::Decimal {
             scale: 0,
@@ -228,51 +205,11 @@ pub fn strategy_from_column_description(
         | DataType::Numeric {
             scale: 0,
             precision: p @ 0..=18,
-        } => Box::new(ColumnFetchStrategyImpl::new::<Int64Type, i64>(
-            name,
-            cd.nullability,
-            ConvertedType::DECIMAL,
-            Some(p as i32),
-            Some(0),
+        } => Box::new(FetchIdentical::<Int64Type>::decimal_with_precision(
+            repetition, p as i32,
         )),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-            // Length of the two's complement.
-            let num_binary_digits = precision as f64 * 10f64.log2();
-            // Plus one bit for the sign (+/-)
-            let length_in_bits = num_binary_digits + 1.0;
-            let length_in_bytes = (length_in_bits / 8.0).ceil() as i32;
-            let parquet_type = ptb(PhysicalType::FIXED_LEN_BYTE_ARRAY)
-                .with_length(length_in_bytes)
-                .with_converted_type(ConvertedType::DECIMAL)
-                .with_precision(precision.try_into().unwrap())
-                .with_scale(scale.try_into().unwrap())
-                .with_repetition(to_repetition(cd.nullability))
-                .build()
-                .unwrap();
-            let buffer_description = BufferDescription {
-                kind: BufferKind::Text {
-                    max_str_len: cd.data_type.column_size(),
-                },
-                nullable: true,
-            };
-            let odbc_to_parquet = Box::new(
-                move |pb: &mut ParquetBuffer,
-                      column_writer: &mut ColumnWriter,
-                      column_reader: AnyColumnView| {
-                    write_decimal_col(
-                        pb,
-                        column_writer,
-                        column_reader,
-                        length_in_bytes.try_into().unwrap(),
-                        precision,
-                    )
-                },
-            );
-            Box::new(ColumnFetchStrategyImpl {
-                parquet_type,
-                buffer_description,
-                odbc_to_parquet,
-            })
+            Box::new(Decimal::new(repetition, scale as i32, precision))
         }
         DataType::Timestamp { precision } => {
             let parquet_type = ptb(PhysicalType::INT64)
@@ -301,18 +238,14 @@ pub fn strategy_from_column_description(
                 odbc_to_parquet,
             })
         }
-        DataType::BigInt => Box::new(ColumnFetchStrategyImpl::trivial::<Int64Type>(
-            name,
-            cd.nullability,
-        )),
+        DataType::BigInt => Box::new(FetchIdentical::<Int64Type>::new(repetition)),
         DataType::Bit => Box::new(ColumnFetchStrategyImpl::with_conversion::<BoolType, Bit>(
             name,
             cd.nullability,
             ConvertedType::NONE,
         )),
-        DataType::TinyInt => Box::new(ColumnFetchStrategyImpl::with_converted_type::<Int32Type>(
-            name,
-            cd.nullability,
+        DataType::TinyInt => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
+            repetition,
             ConvertedType::INT_8,
         )),
         DataType::Binary { length } => {
@@ -425,7 +358,8 @@ pub fn strategy_from_column_description(
 
     debug!(
         "ODBC buffer description for column {}: {:?}",
-        index, strategy.buffer_description
+        index,
+        strategy.buffer_description()
     );
 
     if matches!(
@@ -444,23 +378,6 @@ pub fn strategy_from_column_description(
     } else {
         Ok(Some(strategy))
     }
-}
-
-fn write_decimal_col(
-    pb: &mut ParquetBuffer,
-    column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
-    length_in_bytes: usize,
-    precision: usize,
-) -> Result<(), Error> {
-    if let (ColumnWriter::FixedLenByteArrayColumnWriter(cw), AnyColumnView::Text(it)) =
-        (column_writer, column_reader)
-    {
-        pb.write_decimal(cw, it, length_in_bytes, precision)?;
-    } else {
-        panic_invalid_cv()
-    }
-    Ok(())
 }
 
 fn write_timestamp_col(
