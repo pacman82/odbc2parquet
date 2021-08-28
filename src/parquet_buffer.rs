@@ -2,14 +2,14 @@ use anyhow::Error;
 use chrono::NaiveDate;
 use num_bigint::BigInt;
 use odbc_api::{
-    sys::{Date, Timestamp},
+    sys::Timestamp,
     Bit,
 };
 use parquet::{
     column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
 };
-use std::{convert::TryInto, mem::size_of};
+use std::mem::size_of;
 
 /// Holds preallocated buffers for every possible physical parquet type. This way we do not need to
 /// reallocate them.
@@ -317,22 +317,21 @@ pub trait IntoPhysical<T> {
     fn into_physical(self) -> T;
 }
 
+impl<T> IntoPhysical<T> for T
+where
+    T: Copy,
+{
+    fn into_physical(self) -> T {
+        self
+    }
+}
+
 impl<T> IntoPhysical<T> for &T
 where
     T: Copy,
 {
     fn into_physical(self) -> T {
         *self
-    }
-}
-
-impl IntoPhysical<i32> for &Date {
-    fn into_physical(self) -> i32 {
-        let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
-        // Transform date to days since unix epoch as i32
-        let date = NaiveDate::from_ymd(self.year as i32, self.month as u32, self.day as u32);
-        let duration = date.signed_duration_since(unix_epoch);
-        duration.num_days().try_into().unwrap()
     }
 }
 
