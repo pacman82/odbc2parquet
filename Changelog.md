@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.10
+
+* Fix: An issue with the ODBC buffer allocated for `NUMERIC` and `DECIMAL` types being two bytes to
+  short, which could lead to wrong values being written into parquet without emmitting an error
+  message.
+
 ## 0.6.9
 
 * Both `--batch-size-row` and `--batch-size-mib` can now be both specified together.
