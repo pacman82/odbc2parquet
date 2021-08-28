@@ -84,7 +84,7 @@ where
     ) -> Result<(), Error> {
         let it = Pdt::T::nullable_buffer(column_view);
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
-        parquet_buffer.write_optional(column_writer, it)?;
+        parquet_buffer.write_optional(column_writer, it.map(|opt_ref| opt_ref.copied()))?;
         Ok(())
     }
 }

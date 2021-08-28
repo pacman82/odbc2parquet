@@ -1,9 +1,13 @@
 mod batch_size_limit;
-mod odbc_buffer_item;
-mod strategy;
-mod identical;
+mod binary;
+mod boolean;
 mod date;
 mod decimal;
+mod identical;
+mod odbc_buffer_item;
+mod strategy;
+mod text;
+mod timestamp;
 
 use self::{
     batch_size_limit::BatchSizeLimit,
@@ -173,11 +177,13 @@ fn cursor_to_parquet(
     Ok(())
 }
 
+type ColumnInfo = (u16, String, Box<dyn ColumnFetchStrategy>);
+
 fn make_schema(
     cursor: &impl Cursor,
     use_utf16: bool,
     prefer_varbinary: bool,
-) -> Result<Vec<(u16, String, Box<dyn ColumnFetchStrategy>)>, Error> {
+) -> Result<Vec<ColumnInfo>, Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -213,10 +219,12 @@ fn make_schema(
     Ok(odbc_buffer_desc)
 }
 
-fn parquet_schema_from_strategies(strategies: &[(u16, String, Box<dyn ColumnFetchStrategy>)]) -> TypePtr {
+fn parquet_schema_from_strategies(
+    strategies: &[(u16, String, Box<dyn ColumnFetchStrategy>)],
+) -> TypePtr {
     let mut fields = strategies
         .iter()
-        .map(|(_index, name, s)| Arc::new(s.parquet_type(name).clone()))
+        .map(|(_index, name, s)| Arc::new(s.parquet_type(name)))
         .collect();
     Arc::new(
         Type::group_type_builder("schema")

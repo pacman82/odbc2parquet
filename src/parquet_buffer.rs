@@ -1,10 +1,7 @@
 use anyhow::Error;
 use chrono::NaiveDate;
 use num_bigint::BigInt;
-use odbc_api::{
-    sys::Timestamp,
-    Bit,
-};
+use odbc_api::sys::Timestamp;
 use parquet::{
     column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
     data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
@@ -185,17 +182,16 @@ impl ParquetBuffer {
     /// Write to a parquet buffer using an iterator over optional source items. A default
     /// transformation, defined via the `IntoPhysical` trait is used to transform the items into
     /// buffer elements.
-    pub fn write_optional<T, S>(
+    pub fn write_optional<T>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
-        source: impl Iterator<Item = Option<S>>,
+        source: impl Iterator<Item = Option<T::T>>,
     ) -> Result<(), Error>
     where
         T: DataType,
         T::T: BufferedDataType,
-        S: IntoPhysical<T::T>,
     {
-        self.write_optional_any(cw, source, |s| s.into_physical())
+        self.write_optional_any(cw, source, |s| s)
     }
 
     /// Iterate over the elements of a column reader over an optional column.
@@ -310,53 +306,6 @@ impl BufferedDataType for FixedLenByteArray {
             buffer.values_fixed_bytes_array.as_mut_slice(),
             buffer.def_levels.as_mut_slice(),
         )
-    }
-}
-
-pub trait IntoPhysical<T> {
-    fn into_physical(self) -> T;
-}
-
-impl<T> IntoPhysical<T> for T
-where
-    T: Copy,
-{
-    fn into_physical(self) -> T {
-        self
-    }
-}
-
-impl<T> IntoPhysical<T> for &T
-where
-    T: Copy,
-{
-    fn into_physical(self) -> T {
-        *self
-    }
-}
-
-impl IntoPhysical<bool> for &Bit {
-    fn into_physical(self) -> bool {
-        self.as_bool()
-    }
-}
-
-impl IntoPhysical<ByteArray> for String {
-    fn into_physical(self) -> ByteArray {
-        self.into_bytes().into()
-    }
-}
-
-impl IntoPhysical<ByteArray> for &[u8] {
-    fn into_physical(self) -> ByteArray {
-        self.to_owned().into()
-    }
-}
-
-impl IntoPhysical<FixedLenByteArray> for &[u8] {
-    fn into_physical(self) -> FixedLenByteArray {
-        let byte_array: ByteArray = self.to_owned().into();
-        byte_array.into()
     }
 }
 

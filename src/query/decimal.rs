@@ -56,10 +56,11 @@ impl ColumnFetchStrategy for Decimal {
     fn buffer_description(&self) -> odbc_api::buffers::BufferDescription {
         // Precision + 2. (One byte for the radix character and another for the sign)
         let max_str_len = DataType::Decimal {
-            precision: self.precision.try_into().unwrap(),
+            precision: self.precision,
             scale: self.scale.try_into().unwrap(),
         }
-        .display_size().unwrap();
+        .display_size()
+        .unwrap();
         BufferDescription {
             kind: BufferKind::Text { max_str_len },
             nullable: true,
