@@ -2,10 +2,7 @@ mod batch_size_limit;
 mod strategy;
 mod odbc_buffer_item;
 
-use self::{
-    batch_size_limit::BatchSizeLimit,
-    strategy::{strategy_from_column_description, ColumnFetchStrategy},
-};
+use self::{batch_size_limit::BatchSizeLimit, strategy::{ColumnFetchStrategy, strategy_from_column_description}};
 
 use std::{
     fs::File,
@@ -102,7 +99,7 @@ fn cursor_to_parquet(
 
     let mem_usage_odbc_buffer_per_row: usize = strategies
         .iter()
-        .map(|(_index, strategy)| strategy.buffer_description.bytes_per_row())
+        .map(|(_index, strategy)| strategy.buffer_description().bytes_per_row())
         .sum();
     let total_mem_usage_per_row =
         mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
@@ -120,7 +117,7 @@ fn cursor_to_parquet(
         batch_size_row,
         strategies
             .iter()
-            .map(|&(index, ref strategy)| (index, strategy.buffer_description)),
+            .map(|&(index, ref strategy)| (index, strategy.buffer_description())),
     );
 
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
@@ -153,7 +150,7 @@ fn cursor_to_parquet(
 
             let odbc_column = buffer.column(col_index);
 
-            let odbc_to_parquet_col = &strategies[col_index].1.odbc_to_parquet;
+            let odbc_to_parquet_col = &strategies[col_index].1.odbc_to_parquet();
 
             odbc_to_parquet_col(&mut pb, &mut column_writer, odbc_column)?;
 
@@ -172,7 +169,7 @@ fn make_schema(
     cursor: &impl Cursor,
     use_utf16: bool,
     prefer_varbinary: bool,
-) -> Result<Vec<(u16, ColumnFetchStrategy)>, Error> {
+) -> Result<Vec<(u16, Box<dyn ColumnFetchStrategy>)>, Error> {
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -213,10 +210,10 @@ fn make_schema(
     Ok(odbc_buffer_desc)
 }
 
-fn parquet_schema_from_strategies(strategies: &[(u16, ColumnFetchStrategy)]) -> TypePtr {
+fn parquet_schema_from_strategies(strategies: &[(u16, Box<dyn ColumnFetchStrategy>)]) -> TypePtr {
     let mut fields = strategies
         .iter()
-        .map(|(_index, s)| Arc::new(s.parquet_type.clone()))
+        .map(|(_index, s)| Arc::new(s.parquet_type().clone()))
         .collect();
     Arc::new(
         Type::group_type_builder("schema")
