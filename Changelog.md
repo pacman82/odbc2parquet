@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.11
+
+* Optimization: Required columns which do not require conversion to parquet types during fetch, are
+  now no longer copied in the intermediate buffer. This will result in a little bit less memory
+  usage and faster processing required (i.e. NOT NULL) columns with types:
+
+  * Double
+  * Real
+  * Float
+  * TinyInteger
+  * SmallInteger
+  * Integer
+  * Big Int
+  * and Decimals with Scale 0 and precision <= 18.
+
 ## 0.6.10
 
 * Fix: An issue with the ODBC buffer allocated for `NUMERIC` and `DECIMAL` types being two bytes to

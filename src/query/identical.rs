@@ -16,8 +16,7 @@ use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 use super::{odbc_buffer_item::OdbcBufferItem, ColumnFetchStrategy};
 
 /// Copy identical optional data from ODBC to Parquet.
-pub struct FetchIdentical<Pdt> {
-    repetition: Repetition,
+struct IdenticalOptional<Pdt> {
     converted_type: ConvertedType,
     precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
@@ -25,16 +24,15 @@ pub struct FetchIdentical<Pdt> {
 
 /// Columnar fetch strategy to be applied if Parquet and Odbc value type are binary identical.
 /// Generic argument is a parquet data type.
-impl<Pdt> FetchIdentical<Pdt> {
-    pub fn new(repetition: Repetition) -> Self {
-        Self::with_converted_type(repetition, ConvertedType::NONE)
+impl<Pdt> IdenticalOptional<Pdt> {
+    pub fn new() -> Self {
+        Self::with_converted_type(ConvertedType::NONE)
     }
 
     /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
     /// a specific converted type (aka. former logical type).
-    pub fn with_converted_type(repetition: Repetition, converted_type: ConvertedType) -> Self {
+    pub fn with_converted_type(converted_type: ConvertedType) -> Self {
         Self {
-            repetition,
             converted_type,
             precision: None,
             _parquet_data_type: PhantomData,
@@ -43,9 +41,8 @@ impl<Pdt> FetchIdentical<Pdt> {
 
     /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
     /// representation as either 32 or 64 bit integers.
-    pub fn decimal_with_precision(repetition: Repetition, precision: i32) -> Self {
+    pub fn decimal_with_precision(precision: i32) -> Self {
         Self {
-            repetition,
             converted_type: ConvertedType::DECIMAL,
             precision: Some(precision),
             _parquet_data_type: PhantomData,
@@ -53,7 +50,7 @@ impl<Pdt> FetchIdentical<Pdt> {
     }
 }
 
-impl<Pdt> ColumnFetchStrategy for FetchIdentical<Pdt>
+impl<Pdt> ColumnFetchStrategy for IdenticalOptional<Pdt>
 where
     Pdt: DataType,
     Pdt::T: OdbcBufferItem + BufferedDataType,
@@ -61,7 +58,7 @@ where
     fn parquet_type(&self, name: &str) -> Type {
         let physical_type = Pdt::get_physical_type();
         let mut builder = Type::primitive_type_builder(name, physical_type)
-            .with_repetition(self.repetition)
+            .with_repetition(Repetition::OPTIONAL)
             .with_converted_type(self.converted_type);
         if let Some(precision) = self.precision {
             builder = builder.with_scale(0).with_precision(precision);
@@ -86,5 +83,124 @@ where
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|opt_ref| opt_ref.copied()))?;
         Ok(())
+    }
+}
+
+/// Optimized strategy if ODBC and Parquet type are identical, and we know the data source not to
+/// contain any NULLs.
+struct IdenticalRequired<Pdt> {
+    converted_type: ConvertedType,
+    precision: Option<i32>,
+    _parquet_data_type: PhantomData<Pdt>,
+}
+
+impl<Pdt> IdenticalRequired<Pdt> {
+    pub fn new() -> Self {
+        Self::with_converted_type(ConvertedType::NONE)
+    }
+
+    /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
+    /// a specific converted type (aka. former logical type).
+    pub fn with_converted_type(converted_type: ConvertedType) -> Self {
+        Self {
+            converted_type,
+            precision: None,
+            _parquet_data_type: PhantomData,
+        }
+    }
+
+    /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
+    /// representation as either 32 or 64 bit integers.
+    pub fn decimal_with_precision(precision: i32) -> Self {
+        Self {
+            converted_type: ConvertedType::DECIMAL,
+            precision: Some(precision),
+            _parquet_data_type: PhantomData,
+        }
+    }
+}
+
+impl<Pdt> ColumnFetchStrategy for IdenticalRequired<Pdt>
+where
+    Pdt: DataType,
+    Pdt::T: OdbcBufferItem + BufferedDataType,
+{
+    fn parquet_type(&self, name: &str) -> Type {
+        let physical_type = Pdt::get_physical_type();
+        let mut builder = Type::primitive_type_builder(name, physical_type)
+            .with_repetition(Repetition::REQUIRED)
+            .with_converted_type(self.converted_type);
+        if let Some(precision) = self.precision {
+            builder = builder.with_scale(0).with_precision(precision);
+        }
+        builder.build().unwrap()
+    }
+
+    fn buffer_description(&self) -> BufferDescription {
+        BufferDescription {
+            kind: Pdt::T::BUFFER_KIND,
+            nullable: false,
+        }
+    }
+
+    fn copy_odbc_to_parquet(
+        &self,
+        _parquet_buffer: &mut ParquetBuffer,
+        column_writer: &mut ColumnWriter,
+        column_view: AnyColumnView,
+    ) -> Result<(), Error> {
+        // We do not require to buffer the values, as they must neither be transformed, nor contain
+        // any gaps due to null, we can use the ODBC buffer directly to write the batch.
+
+        let values = Pdt::T::plain_buffer(column_view);
+        let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
+        column_writer.write_batch(values, None, None)?;
+        Ok(())
+    }
+}
+
+pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn ColumnFetchStrategy>
+where
+    Pdt: DataType,
+    Pdt::T: OdbcBufferItem + BufferedDataType,
+{
+    if is_optional {
+        Box::new(IdenticalOptional::<Pdt>::new())
+    } else {
+        Box::new(IdenticalRequired::<Pdt>::new())
+    }
+}
+
+pub fn fetch_identical_with_converted_type<Pdt>(
+    is_optional: bool,
+    converted_type: ConvertedType,
+) -> Box<dyn ColumnFetchStrategy>
+where
+    Pdt: DataType,
+    Pdt::T: OdbcBufferItem + BufferedDataType,
+{
+    if is_optional {
+        Box::new(IdenticalOptional::<Pdt>::with_converted_type(
+            converted_type,
+        ))
+    } else {
+        Box::new(IdenticalRequired::<Pdt>::with_converted_type(
+            converted_type,
+        ))
+    }
+}
+
+pub fn fetch_decimal_as_identical_with_precision<Pdt>(
+    is_optional: bool,
+    precision: i32,
+) -> Box<dyn ColumnFetchStrategy>
+where
+    Pdt: DataType,
+    Pdt::T: OdbcBufferItem + BufferedDataType,
+{
+    if is_optional {
+        Box::new(IdenticalOptional::<Pdt>::decimal_with_precision(precision))
+    } else {
+        Box::new(IdenticalRequired::<Pdt>::decimal_with_precision(precision))
     }
 }

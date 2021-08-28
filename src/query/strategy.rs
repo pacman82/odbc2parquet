@@ -22,7 +22,10 @@ use crate::{
         boolean::Boolean,
         date::Date,
         decimal::Decimal,
-        identical::FetchIdentical,
+        identical::{
+            fetch_decimal_as_identical_with_precision, fetch_identical,
+            fetch_identical_with_converted_type,
+        },
         text::{Utf16ToUtf8, Utf8},
         timestamp::Timestamp,
     },
@@ -60,17 +63,17 @@ pub fn strategy_from_column_description(
         Nullability::NoNulls => Repetition::REQUIRED,
     };
 
+    let is_optional = cd.could_be_nullable();
+
     let strategy: Box<dyn ColumnFetchStrategy> = match cd.data_type {
-        DataType::Double => Box::new(FetchIdentical::<DoubleType>::new(repetition)),
-        DataType::Float | DataType::Real => Box::new(FetchIdentical::<FloatType>::new(repetition)),
-        DataType::SmallInt => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
-            repetition,
-            ConvertedType::INT_16,
-        )),
-        DataType::Integer => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
-            repetition,
-            ConvertedType::INT_32,
-        )),
+        DataType::Double => fetch_identical::<DoubleType>(is_optional),
+        DataType::Float | DataType::Real => fetch_identical::<FloatType>(is_optional),
+        DataType::SmallInt => {
+            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_16)
+        }
+        DataType::Integer => {
+            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_32)
+        }
         DataType::Date => Box::new(Date::new(repetition)),
         DataType::Decimal {
             scale: 0,
@@ -79,9 +82,7 @@ pub fn strategy_from_column_description(
         | DataType::Numeric {
             scale: 0,
             precision: p @ 0..=9,
-        } => Box::new(FetchIdentical::<Int32Type>::decimal_with_precision(
-            repetition, p as i32,
-        )),
+        } => fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, p as i32),
         DataType::Decimal {
             scale: 0,
             precision: p @ 0..=18,
@@ -89,19 +90,16 @@ pub fn strategy_from_column_description(
         | DataType::Numeric {
             scale: 0,
             precision: p @ 0..=18,
-        } => Box::new(FetchIdentical::<Int64Type>::decimal_with_precision(
-            repetition, p as i32,
-        )),
+        } => fetch_decimal_as_identical_with_precision::<Int64Type>(is_optional, p as i32),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
             Box::new(Decimal::new(repetition, scale as i32, precision))
         }
         DataType::Timestamp { precision } => Box::new(Timestamp::new(repetition, precision)),
-        DataType::BigInt => Box::new(FetchIdentical::<Int64Type>::new(repetition)),
+        DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
-        DataType::TinyInt => Box::new(FetchIdentical::<Int32Type>::with_converted_type(
-            repetition,
-            ConvertedType::INT_8,
-        )),
+        DataType::TinyInt => {
+            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_8)
+        }
         DataType::Binary { length } => {
             if prefer_varbinary {
                 Box::new(Binary::<ByteArrayType>::new(repetition, length))
