@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Insall latests rust toolchain
+      - name: Install latests rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
