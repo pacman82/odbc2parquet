@@ -14,7 +14,7 @@ use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
         AnyColumnViewMut, BinColumnWriter, BufferDescription, BufferKind, ColumnarRowSet,
-        OptWriter, TextColumnWriter,
+        NullableSliceMut, TextColumnWriter,
     },
     sys::{Date, Timestamp},
     Bit, Environment, U16String,
@@ -266,7 +266,7 @@ trait InserterBuilderStart: DataType + Sized {
         Self: for<'a> OdbcDataType<
             'a,
             Required = &'a mut [<Self as DataType>::T],
-            Optional = OptWriter<'a, <Self as DataType>::T>,
+            Optional = NullableSliceMut<'a, <Self as DataType>::T>,
         >,
     {
         if nullable {
@@ -320,7 +320,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
     fn with<F, E>(&self, f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
     where
         Pdt: DataType,
-        Odt: for<'a> OdbcDataType<'a, Required = &'a mut [E], Optional = OptWriter<'a, E>>,
+        Odt: for<'a> OdbcDataType<'a, Required = &'a mut [E], Optional = NullableSliceMut<'a, E>>,
         F: Fn(&Pdt::T) -> E + 'static,
         Pdt::T: BufferedDataType,
     {
@@ -807,7 +807,7 @@ macro_rules! impl_odbc_data_type {
     ($data_type:ident, $element:ident, $variant_cw_req:ident, $variant_cw_opt:ident) => {
         impl<'a> OdbcDataType<'a> for $data_type {
             type Required = &'a mut [$element];
-            type Optional = OptWriter<'a, $element>;
+            type Optional = NullableSliceMut<'a, $element>;
 
             fn unwrap_writer_required(column_writer: AnyColumnViewMut<'a>) -> Self::Required {
                 if let AnyColumnViewMut::$variant_cw_req(inner) = column_writer {

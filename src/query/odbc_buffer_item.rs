@@ -1,5 +1,5 @@
 use odbc_api::{
-    buffers::{AnyColumnView, BufferKind, OptIt},
+    buffers::{AnyColumnView, BufferKind, NullableSlice},
     sys::Date,
     Bit,
 };
@@ -13,7 +13,7 @@ pub trait OdbcBufferItem: Sized + Copy {
     fn plain_buffer(variant: AnyColumnView<'_>) -> &[Self];
     /// Extract the typed nullable buffer from an `AnyColumnView`.  Will panic should the instance
     /// actually be a different variant.
-    fn nullable_buffer(variant: AnyColumnView<'_>) -> OptIt<Self>;
+    fn nullable_buffer(variant: AnyColumnView<'_>) -> NullableSlice<Self>;
 }
 
 macro_rules! impl_fixed_sized_item {
@@ -28,7 +28,7 @@ macro_rules! impl_fixed_sized_item {
                 }
             }
 
-            fn nullable_buffer(variant: AnyColumnView<'_>) -> OptIt<Self> {
+            fn nullable_buffer(variant: AnyColumnView<'_>) -> NullableSlice<Self> {
                 match variant {
                     AnyColumnView::$null(vals) => vals,
                     _ => panic!("Unexepected variant in AnyColumnView."),
