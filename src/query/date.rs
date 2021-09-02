@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, Item},
     sys::Date as OdbcDate,
 };
 use parquet::{
@@ -15,7 +15,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{odbc_buffer_item::OdbcBufferItem, strategy::ColumnFetchStrategy};
+use super::strategy::ColumnFetchStrategy;
 
 pub struct Date {
     repetition: Repetition,
@@ -51,7 +51,7 @@ impl ColumnFetchStrategy for Date {
         column_writer: &mut ColumnWriter,
         column_view: AnyColumnView,
     ) -> Result<(), Error> {
-        let it = OdbcDate::nullable_buffer(column_view);
+        let it = OdbcDate::as_nullable_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<Int32Type>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|date| date.map(days_since_epoch)))?;
         Ok(())

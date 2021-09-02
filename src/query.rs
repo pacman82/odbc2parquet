@@ -4,7 +4,6 @@ mod boolean;
 mod date;
 mod decimal;
 mod identical;
-mod odbc_buffer_item;
 mod strategy;
 mod text;
 mod timestamp;

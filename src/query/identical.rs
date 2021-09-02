@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnyColumnView, BufferDescription};
+use odbc_api::buffers::{AnyColumnView, BufferDescription, Item};
 use parquet::{
     basic::{ConvertedType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -13,7 +13,7 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::{odbc_buffer_item::OdbcBufferItem, ColumnFetchStrategy};
+use super::ColumnFetchStrategy;
 
 /// Copy identical optional data from ODBC to Parquet.
 struct IdenticalOptional<Pdt> {
@@ -53,7 +53,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
 impl<Pdt> ColumnFetchStrategy for IdenticalOptional<Pdt>
 where
     Pdt: DataType,
-    Pdt::T: OdbcBufferItem + BufferedDataType,
+    Pdt::T: Item + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
         let physical_type = Pdt::get_physical_type();
@@ -79,7 +79,7 @@ where
         column_writer: &mut ColumnWriter,
         column_view: AnyColumnView,
     ) -> Result<(), Error> {
-        let it = Pdt::T::nullable_buffer(column_view);
+        let it = Pdt::T::as_nullable_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|opt_ref| opt_ref.copied()))?;
         Ok(())
@@ -123,7 +123,7 @@ impl<Pdt> IdenticalRequired<Pdt> {
 impl<Pdt> ColumnFetchStrategy for IdenticalRequired<Pdt>
 where
     Pdt: DataType,
-    Pdt::T: OdbcBufferItem + BufferedDataType,
+    Pdt::T: Item + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
         let physical_type = Pdt::get_physical_type();
@@ -152,7 +152,7 @@ where
         // We do not require to buffer the values, as they must neither be transformed, nor contain
         // any gaps due to null, we can use the ODBC buffer directly to write the batch.
 
-        let values = Pdt::T::plain_buffer(column_view);
+        let values = Pdt::T::as_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
         column_writer.write_batch(values, None, None)?;
         Ok(())
@@ -162,7 +162,7 @@ where
 pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn ColumnFetchStrategy>
 where
     Pdt: DataType,
-    Pdt::T: OdbcBufferItem + BufferedDataType,
+    Pdt::T: Item + BufferedDataType,
 {
     if is_optional {
         Box::new(IdenticalOptional::<Pdt>::new())
@@ -177,7 +177,7 @@ pub fn fetch_identical_with_converted_type<Pdt>(
 ) -> Box<dyn ColumnFetchStrategy>
 where
     Pdt: DataType,
-    Pdt::T: OdbcBufferItem + BufferedDataType,
+    Pdt::T: Item + BufferedDataType,
 {
     if is_optional {
         Box::new(IdenticalOptional::<Pdt>::with_converted_type(
@@ -196,7 +196,7 @@ pub fn fetch_decimal_as_identical_with_precision<Pdt>(
 ) -> Box<dyn ColumnFetchStrategy>
 where
     Pdt: DataType,
-    Pdt::T: OdbcBufferItem + BufferedDataType,
+    Pdt::T: Item + BufferedDataType,
 {
     if is_optional {
         Box::new(IdenticalOptional::<Pdt>::decimal_with_precision(precision))

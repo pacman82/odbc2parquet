@@ -1,6 +1,6 @@
 use anyhow::Error;
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, Item},
     Bit,
 };
 use parquet::{
@@ -12,7 +12,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{odbc_buffer_item::OdbcBufferItem, strategy::ColumnFetchStrategy};
+use super::strategy::ColumnFetchStrategy;
 
 /// Could be the identical strategy on most platform. Yet Rust does not give any guarantees with
 /// regard to the memory layout of a bool, so we do an explicit conversion from `Bit`.
@@ -49,7 +49,7 @@ impl ColumnFetchStrategy for Boolean {
         column_writer: &mut ColumnWriter,
         column_view: AnyColumnView,
     ) -> Result<(), Error> {
-        let it = Bit::nullable_buffer(column_view);
+        let it = Bit::as_nullable_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<BoolType>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|bit| bit.map(|bit| bit.as_bool())))?;
         Ok(())
