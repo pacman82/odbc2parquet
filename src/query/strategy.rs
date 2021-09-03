@@ -66,8 +66,14 @@ pub fn strategy_from_column_description(
     let is_optional = cd.could_be_nullable();
 
     let strategy: Box<dyn ColumnFetchStrategy> = match cd.data_type {
+        DataType::Float { precision: 0..=24 } | DataType::Real => {
+            fetch_identical::<FloatType>(is_optional)
+        }
+        // Map all precisions larger than 24 to double. Double would be technically precision 53.
+        DataType::Float { precision: _ } => {
+            fetch_identical::<DoubleType>(is_optional)
+        }
         DataType::Double => fetch_identical::<DoubleType>(is_optional),
-        DataType::Float | DataType::Real => fetch_identical::<FloatType>(is_optional),
         DataType::SmallInt => {
             fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_16)
         }

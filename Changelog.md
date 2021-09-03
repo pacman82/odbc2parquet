@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.12
+
+* Fix: An issue with the mapping of ODBC data type FLOAT has been resolved. Before it had always
+  been mapped to 32 Bit floating point precision. Now the precision of that column is also taken
+  into account to map it to a 64 Bit floating point in case the precision exceeds 24.
+
 ## 0.6.11
 
 * Optimization: Required columns which do not require conversion to parquet types during fetch, are

@@ -496,6 +496,67 @@ fn query_bits() {
 }
 
 #[test]
+fn query_doubles() {
+    // Setup table for test
+    let table_name = "QueryDoubles";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (0.1), (2.3);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let expected_values = "\
+        {a: 0.1}\n\
+        {a: 2.3}\n\
+    ";
+
+    let expected_schema = "REQUIRED DOUBLE a;";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+
+    // Also verify schema to ensure f64 is choosen and not f32
+    let mut cmd = Command::new("parquet-schema");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(contains(expected_schema));
+}
+
+#[test]
 fn split_files() {
     // Setup table for test
     let table_name = "SplitFiles";

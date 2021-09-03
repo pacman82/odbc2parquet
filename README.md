@@ -19,7 +19,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Bit                   | Boolean                 |
 | Double                | Double                  |
 | Real                  | Float                   |
-| Float                 | Float                   |
+| Float(p: 0..24)       | Float                   |
+| Float(p >= 25)        | Double                  |
 | Tiny Integer          | Int8                    |
 | Small Integer         | Int16                   |
 | Integer               | Int32                   |
