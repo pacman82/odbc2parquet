@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.13
+
+* Fix: Version number
+
 ## 0.6.12
 
 * Fix: An issue with the mapping of ODBC data type FLOAT has been resolved. Before it had always
