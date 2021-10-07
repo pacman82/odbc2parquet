@@ -70,9 +70,7 @@ pub fn strategy_from_column_description(
             fetch_identical::<FloatType>(is_optional)
         }
         // Map all precisions larger than 24 to double. Double would be technically precision 53.
-        DataType::Float { precision: _ } => {
-            fetch_identical::<DoubleType>(is_optional)
-        }
+        DataType::Float { precision: _ } => fetch_identical::<DoubleType>(is_optional),
         DataType::Double => fetch_identical::<DoubleType>(is_optional),
         DataType::SmallInt => {
             fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_16)

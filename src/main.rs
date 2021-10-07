@@ -211,8 +211,8 @@ fn main() -> Result<(), Error> {
         .init()
         .unwrap();
 
-    // We know this is going to be the only ODBC environment in the entire process, so this is safe.
-    let odbc_env = unsafe { Environment::new() }?;
+    // Initialize ODBC environment used to create the connection to the Database
+    let odbc_env = Environment::new()?;
 
     match opt.command {
         Command::Query { query_opt } => {

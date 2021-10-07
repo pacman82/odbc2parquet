@@ -29,14 +29,14 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.28.2"
+odbc-api = "0.28.3"
 parquet = "5.5.0"
 anyhow = "1.0.44"
 stderrlog = "0.5.1"
 structopt = "0.3.23"
 log = "0.4.14"
 chrono = "0.4.19"
-num-bigint = "0.4.1"
+num-bigint = "0.4.2"
 atoi = "0.4.0"
 num-traits = "0.2.14"
 

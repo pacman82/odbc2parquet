@@ -23,7 +23,7 @@ const MSSQL: &str =
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
-    static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    static ref ENV: Environment = Environment::new().unwrap();
 }
 
 /// Query MSSQL database, yet do not specify username and password in the connection string, but
