@@ -4,6 +4,9 @@ on:
   release:
     types: [created]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   release_win64:
     name: Build and release Windows 64Bit
