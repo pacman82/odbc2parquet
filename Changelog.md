@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.14
+
+* Update dependencies
+
 ## 0.6.13
 
 * Fix: Version number
