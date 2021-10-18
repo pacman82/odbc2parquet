@@ -30,7 +30,6 @@ readme = "README.md"
 
 [dependencies]
 odbc-api = "0.29.0"
-parquet = "5.5.0"
 anyhow = "1.0.44"
 stderrlog = "0.5.1"
 structopt = "0.3.25"
@@ -39,6 +38,11 @@ chrono = "0.4.19"
 num-bigint = "0.4.2"
 atoi = "0.4.0"
 num-traits = "0.2.14"
+
+[dependencies.parquet]
+version = "6.0.0"
+default_features = false
+features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 
 # Prompt functionality is only supported for windows
 [target.'cfg(windows)'.dependencies]
