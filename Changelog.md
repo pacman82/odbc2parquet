@@ -87,7 +87,7 @@
 * Command line parameters `user` and `password` will no longer be ignored then passed together with a connection string. Instead their values will be appended as `UID` and `PWD` attributes at the end.
 * `--batch-size` command line flag has been renamed to `batch-size-row`.
 * Introduced `--batch-size-mib` command line flag to limit batch size based on memory usage
-* Default batch size is adapted so buffer allocation requires 2 GiB on 64 Bit platforms and 1 GiB on 32 Bit Platforms. 
+* Default batch size is adapted so buffer allocation requires 2 GiB on 64 Bit platforms and 1 GiB on 32 Bit Platforms.
 * Fix: There is now an error message produced if the resulting parquet file would not contain any columns.
 
 ## 0.5.10
