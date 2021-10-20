@@ -16,6 +16,7 @@ use super::strategy::ColumnFetchStrategy;
 
 pub struct Utf16ToUtf8 {
     repetition: Repetition,
+    /// Length of the column elements in `u16` (as opposed to code points).
     length: usize,
 }
 
@@ -37,8 +38,7 @@ impl ColumnFetchStrategy for Utf16ToUtf8 {
     fn buffer_description(&self) -> BufferDescription {
         BufferDescription {
             kind: BufferKind::WText {
-                // One UTF-16 code point may consist of up to two bytes.
-                max_str_len: self.length * 2,
+                max_str_len: self.length,
             },
             nullable: true,
         }
@@ -94,14 +94,6 @@ impl Utf8 {
     pub fn with_bytes_length(repetition: Repetition, length: usize) -> Self {
         Self { repetition, length }
     }
-
-    pub fn with_char_length(repetition: Repetition, length: usize) -> Self {
-        Self {
-            repetition,
-            // One UTF-8 code point may consist of up to four bytes.
-            length: length * 4,
-        }
-    }
 }
 
 impl ColumnFetchStrategy for Utf8 {
@@ -116,8 +108,7 @@ impl ColumnFetchStrategy for Utf8 {
     fn buffer_description(&self) -> BufferDescription {
         BufferDescription {
             kind: BufferKind::Text {
-                // One UTF-16 code point may consist of up to two bytes.
-                max_str_len: self.length * 4,
+                max_str_len: self.length,
             },
             nullable: true,
         }
