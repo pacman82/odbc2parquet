@@ -526,7 +526,8 @@ fn parquet_type_to_odbc_buffer_desc(
         PhysicalType::INT96 => bail!(
             "'{}' is a column of type INT96. This tool currently offers no support for that type. \
             If you feel that it should, please raise an issue at \
-            https://github.com/pacman82/odbc2parquet/issues."
+            https://github.com/pacman82/odbc2parquet/issues.",
+            name,
         ),
         PhysicalType::FLOAT => match lt {
             ConvertedType::NONE => (BufferKind::F32, FloatType::map_identity(nullable)),
