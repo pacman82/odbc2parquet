@@ -245,6 +245,7 @@ fn open_connection<'e>(
     odbc_env: &'e Environment,
     opt: &ConnectOpts,
 ) -> Result<Connection<'e>, Error> {
+    // If a data source name has been given, try connecting with that.
     if let Some(dsn) = opt.dsn.as_deref() {
         let conn = odbc_env.connect(
             dsn,
@@ -252,6 +253,11 @@ fn open_connection<'e>(
             opt.password.as_deref().unwrap_or(""),
         )?;
         return Ok(conn);
+    }
+
+    // There is no data source name, so at least there must be prompt or a connection string
+    if !opt.prompt && opt.connection_string.is_none() {
+        bail!("Either DSN, connection string or prompt must be specified.")
     }
 
     // Append user and or password to connection string
@@ -265,6 +271,8 @@ fn open_connection<'e>(
 
     #[cfg(target_os = "windows")]
     let driver_completion = if opt.prompt {
+        // Only show the prompt to the user if the connection string does not contain all
+        // information required to create a connection.
         DriverCompleteOption::Complete
     } else {
         DriverCompleteOption::NoPrompt
@@ -279,14 +287,6 @@ fn open_connection<'e>(
     } else {
         DriverCompleteOption::NoPrompt
     };
-
-    if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
-        bail!("Either DSN, connection string or prompt must be specified.")
-    }
-
-    if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
-        bail!("Either DSN, connection string or prompt must be specified.")
-    }
 
     let conn = odbc_env.driver_connect(&cs, None, driver_completion)?;
     Ok(conn)
