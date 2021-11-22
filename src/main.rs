@@ -7,18 +7,10 @@ use crate::enum_args::{
     column_encoding_from_str, compression_from_str, EncodingArgument, COMPRESSION_VARIANTS,
 };
 use anyhow::{bail, Error};
-use odbc_api::{escape_attribute_value, Connection, Environment};
+use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
 use parquet::basic::{Compression, Encoding};
 use std::path::PathBuf;
 use structopt::StructOpt;
-
-#[cfg(target_os = "windows")]
-use odbc_api::DriverCompleteOption;
-#[cfg(target_os = "windows")]
-use winit::{
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
-};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
@@ -272,32 +264,30 @@ fn open_connection<'e>(
     }
 
     #[cfg(target_os = "windows")]
-    if opt.prompt {
-        let window = message_only_window().unwrap();
-        let conn = odbc_env.driver_connect(&cs, None, DriverCompleteOption::Complete(&window))?;
-        return Ok(conn);
-    }
+    let driver_completion = if opt.prompt {
+        DriverCompleteOption::Complete
+    } else {
+        DriverCompleteOption::NoPrompt
+    };
 
-    // Would rather use conditional compilation on the flag itself. While this works fine, it does
-    // mess with rust analyzer, so I keep it and panic here to keep development experience smooth.
     #[cfg(not(target_os = "windows"))]
-    if opt.prompt {
-        bail!("--prompt is only supported on windows.")
+    let driver_completion = if opt.prompt {
+        // Would rather use conditional compilation on the flag itself. While this works fine, it
+        // does mess with rust analyzer, so I keep it and panic here to keep development experience
+        // smooth.
+        bail!("--prompt is only supported on windows.");
+    } else {
+        DriverCompleteOption::NoPrompt
+    };
+
+    if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
+        bail!("Either DSN, connection string or prompt must be specified.")
     }
 
     if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
         bail!("Either DSN, connection string or prompt must be specified.")
     }
 
-    let conn = odbc_env.connect_with_connection_string(&cs)?;
+    let conn = odbc_env.driver_connect(&cs, None, driver_completion)?;
     Ok(conn)
-}
-
-/// Used as a parent window for the prompt by the ODBC driver manager on windows systems.
-#[cfg(target_os = "windows")]
-fn message_only_window() -> Result<Window, Error> {
-    let window = WindowBuilder::new()
-        .with_visible(false)
-        .build(&EventLoop::new())?;
-    Ok(window)
 }

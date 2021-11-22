@@ -29,7 +29,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.30.1"
+odbc-api = "0.31.0"
 anyhow = "1.0.47"
 stderrlog = "0.5.1"
 structopt = "0.3.25"
@@ -43,10 +43,6 @@ num-traits = "0.2.14"
 version = "6.2.0"
 default_features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
-
-# Prompt functionality is only supported for windows
-[target.'cfg(windows)'.dependencies]
-winit = "0.25.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.2"

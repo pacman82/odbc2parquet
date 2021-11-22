@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.16
+
+* Update dependencies.
+
 ## 0.6.15
 
 * Use less memory for Text columns.
