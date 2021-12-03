@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.17
+
+* Update dependencies.
+* Includes downstream fix: Passwords containing a `+` character are now escaped if passed via the
+  `--password` command line option.
+
 ## 0.6.16
 
 * Update dependencies.
