@@ -65,7 +65,7 @@ jobs:
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: odbc2parquet-win.zip
+          file: odbc2parquet-win32.zip
           asset_name: odbc2parquet-win32.zip
           tag: ${{ github.ref }}
 
