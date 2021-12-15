@@ -333,7 +333,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
                     let mut cr = Pdt::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Odt::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
-                    cw.write(it.map(|opt| opt.map(|val| f(val))));
+                    cw.write(it.map(|opt| opt.map(&f)));
                     Ok(())
                 },
             )
