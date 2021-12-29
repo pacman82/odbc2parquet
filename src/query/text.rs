@@ -151,7 +151,7 @@ fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
     if matches!(utf8_str, Cow::Owned(_)) {
         warn!(
             "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
-        UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
+            UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
             utf8_str
         );
     }
