@@ -10,7 +10,7 @@ use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
 use parquet::basic::{Compression, Encoding};
 use std::path::PathBuf;
-use structopt::StructOpt;
+use structopt::{StructOpt, clap::Shell};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
@@ -46,6 +46,14 @@ enum Command {
         #[structopt(flatten)]
         insert_opt: InsertOpt,
     },
+    /// Generate shell completions
+    Completions {
+        #[structopt(long, short = "o", default_value = ".")]
+        /// Output directory
+        output: PathBuf,
+        /// Name of the shell to generate completions for.
+        shell: Shell,
+    }
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
@@ -234,6 +242,9 @@ fn main() -> Result<(), Error> {
                 println!("Server name: {}", data_source_info.server_name);
                 println!("Driver: {}", data_source_info.driver);
             }
+        }
+        Command::Completions { shell, output } => {
+            Cli::clap().gen_completions("odbc2parquet", shell, output)
         }
     }
 
