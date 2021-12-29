@@ -1023,7 +1023,7 @@ fn utf_16_encoding() {
 fn auto_encoding() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "AutoEncoding";
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
     conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
         .unwrap();

@@ -118,21 +118,17 @@ pub fn strategy_from_column_description(
         // depending on the system locale being utf-8. For other character buffers we always use
         // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
         // represented in ASCII characters.
-        DataType::Char { length: _ }
+        dt
+        @
+        (DataType::Char { length: _ }
         | DataType::Varchar { length: _ }
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
-        | DataType::WChar { length: _ } => {
-            let octet_length: usize = cursor
-                .col_octet_length(index.try_into().unwrap())?
-                .try_into()
-                .unwrap();
+        | DataType::WChar { length: _ }) => {
             if use_utf16 {
-                Box::new(Utf16ToUtf8::new(repetition, octet_length / 2))
+                Box::new(Utf16ToUtf8::new(repetition, dt.utf16_len().unwrap()))
             } else {
-                // Use octet length instead of column size, since the meaning is not ambigious as it
-                // is always the length of columns in bytes.
-                Box::new(Utf8::with_bytes_length(repetition, octet_length))
+                Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
             }
         }
         DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {

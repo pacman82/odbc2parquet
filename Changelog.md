@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.19
+
+* Fix: An issue with not reserving enough memories for the largest possible string if the octet length reported by the driver is to small. Now calculation is based on column sized.
+
 ## 0.6.18
 
 * Update dependencies.
