@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use anyhow::Error;
 use log::{debug, warn};
 use odbc_api::{

@@ -1,0 +1,33 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Run tests on Ubuntu
+    runs-on: ubuntu-latest
+
+    # Database services used for testing
+    services:
+      # Microsoft SQL Server
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: My@Test@Password1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: |
+          # Parquet tooling is used to verify output of this tool in tests
+          cargo install parquet --features cli
+          # Run test suite
+          cargo test
+        
+
+

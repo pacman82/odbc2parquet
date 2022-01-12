@@ -10,7 +10,7 @@ use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
 use parquet::basic::{Compression, Encoding};
 use std::path::PathBuf;
-use structopt::{StructOpt, clap::Shell};
+use structopt::{clap::Shell, StructOpt};
 
 /// Query an ODBC data source at store the result in a Parquet file.
 #[derive(StructOpt)]
@@ -53,7 +53,7 @@ enum Command {
         output: PathBuf,
         /// Name of the shell to generate completions for.
         shell: Shell,
-    }
+    },
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
