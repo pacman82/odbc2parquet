@@ -12,8 +12,8 @@ use log::info;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
-        AnyColumnViewMut, BinColumnWriter, BufferDescription, BufferKind, ColumnarRowSet,
-        NullableSliceMut, TextColumnWriter,
+        AnyColumnViewMut, BinColumnWriter, BufferDescription, BufferKind,
+        NullableSliceMut, TextColumnWriter, buffer_from_description,
     },
     sys::{Date, Timestamp},
     Bit, Environment, U16String,
@@ -74,7 +74,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
 
     // Start with a small initial batch size and reallocate as we encounter larger row groups.
     let mut batch_size = 1;
-    let mut odbc_buffer = ColumnarRowSet::new(
+    let mut odbc_buffer = buffer_from_description(
         batch_size,
         column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
     );
@@ -96,7 +96,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         if num_rows > batch_size as usize {
             batch_size = num_rows;
             odbc_buffer =
-                ColumnarRowSet::new(batch_size, column_buf_desc.iter().map(|(desc, _)| *desc));
+                buffer_from_description(batch_size, column_buf_desc.iter().map(|(desc, _)| *desc));
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);

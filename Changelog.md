@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.20
+
+* Updated dependencies
+  * Including update to `parquet 7.0.0`
+
 ## 0.6.19
 
 * New `Completion` subcommand to generate shell completions.

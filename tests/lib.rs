@@ -3,7 +3,7 @@ use std::{fs::File, iter, path::Path, sync::Arc};
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers::{BufferDescription, ColumnarRowSet, TextRowSet},
+    buffers::{buffer_from_description, BufferDescription, TextRowSet},
     Connection, Cursor, Environment, IntoParameter,
 };
 use parquet::{
@@ -412,7 +412,7 @@ fn query_4097_bits() {
         nullable: false,
         kind: odbc_api::buffers::BufferKind::Bit,
     };
-    let mut parameter_buffer = ColumnarRowSet::new(num_bits, iter::once(desc));
+    let mut parameter_buffer = buffer_from_description(num_bits, iter::once(desc));
     parameter_buffer.set_num_rows(num_bits as usize);
     conn.execute(&insert, &parameter_buffer).unwrap();
 

@@ -20,7 +20,7 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::{bail, Error};
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarRowSet, ColumnDescription, Cursor, Environment, IntoParameter};
+use odbc_api::{buffers::{buffer_from_description_and_indices}, ColumnDescription, Cursor, Environment, IntoParameter};
 use parquet::schema::types::{Type, TypePtr};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
@@ -107,7 +107,7 @@ fn cursor_to_parquet(
 
     info!("Batch size set to {} rows.", batch_size_row);
 
-    let mut odbc_buffer = ColumnarRowSet::with_column_indices(
+    let mut odbc_buffer = buffer_from_description_and_indices(
         batch_size_row,
         strategies
             .iter()
