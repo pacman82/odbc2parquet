@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{

@@ -1,6 +1,5 @@
 use core::panic;
 use std::{
-    convert::TryInto,
     fs::File,
     io::Write,
     marker::PhantomData,

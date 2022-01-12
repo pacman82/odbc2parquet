@@ -27,7 +27,7 @@ Otherwise you can manually install these requirements from here:
 * Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
 * [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
 * An ODBC Driver manager if you are not on windows: http://www.unixodbc.org/
-* The command line tools shipping with the `parquet` crate are invoked by the tests. `cargo install parquet`.
+* The command line tools shipping with the `parquet` crate are invoked by the tests. `cargo install parquet --features cli`.
 
 We now can execute the tests in Rust typical fashion using:
 

@@ -1,4 +1,4 @@
-use std::{convert::TryInto, marker::PhantomData};
+use std::marker::PhantomData;
 
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
