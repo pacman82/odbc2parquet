@@ -32,12 +32,16 @@ readme = "README.md"
 odbc-api = "0.33.2"
 anyhow = "1.0.53"
 stderrlog = "0.5.1"
-structopt = "0.3.26"
 log = "0.4.14"
 chrono = "0.4.19"
 num-bigint = "0.4.3"
 atoi = "1.0.0"
 num-traits = "0.2.14"
+clap_complete = "3.0.5"
+
+[dependencies.clap]
+version = "3.0.13"
+features = ["derive", "env"]
 
 [dependencies.parquet]
 version = "7.0.0"

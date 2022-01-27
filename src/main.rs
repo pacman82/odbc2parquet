@@ -9,28 +9,31 @@ use crate::enum_args::{
 use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
 use parquet::basic::{Compression, Encoding};
-use std::path::PathBuf;
-use structopt::{clap::Shell, StructOpt};
+use std::{path::PathBuf, fs::File};
+
+use clap::{Parser, Args, IntoApp};
+use clap_complete::{generate, Shell};
 
 /// Query an ODBC data source at store the result in a Parquet file.
-#[derive(StructOpt)]
+#[derive(Parser)]
+#[clap(version)]
 struct Cli {
     /// Only print errors to standard error stream. Supresses warnings and all other log levels
     /// independent of the verbose mode.
-    #[structopt(short = "q", long)]
+    #[clap(short = 'q', long)]
     quiet: bool,
     /// Verbose mode (-v, -vv, -vvv, etc)
     ///
     /// 'v': Info level logging
     /// 'vv': Debug level logging
     /// 'vvv': Trace level logging
-    #[structopt(short = "v", long, parse(from_occurrences))]
+    #[structopt(short = 'v', long, parse(from_occurrences))]
     verbose: usize,
     #[structopt(subcommand)]
     command: Command,
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 enum Command {
     /// Query a data source and write the result as parquet.
     Query {
@@ -43,12 +46,12 @@ enum Command {
     ListDataSources,
     /// Read the content of a parquet and insert it into a table.
     Insert {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         insert_opt: InsertOpt,
     },
     /// Generate shell completions
     Completions {
-        #[structopt(long, short = "o", default_value = ".")]
+        #[structopt(long, short = 'o', default_value = ".")]
         /// Output directory
         output: PathBuf,
         /// Name of the shell to generate completions for.
@@ -57,35 +60,35 @@ enum Command {
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
-#[derive(StructOpt)]
+#[derive(Args)]
 struct ConnectOpts {
-    #[structopt(long, conflicts_with = "dsn")]
+    #[clap(long, conflicts_with = "dsn")]
     /// Prompts the user for missing information from the connection string. Only supported on
     /// windows platform.
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
-    #[structopt(long, short = "c")]
+    #[clap(long, short = 'c')]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
-    #[structopt(long, conflicts_with = "connection-string")]
+    #[clap(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn. Should you specify a connection string
     /// instead of a Data Source Name the user name is going to be appended at the end of it as the
     /// `UID` attribute.
-    #[structopt(long, short = "u", env = "ODBC_USER")]
+    #[clap(long, short = 'u', env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string. Should you specify a Connection string instead of a Data Source Name the
     /// password is going to be appended at the end of it as the `PWD` attribute.
-    #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
+    #[clap(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 pub struct QueryOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Size of a single batch in rows. The content of the data source is written into the output
     /// parquet files in batches. This way the content does never need to be materialized completely
@@ -93,7 +96,7 @@ pub struct QueryOpt {
     /// avoids issues with some ODBC drivers using 16Bit integers to represent batch sizes. If
     /// `--batch-size-mib` is specified no other limit is applied by default. If both option are
     /// specified the batch size is the largest possible which satisfies both constraints.
-    #[structopt(long)]
+    #[clap(long)]
     batch_size_row: Option<usize>,
     /// Limits the size of a single batch. It does so by calculating the amount of memory each row
     /// requires in the allocated buffers and then limits the maximum number of rows so that the
@@ -102,17 +105,17 @@ pub struct QueryOpt {
     /// not specified. If `--batch-size-row` is not specified no memory limit is applied by default.
     /// If both option are specified the batch size is the largest possible which satisfies both
     /// constraints.
-    #[structopt(long)]
+    #[clap(long)]
     batch_size_mib: Option<u32>,
     /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
     /// single output file is produces. Otherwise each output file is closed after the maximum
     /// number of batches have been written and a new one with the suffix `_n` is started. There n
     /// is the of the produced output file starting at one for the first one. E.g. `out_1.par`,
     /// `out_2.par`, ...
-    #[structopt(long, default_value = "0")]
+    #[clap(long, default_value = "0")]
     batches_per_file: u32,
     /// Default compression used by the parquet file writer.
-    #[structopt(
+    #[clap(
         long,
         possible_values=COMPRESSION_VARIANTS,
         default_value="gzip",
@@ -132,21 +135,21 @@ pub struct QueryOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[structopt(
+    #[clap(
         long,
-        possible_values = &EncodingArgument::variants(),
+        arg_enum,
         default_value = "Auto",
-        case_insensitive = true)
+        ignore_case = true)
     ]
     encoding: EncodingArgument,
     /// Map `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
-    #[structopt(long)]
+    #[clap(long)]
     prefer_varbinary: bool,
     /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
     /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
     /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
-    #[structopt(long, multiple=true, parse(try_from_str=column_encoding_from_str))]
+    #[clap(long, multiple=true, parse(try_from_str=column_encoding_from_str))]
     parquet_column_encoding: Vec<(String, Encoding)>,
     /// Name of the output parquet file.
     output: PathBuf,
@@ -158,9 +161,9 @@ pub struct QueryOpt {
     parameters: Vec<String>,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 pub struct InsertOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Encoding used for transferring character data to the database.
     ///
@@ -175,11 +178,11 @@ pub struct InsertOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[structopt(
+    #[clap(
         long,
-        possible_values = &EncodingArgument::variants(),
+        arg_enum,
         default_value = "Auto",
-        case_insensitive = true)
+        ignore_case = true)
     ]
     encoding: EncodingArgument,
     /// Path to the input parquet file which is used to fill the database table with values.
@@ -191,7 +194,7 @@ pub struct InsertOpt {
 }
 
 fn main() -> Result<(), Error> {
-    let opt = Cli::from_args();
+    let opt = Cli::parse();
 
     let verbose = if opt.quiet {
         // Log errors, but nothing else
@@ -244,7 +247,8 @@ fn main() -> Result<(), Error> {
             }
         }
         Command::Completions { shell, output } => {
-            Cli::clap().gen_completions("odbc2parquet", shell, output)
+            let mut output = File::create(output)?;
+            generate(shell, &mut Cli::into_app(), "odbc2parquet", &mut output);
         }
     }
 

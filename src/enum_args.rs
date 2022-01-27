@@ -1,14 +1,13 @@
 use anyhow::{anyhow, bail, Error};
 use parquet::basic::{Compression, Encoding};
-use structopt::clap::arg_enum;
+use clap::ArgEnum;
 
-arg_enum! {
-    #[derive(Debug, Clone, Copy)]
-    pub enum EncodingArgument {
-        System,
-        Utf16,
-        Auto,
-    }
+
+#[derive(ArgEnum, Debug, Clone, Copy)]
+pub enum EncodingArgument {
+    System,
+    Utf16,
+    Auto,
 }
 
 impl EncodingArgument {
