@@ -9,9 +9,9 @@ use crate::enum_args::{
 use anyhow::{bail, Error};
 use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
 use parquet::basic::{Compression, Encoding};
-use std::{path::PathBuf, fs::File};
+use std::{fs::File, path::PathBuf};
 
-use clap::{Parser, Args, IntoApp};
+use clap::{Args, IntoApp, Parser};
 use clap_complete::{generate, Shell};
 
 /// Query an ODBC data source at store the result in a Parquet file.
@@ -135,12 +135,7 @@ pub struct QueryOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[clap(
-        long,
-        arg_enum,
-        default_value = "Auto",
-        ignore_case = true)
-    ]
+    #[clap(long, arg_enum, default_value = "Auto", ignore_case = true)]
     encoding: EncodingArgument,
     /// Map `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
@@ -149,7 +144,7 @@ pub struct QueryOpt {
     /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
     /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
     /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
-    #[clap(long, multiple=true, parse(try_from_str=column_encoding_from_str))]
+    #[clap(long, multiple_values=true, multiple_occurrences=true, parse(try_from_str=column_encoding_from_str))]
     parquet_column_encoding: Vec<(String, Encoding)>,
     /// Name of the output parquet file.
     output: PathBuf,
@@ -178,12 +173,7 @@ pub struct InsertOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[clap(
-        long,
-        arg_enum,
-        default_value = "Auto",
-        ignore_case = true)
-    ]
+    #[clap(long, arg_enum, default_value = "Auto", ignore_case = true)]
     encoding: EncodingArgument,
     /// Path to the input parquet file which is used to fill the database table with values.
     input: PathBuf,
