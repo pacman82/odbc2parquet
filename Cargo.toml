@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "0.6.20"
+version = "0.6.21"
 authors = ["Markus Klein"]
 edition = "2021"
 repository = "https://github.com/pacman82/odbc2parquet"
@@ -44,9 +44,11 @@ version = "3.0.13"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "7.0.0"
+version = "8.0.0"
 default_features = false
-features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
+# In version 8.0.0 the `DataType` trait and its implementations are hidden behind the `experimental`
+# flag. Activate the featuer, until that is reversed.
+features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64", "experimental"]
 
 [dev-dependencies]
 assert_cmd = "2.0.4"

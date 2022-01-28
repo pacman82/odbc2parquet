@@ -116,9 +116,7 @@ pub fn strategy_from_column_description(
         // depending on the system locale being utf-8. For other character buffers we always use
         // narrow (8-Bit) buffers, since we expect decimals, timestamps and so on to always be
         // represented in ASCII characters.
-        dt
-        @
-        (DataType::Char { length: _ }
+        dt @ (DataType::Char { length: _ }
         | DataType::Varchar { length: _ }
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }

@@ -20,7 +20,10 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::{bail, Error};
 use log::{debug, info};
-use odbc_api::{buffers::{buffer_from_description_and_indices}, ColumnDescription, Cursor, Environment, IntoParameter};
+use odbc_api::{
+    buffers::buffer_from_description_and_indices, ColumnDescription, Cursor, Environment,
+    IntoParameter,
+};
 use parquet::schema::types::{Type, TypePtr};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};

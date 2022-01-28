@@ -12,8 +12,8 @@ use log::info;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
-        AnyColumnViewMut, BinColumnWriter, BufferDescription, BufferKind,
-        NullableSliceMut, TextColumnWriter, buffer_from_description,
+        buffer_from_description, AnyColumnViewMut, BinColumnWriter, BufferDescription, BufferKind,
+        NullableSliceMut, TextColumnWriter,
     },
     sys::{Date, Timestamp},
     Bit, Environment, U16String,

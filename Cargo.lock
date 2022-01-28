@@ -889,7 +889,7 @@ checksum = "4becfc9f75e44ac11ee3cc87a9cb2d58a4db5bf83f87313189d5bb1bafeb942c"
 
 [[package]]
 name = "odbc2parquet"
-version = "0.6.20"
+version = "0.6.21"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -959,9 +959,9 @@ dependencies = [
 
 [[package]]
 name = "parquet"
-version = "7.0.0"
+version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c718575b34e488fa78d4f0286356abb8466573cb17ae8faa96ffd871ca6e8c6"
+checksum = "2d5a6492e0b849fd458bc9364aee4c8a9882b3cc21b2576767162725f69d2ad8"
 dependencies = [
  "base64",
  "brotli",

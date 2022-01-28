@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.21
+
+* Updated dependencies
+  * Including update to `parquet 8.0.0`
+
 ## 0.6.20
 
 * Updated dependencies

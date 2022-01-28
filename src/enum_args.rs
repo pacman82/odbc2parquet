@@ -1,7 +1,6 @@
 use anyhow::{anyhow, bail, Error};
-use parquet::basic::{Compression, Encoding};
 use clap::ArgEnum;
-
+use parquet::basic::{Compression, Encoding};
 
 #[derive(ArgEnum, Debug, Clone, Copy)]
 pub enum EncodingArgument {
