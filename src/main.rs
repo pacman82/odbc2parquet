@@ -7,7 +7,10 @@ use crate::enum_args::{
     column_encoding_from_str, compression_from_str, EncodingArgument, COMPRESSION_VARIANTS,
 };
 use anyhow::{bail, Error};
-use odbc_api::{escape_attribute_value, Connection, DriverCompleteOption, Environment};
+use odbc_api::{
+    escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
+    Environment,
+};
 use parquet::basic::{Compression, Encoding};
 use std::{fs::File, path::PathBuf};
 
@@ -293,6 +296,10 @@ fn open_connection<'e>(
         DriverCompleteOption::NoPrompt
     };
 
-    let conn = odbc_env.driver_connect(&cs, None, driver_completion)?;
+    // We are not interessted in the completed connection string, beyond creating a connection, so
+    // we pass an empty buffer.
+    let mut completed_connection_string = OutputStringBuffer::empty();
+
+    let conn = odbc_env.driver_connect(&cs, &mut completed_connection_string, driver_completion)?;
     Ok(conn)
 }
