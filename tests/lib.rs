@@ -310,6 +310,56 @@ fn query_decimals() {
 }
 
 #[test]
+fn query_large_numeric_as_text() {
+    // Setup table for test
+    let table_name = "QueryLargeNumericAsText";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["NUMERIC(10,0) NOT NULL"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (1234567890);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let expected_values = "{a: 1234567890}\n";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--driver-does-not-support-64bit-integers",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.arg(out_str)
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+}
+
+#[test]
 fn query_all_the_types() {
     // Setup table for test
     let table_name = "AllTheTypes";

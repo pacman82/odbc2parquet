@@ -24,6 +24,7 @@ use crate::{
             fetch_decimal_as_identical_with_precision, fetch_identical,
             fetch_identical_with_converted_type,
         },
+        integer::Int64FromText,
         text::{Utf16ToUtf8, Utf8},
         timestamp::Timestamp,
     },
@@ -50,6 +51,7 @@ pub fn strategy_from_column_description(
     cd: &ColumnDescription,
     name: &str,
     prefer_varbinary: bool,
+    driver_does_support_i64: bool,
     use_utf16: bool,
     cursor: &impl Cursor,
     index: i16,
@@ -92,7 +94,13 @@ pub fn strategy_from_column_description(
         | DataType::Numeric {
             scale: 0,
             precision: p @ 0..=18,
-        } => fetch_decimal_as_identical_with_precision::<Int64Type>(is_optional, p as i32),
+        } => {
+            if driver_does_support_i64 {
+                fetch_decimal_as_identical_with_precision::<Int64Type>(is_optional, p as i32)
+            } else {
+                Box::new(Int64FromText::new(p, is_optional))
+            }
+        }
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
             Box::new(Decimal::new(repetition, scale as i32, precision))
         }

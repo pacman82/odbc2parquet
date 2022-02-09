@@ -16,7 +16,7 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::strategy::ColumnFetchStrategy;
 
-/// Strategy for fetching decimal values which can not be represented as either 32Bit
+/// Strategy for fetching decimal values which can not be represented as either 32Bit or 64Bit
 pub struct Decimal {
     repetition: Repetition,
     scale: i32,
