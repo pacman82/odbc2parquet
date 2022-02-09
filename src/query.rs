@@ -4,6 +4,7 @@ mod boolean;
 mod date;
 mod decimal;
 mod identical;
+mod integer;
 mod parquet_writer;
 mod strategy;
 mod text;
@@ -42,6 +43,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         prefer_varbinary,
         column_compression_default,
         parquet_column_encoding,
+        driver_does_not_support_64bit_integers,
     } = opt;
 
     let batch_size = BatchSizeLimit::new(*batch_size_row, *batch_size_mib);
@@ -59,14 +61,19 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         column_encodings: parquet_column_encoding.clone(),
     };
 
+    let mapping_options = MappingOptions {
+        use_utf16: encoding.use_utf16(),
+        prefer_varbinary: *prefer_varbinary,
+        driver_does_support_i64: !driver_does_not_support_64bit_integers,
+    };
+
     if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
         cursor_to_parquet(
             cursor,
             output,
             batch_size,
             *batches_per_file,
-            encoding.use_utf16(),
-            *prefer_varbinary,
+            mapping_options,
             parquet_format_options,
         )?;
     } else {
@@ -82,11 +89,10 @@ fn cursor_to_parquet(
     path: &Path,
     batch_size: BatchSizeLimit,
     batches_per_file: u32,
-    use_utf16: bool,
-    prefer_varbinary: bool,
+    mapping_options: MappingOptions,
     parquet_format_options: ParquetFormatOptions,
 ) -> Result<(), Error> {
-    let strategies = make_schema(&cursor, use_utf16, prefer_varbinary)?;
+    let strategies = make_schema(&cursor, mapping_options)?;
 
     let parquet_schema = parquet_schema_from_strategies(&strategies);
 
@@ -166,11 +172,23 @@ fn cursor_to_parquet(
 
 type ColumnInfo = (u16, String, Box<dyn ColumnFetchStrategy>);
 
-fn make_schema(
-    cursor: &impl Cursor,
+/// Controls how columns a queried and mapped onto parquet columns
+struct MappingOptions {
     use_utf16: bool,
     prefer_varbinary: bool,
+    driver_does_support_i64: bool,
+}
+
+fn make_schema(
+    cursor: &impl Cursor,
+    mapping_options: MappingOptions,
 ) -> Result<Vec<ColumnInfo>, Error> {
+    let MappingOptions {
+        use_utf16,
+        prefer_varbinary,
+        driver_does_support_i64,
+    } = mapping_options;
+
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -195,6 +213,7 @@ fn make_schema(
             &cd,
             &name,
             prefer_varbinary,
+            driver_does_support_i64,
             use_utf16,
             cursor,
             index,
