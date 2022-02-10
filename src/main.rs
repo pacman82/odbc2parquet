@@ -158,10 +158,10 @@ pub struct QueryOpt {
     /// the end of the command line.
     parameters: Vec<String>,
     /// Tells the odbc2parquet, that the ODBC driver does not support binding 64 Bit integers (aka
-    /// S_C_BIGINT in ODBC speak). This will cause the odbc2parquet to query large integers as Text
-    /// instead. odbc2parquet will parse the text and write it as i64 into the parquet still, so if
-    /// setting this flag the output is unaffected, the runtime might not. You may want to set this
-    /// flag, if you use an Oracle Database, but you can likely do without it otherwise.
+    /// S_C_BIGINT in ODBC speak). This will cause the odbc2parquet to query large integers as text
+    /// instead and convert them to 64 Bit integers itself. Setting this flag will not affect the
+    /// output, but may incurr a performance penality. In case you are using an Oracle Database it
+    /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
 }
