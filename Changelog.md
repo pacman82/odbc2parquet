@@ -1,6 +1,6 @@
 # Changelog
 
-## (next)
+## 0.6.23
 
 * Update dependencies. Including `parquet 9.0.2`.
 
