@@ -44,9 +44,9 @@ version = "3.0.14"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "8.0.0"
+version = "9.0.2"
 default_features = false
-# In version 8.0.0 the `DataType` trait and its implementations are hidden behind the `experimental`
+# In version 9.0.2 the `DataType` trait and its implementations are hidden behind the `experimental`
 # flag. Activate the feature, until that is reversed.
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64", "experimental"]
 
