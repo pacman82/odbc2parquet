@@ -1,5 +1,9 @@
 # Changelog
 
+## (next)
+
+* Update dependencies. Including `parquet 9.0.1`.
+
 ## 0.6.22
 
 * Introduce flag `--driver-does-not-support-64bit-integers` in order to compensate for missing 64 Bit integer support in the Oracle driver.
