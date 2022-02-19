@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.24
+
+* Updating dependencies.
+* Added message for Oracle users telling them about the `--driver-does-not-support-64bit-integers`, if SQLFetch fails with `HY004`.
+
 ## 0.6.23
 
 * Update dependencies. Including `parquet 9.0.2`.
