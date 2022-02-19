@@ -248,7 +248,7 @@ fn main() -> Result<(), Error> {
         }
         Command::Completions { shell, output } => {
             let mut output = File::create(output)?;
-            generate(shell, &mut Cli::into_app(), "odbc2parquet", &mut output);
+            generate(shell, &mut Cli::command(), "odbc2parquet", &mut output);
         }
     }
 
