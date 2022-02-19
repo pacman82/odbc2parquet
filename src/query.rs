@@ -135,7 +135,10 @@ fn cursor_to_parquet(
         parquet_format_options,
     )?;
 
-    while let Some(buffer) = row_set_cursor.fetch()? {
+    while let Some(buffer) = row_set_cursor
+        .fetch()
+        .map_err(give_hint_about_flag_for_oracle_users)?
+    {
         let mut row_group_writer = writer.next_row_group(num_batch)?;
         let mut col_index = 0;
         num_batch += 1;
@@ -238,4 +241,19 @@ fn parquet_schema_from_strategies(
             .build()
             .unwrap(),
     )
+}
+
+/// If we hit the issue with oracle not supporting 64Bit, let's tell our users that we have
+/// implemented a solution to it.
+fn give_hint_about_flag_for_oracle_users(error: odbc_api::Error) -> Error {
+    match error {
+        error @ odbc_api::Error::OracleOdbcDriverDoesNotSupport64Bit(_) => {
+            let error: Error = error.into();
+            error.context(
+                "Looks like you are using an Oracle database. Try the \
+                `--driver-does-not-support-64bit-integers` flag."
+            )
+        }
+        other => other.into(),
+    }
 }
