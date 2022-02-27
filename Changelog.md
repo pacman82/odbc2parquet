@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.25
+
+Peace for the citizens of Ukraine who fight for their freedom and stand up to oppression. Peace for the Russian soldier, who does not know why he is shooting at his brothers and sisters, may he be reunited with his family soon.
+        
+Peace to 🇺🇦, 🇷🇺 and the world. May sanity prevail.
+
 ## 0.6.24
 
 * Updating dependencies.
