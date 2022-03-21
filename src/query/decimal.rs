@@ -91,8 +91,8 @@ fn write_decimal_col(
     precision: usize,
 ) -> Result<(), Error> {
     let column_writer = FixedLenByteArrayType::get_column_writer_mut(column_writer).unwrap();
-    if let AnyColumnView::Text(it) = column_reader {
-        parquet_buffer.write_decimal(column_writer, it, length_in_bytes, precision)?;
+    if let AnyColumnView::Text(view) = column_reader {
+        parquet_buffer.write_decimal(column_writer, view.iter(), length_in_bytes, precision)?;
     } else {
         panic!(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \

@@ -59,12 +59,12 @@ fn write_utf16_to_utf8(
     column_writer: &mut ColumnWriter,
     column_reader: AnyColumnView,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::WText(it)) =
+    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::WText(view)) =
         (column_writer, column_reader)
     {
         pb.write_optional(
             cw,
-            it.map(|item| {
+            view.iter().map(|item| {
                 item.map(|ustr| {
                     let byte_array: ByteArray = ustr
                         .to_string()
@@ -129,10 +129,13 @@ fn write_to_utf8(
     column_writer: &mut ColumnWriter,
     column_reader: AnyColumnView,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(it)) =
+    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(view)) =
         (column_writer, column_reader)
     {
-        pb.write_optional(cw, it.map(|item| item.map(utf8_bytes_to_byte_array)))?;
+        pb.write_optional(
+            cw,
+            view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
+        )?;
     } else {
         panic!(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \

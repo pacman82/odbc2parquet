@@ -69,10 +69,10 @@ where
         column_view: AnyColumnView,
     ) -> Result<(), Error> {
         let cw = get_typed_column_writer_mut::<Pdt>(column_writer);
-        if let AnyColumnView::Binary(it) = column_view {
+        if let AnyColumnView::Binary(view) = column_view {
             parquet_buffer.write_optional(
                 cw,
-                it.map(|maybe_bytes| {
+                view.iter().map(|maybe_bytes| {
                     maybe_bytes.map(|bytes| {
                         let byte_array: ByteArray = bytes.to_owned().into();
                         // Transforms ByteArray into FixedLenByteArray or does nothing depending `Pdt`.
