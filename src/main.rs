@@ -194,7 +194,6 @@ pub struct InsertOpt {
 }
 
 fn main() -> Result<(), Error> {
-
     let opt = Cli::parse();
 
     let verbose = if opt.quiet {

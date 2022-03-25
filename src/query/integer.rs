@@ -65,7 +65,8 @@ impl ColumnFetchStrategy for Int64FromText {
         if let AnyColumnView::Text(view) = column_view {
             parquet_buffer.write_optional(
                 column_writer,
-                view.iter().map(|value| value.map(|text| i64::from_radix_10_signed(text).0)),
+                view.iter()
+                    .map(|value| value.map(|text| i64::from_radix_10_signed(text).0)),
             )?;
         } else {
             panic!(

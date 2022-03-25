@@ -251,7 +251,7 @@ fn give_hint_about_flag_for_oracle_users(error: odbc_api::Error) -> Error {
             let error: Error = error.into();
             error.context(
                 "Looks like you are using an Oracle database. Try the \
-                `--driver-does-not-support-64bit-integers` flag."
+                `--driver-does-not-support-64bit-integers` flag.",
             )
         }
         other => other.into(),
