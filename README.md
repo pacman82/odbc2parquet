@@ -1,7 +1,7 @@
 # ODBC to Parquet
 
-[![Licence](https://img.shields.io/crates/l/odbc-api)](https://github.com/pacman82/odbc2parquet/blob/master/License)
-[![Crates.io](https://img.shields.io/crates/v/odbc-api)](https://crates.io/crates/odbc2parquet)
+[![Licence](https://img.shields.io/crates/l/odbc2parquet)](https://github.com/pacman82/odbc2parquet/blob/master/License)
+[![Crates.io](https://img.shields.io/crates/v/odbc2parquet)](https://crates.io/crates/odbc2parquet)
 
 A command line tool to query an ODBC data source and write the result into a parquet file.
 
