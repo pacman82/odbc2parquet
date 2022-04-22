@@ -30,7 +30,7 @@ readme = "README.md"
 
 [dependencies]
 odbc-api = "0.36.1"
-anyhow = "1.0.56"
+anyhow = "1.0.57"
 stderrlog = "0.5.1"
 log = "0.4.16"
 chrono = "0.4.19"
