@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.29
+
+* Recover from failed memory allocations of binary and text buffers and terminate the tool gracefully.
+
 ## 0.6.28
 
 * Update dependencies. This includes an upstream improvement in `odbc-api 0.36.1` which emits a better error if the `unixODBC` version does not support `ODBC 3.80`.

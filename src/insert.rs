@@ -77,7 +77,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
     let mut odbc_buffer = buffer_from_description(
         batch_size,
         column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
-    );
+    )?;
 
     let mut pb = ParquetBuffer::new(batch_size as usize);
 
@@ -95,8 +95,8 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         // Ensure that num rows is less than batch size of originally created buffers.
         if num_rows > batch_size as usize {
             batch_size = num_rows;
-            odbc_buffer =
-                buffer_from_description(batch_size, column_buf_desc.iter().map(|(desc, _)| *desc));
+            let descs = column_buf_desc.iter().map(|(desc, _)| *desc);
+            odbc_buffer = buffer_from_description(batch_size, descs)?;
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
