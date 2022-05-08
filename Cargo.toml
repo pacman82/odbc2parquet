@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "0.6.29"
+version = "0.6.30"
 authors = ["Markus Klein"]
 edition = "2021"
 repository = "https://github.com/pacman82/odbc2parquet"
@@ -29,7 +29,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.39.1"
+odbc-api = "0.40.0"
 anyhow = "1.0.57"
 stderrlog = "0.5.1"
 log = "0.4.17"

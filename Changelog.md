@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.30
+
+* Updated dependencies.
+* Undo: Recover from failed memory allocations of binary and text buffers, because of unclear performance implications.
+
 ## 0.6.29
 
 * Recover from failed memory allocations of binary and text buffers and terminate the tool gracefully.

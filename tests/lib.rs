@@ -468,7 +468,7 @@ fn query_4097_bits() {
         nullable: false,
         kind: odbc_api::buffers::BufferKind::Bit,
     };
-    let mut parameter_buffer = buffer_from_description(num_bits, iter::once(desc)).unwrap();
+    let mut parameter_buffer = buffer_from_description(num_bits, iter::once(desc));
     parameter_buffer.set_num_rows(num_bits as usize);
     conn.execute(&insert, &parameter_buffer).unwrap();
 

@@ -121,7 +121,7 @@ fn cursor_to_parquet(
         strategies
             .iter()
             .map(|(index, _name, strategy)| (*index, strategy.buffer_description())),
-    )?;
+    );
 
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
