@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.31
+
+* Updated dependencies. Including `parquet 14.0.0`
+
 ## 0.6.30
 
 * Updated dependencies.
