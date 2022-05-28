@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.32
+
+* Updated dependencies. Improvements in upstream `odbc-api` may lead to faster insertion if using many batches.
+
 ## 0.6.31
 
 * Updated dependencies. Including `parquet 14.0.0`
