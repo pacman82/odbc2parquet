@@ -1,9 +1,9 @@
-use std::{fs::File, iter, path::Path, sync::Arc};
+use std::{fs::File, path::Path, sync::Arc};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers::{BufferDescription, ColumnarAnyBuffer, TextRowSet},
+    buffers::{BufferDescription, TextRowSet},
     Connection, Cursor, Environment, IntoParameter,
 };
 use parquet::{
@@ -468,9 +468,13 @@ fn query_4097_bits() {
         nullable: false,
         kind: odbc_api::buffers::BufferKind::Bit,
     };
-    let mut parameter_buffer = ColumnarAnyBuffer::from_description(num_bits, iter::once(desc));
+    let mut parameter_buffer = conn
+        .prepare(&insert)
+        .unwrap()
+        .into_any_column_inserter(num_bits, [desc])
+        .unwrap();
     parameter_buffer.set_num_rows(num_bits as usize);
-    conn.execute(&insert, &parameter_buffer).unwrap();
+    parameter_buffer.execute().unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();

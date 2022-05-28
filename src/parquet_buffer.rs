@@ -212,17 +212,15 @@ impl ParquetBuffer {
         // Strip mutability form the element of values, so we can use it in scan, there we only want
         // to mutate which part of values we see, not the elements of values themselfes.
         let values: &_ = values;
-        let it = def_levels
-            .iter()
-            .scan(values, |values, def| match def {
-                0 => Some(None),
-                1 => {
-                    let val = &values[0];
-                    *values = &values[1..];
-                    Some(Some(val))
-                }
-                _ => panic!("Only definition level 0 and 1 are supported"),
-            });
+        let it = def_levels.iter().scan(values, |values, def| match def {
+            0 => Some(None),
+            1 => {
+                let val = &values[0];
+                *values = &values[1..];
+                Some(Some(val))
+            }
+            _ => panic!("Only definition level 0 and 1 are supported"),
+        });
 
         Ok(it)
     }
