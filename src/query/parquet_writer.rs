@@ -1,5 +1,6 @@
 use std::{
     fs::File,
+    mem::swap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -10,7 +11,7 @@ use parquet::{
     errors::ParquetError,
     file::{
         properties::WriterProperties,
-        writer::{FileWriter, RowGroupWriter, SerializedFileWriter},
+        writer::{SerializedFileWriter, SerializedRowGroupWriter},
     },
     schema::types::{ColumnPath, Type},
 };
@@ -70,27 +71,28 @@ impl<'p> ParquetWriter<'p> {
     /// # Parameters
     ///
     /// * `num_batch`: Zero based num batch index
-    pub fn next_row_group(&mut self, num_batch: u32) -> Result<Box<dyn RowGroupWriter>, Error> {
+    pub fn next_row_group(
+        &mut self,
+        num_batch: u32,
+    ) -> Result<SerializedRowGroupWriter<'_, File>, Error> {
         // Check if we need to write the next batch into a new file
         if num_batch != 0 && self.batches_per_file != 0 && num_batch % self.batches_per_file == 0 {
-            self.writer.close()?;
             let suffix = format!("_{}", (num_batch / self.batches_per_file) + 1);
             let path = Self::path_with_suffix(self.path, &suffix)?;
             let file = File::create(path)?;
-            self.writer =
+
+            // Create new writer as tmp writer
+            let mut tmp_writer =
                 SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
+            // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
+            // Make the new writer self.writer, so we will use it to insert the new data.
+            swap(&mut self.writer, &mut tmp_writer);
+            tmp_writer.close()?;
         }
         Ok(self.writer.next_row_group()?)
     }
 
-    pub fn close_row_group(
-        &mut self,
-        row_group_writer: Box<dyn RowGroupWriter>,
-    ) -> Result<(), ParquetError> {
-        self.writer.close_row_group(row_group_writer)
-    }
-
-    pub fn close(&mut self) -> Result<(), ParquetError> {
+    pub fn close(self) -> Result<(), ParquetError> {
         self.writer.close()?;
         Ok(())
     }

@@ -155,14 +155,13 @@ fn cursor_to_parquet(
 
             strategies[col_index].2.copy_odbc_to_parquet(
                 &mut pb,
-                &mut column_writer,
+                column_writer.untyped(),
                 odbc_column,
             )?;
-
-            row_group_writer.close_column(column_writer)?;
+            column_writer.close()?;
             col_index += 1;
         }
-        writer.close_row_group(row_group_writer)?;
+        row_group_writer.close()?;
     }
 
     writer.close()?;

@@ -11,7 +11,7 @@ use parquet::{
     data_type::{ByteArray, FixedLenByteArray},
     file::{
         properties::WriterProperties,
-        writer::{FileWriter, SerializedFileWriter},
+        writer::SerializedFileWriter,
     },
     schema::parser::parse_message_type,
 };
@@ -2982,9 +2982,9 @@ fn write_values_to_file<T>(
     let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
     let mut row_group_writer = writer.next_row_group().unwrap();
     let mut col_writer = row_group_writer.next_column().unwrap().unwrap();
-    T::write_batch(&mut col_writer, values, def_levels);
-    row_group_writer.close_column(col_writer).unwrap();
-    writer.close_row_group(row_group_writer).unwrap();
+    T::write_batch(col_writer.untyped(), values, def_levels);
+    col_writer.close().unwrap();
+    row_group_writer.close().unwrap();
     writer.close().unwrap();
 }
 
