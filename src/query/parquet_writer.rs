@@ -16,6 +16,8 @@ use parquet::{
     schema::types::{ColumnPath, Type},
 };
 
+use super::batch_size_limit::FileSizeLimit;
+
 /// Options influencing the output parquet format.
 pub struct ParquetFormatOptions {
     pub column_compression_default: Compression,
@@ -29,14 +31,15 @@ pub struct ParquetWriter<'p> {
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
     writer: SerializedFileWriter<File>,
-    batches_per_file: u32,
+    file_size: FileSizeLimit,
+    num_file: u32,
 }
 
 impl<'p> ParquetWriter<'p> {
     pub fn new(
         path: &'p Path,
         schema: Arc<Type>,
-        batches_per_file: u32,
+        file_size: FileSizeLimit,
         format_options: ParquetFormatOptions,
     ) -> Result<Self, Error> {
         // Write properties
@@ -49,10 +52,10 @@ impl<'p> ParquetWriter<'p> {
             wpb = wpb.set_column_encoding(col, encoding)
         }
         let properties = Arc::new(wpb.build());
-        let file = if batches_per_file == 0 {
-            File::create(path)?
-        } else {
+        let file = if file_size.output_is_splitted() {
             File::create(Self::path_with_suffix(path, "_1")?)?
+        } else {
+            File::create(path)?
         };
         let writer = SerializedFileWriter::new(file, schema.clone(), properties.clone())?;
 
@@ -61,7 +64,8 @@ impl<'p> ParquetWriter<'p> {
             schema,
             properties,
             writer,
-            batches_per_file,
+            file_size,
+            num_file: 1,
         })
     }
 
@@ -76,8 +80,9 @@ impl<'p> ParquetWriter<'p> {
         num_batch: u32,
     ) -> Result<SerializedRowGroupWriter<'_, File>, Error> {
         // Check if we need to write the next batch into a new file
-        if num_batch != 0 && self.batches_per_file != 0 && num_batch % self.batches_per_file == 0 {
-            let suffix = format!("_{}", (num_batch / self.batches_per_file) + 1);
+        if self.file_size.should_start_new_file(num_batch) {
+            self.num_file += 1;
+            let suffix = format!("_{}", self.num_file);
             let path = Self::path_with_suffix(self.path, &suffix)?;
             let file = File::create(path)?;
 

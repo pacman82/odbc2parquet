@@ -11,7 +11,7 @@ mod text;
 mod timestamp;
 
 use self::{
-    batch_size_limit::BatchSizeLimit,
+    batch_size_limit::{BatchSizeLimit, FileSizeLimit},
     parquet_writer::ParquetFormatOptions,
     parquet_writer::ParquetWriter,
     strategy::{strategy_from_column_description, ColumnFetchStrategy},
@@ -35,7 +35,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         query,
         batch_size_row,
         batch_size_memory,
-        row_groups_per_file: batches_per_file,
+        row_groups_per_file,
         encoding,
         prefer_varbinary,
         column_compression_default,
@@ -47,6 +47,8 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         *batch_size_row,
         *batch_size_memory,
     );
+
+    let file_size = FileSizeLimit::new(*row_groups_per_file);
 
     // Convert the input strings into parameters suitable for use with ODBC.
     let params: Vec<_> = parameters
@@ -72,7 +74,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             cursor,
             output,
             batch_size,
-            *batches_per_file,
+            file_size,
             mapping_options,
             parquet_format_options,
         )?;
@@ -88,7 +90,7 @@ fn cursor_to_parquet(
     cursor: impl Cursor,
     path: &Path,
     batch_size: BatchSizeLimit,
-    batches_per_file: u32,
+    file_size: FileSizeLimit,
     mapping_options: MappingOptions,
     parquet_format_options: ParquetFormatOptions,
 ) -> Result<(), Error> {
@@ -131,7 +133,7 @@ fn cursor_to_parquet(
     let mut writer = ParquetWriter::new(
         path,
         parquet_schema.clone(),
-        batches_per_file,
+        file_size,
         parquet_format_options,
     )?;
 

@@ -445,61 +445,6 @@ fn query_all_the_types() {
         .stdout(eq(expected_values));
 }
 
-/// This did not work in earlier versions there we set the batch write size of the parquet writer to
-/// the ODBC batch size.
-#[test]
-fn query_4097_bits() {
-    let num_bits = 4097;
-
-    // Setup table for test
-    let table_name = "Query4097Bits";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
-
-    // Insert 4097 bits "false" (default constructed) into the table
-    let insert = format!(
-        "INSERT INTO {}
-        (a)
-        VALUES
-        (?);",
-        table_name
-    );
-    let desc = BufferDescription {
-        nullable: false,
-        kind: odbc_api::buffers::BufferKind::Bit,
-    };
-    let mut parameter_buffer = conn
-        .prepare(&insert)
-        .unwrap()
-        .into_any_column_inserter(num_bits, [desc])
-        .unwrap();
-    parameter_buffer.set_num_rows(num_bits as usize);
-    parameter_buffer.execute().unwrap();
-
-    // A temporary directory, to be removed at the end of the test.
-    let out_dir = tempdir().unwrap();
-    // The name of the output parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let out_path = out_dir.path().join("out.par");
-    // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
-
-    let query = format!("SELECT a FROM {};", table_name);
-
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            out_str,
-            "--connection-string",
-            MSSQL,
-            &query,
-        ])
-        .assert()
-        .success();
-}
-
 #[test]
 fn query_bits() {
     // Setup table for test
@@ -2965,6 +2910,62 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".01\n-.01", actual);
+}
+
+/// This did not work in earlier versions there we set the batch write size of the parquet writer to
+/// the ODBC batch size.
+#[test]
+#[ignore = "Takes too long to run"]
+fn query_4097_bits() {
+    let num_bits = 4097;
+
+    // Setup table for test
+    let table_name = "Query4097Bits";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+
+    // Insert 4097 bits "false" (default constructed) into the table
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (?);",
+        table_name
+    );
+    let desc = BufferDescription {
+        nullable: false,
+        kind: odbc_api::buffers::BufferKind::Bit,
+    };
+    let mut parameter_buffer = conn
+        .prepare(&insert)
+        .unwrap()
+        .into_any_column_inserter(num_bits, [desc])
+        .unwrap();
+    parameter_buffer.set_num_rows(num_bits as usize);
+    parameter_buffer.execute().unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
 }
 
 /// Writes a parquet file with one row group and one column.

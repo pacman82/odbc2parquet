@@ -14,6 +14,41 @@ const DEFAULT_BATCH_SIZE_BYTES: ByteSize = ByteSize::gib(1); // 1GB
 /// for most applications, and this way the tool runs fine out of the box in even more situations.
 const DEFAULT_BATCH_SIZE_ROWS: usize = u16::MAX as usize; // 65535 rows
 
+/// Describes how we limit the size of individual parquet files.
+pub enum FileSizeLimit {
+    /// No file size limit is applied. The entire output is written to one parquet file.
+    None,
+    /// Limits the file size by limiting the number of row groups we write to an individual file.
+    RowGroups(u32),
+}
+
+impl FileSizeLimit {
+    pub fn new(num_row_groups: u32) -> Self {
+        if num_row_groups == 0 {
+            Self::None
+        } else {
+            Self::RowGroups(num_row_groups)
+        }
+    }
+
+    /// `true` if we (might) split the output across several files.
+    pub fn output_is_splitted(&self) -> bool {
+        match self {
+            FileSizeLimit::None => false,
+            FileSizeLimit::RowGroups(_) => true,
+        }
+    }
+
+    pub fn should_start_new_file(&self, num_batch: u32) -> bool {
+        match self {
+            FileSizeLimit::None => false,
+            FileSizeLimit::RowGroups(batches_per_file) => {
+                num_batch != 0 && num_batch % batches_per_file == 0
+            }
+        }
+    }
+}
+
 /// Batches can be limitied by either number of rows or the total size of the rows in the batch in
 /// bytes.
 pub enum BatchSizeLimit {

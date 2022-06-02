@@ -96,9 +96,9 @@ pub struct QueryOpt {
     connect_opts: ConnectOpts,
     /// Size of a single batch in rows. The content of the data source is written into the output
     /// parquet files in batches. This way the content does never need to be materialized completely
-    /// in memory at once. If `--batch-size-mib` is not specified this value defaults to 65535. This
-    /// avoids issues with some ODBC drivers using 16Bit integers to represent batch sizes. If
-    /// `--batch-size-mib` is specified no other limit is applied by default. If both option are
+    /// in memory at once. If `--batch-size-memory` is not specified this value defaults to 65535.
+    /// This avoids issues with some ODBC drivers using 16Bit integers to represent batch sizes. If
+    /// `--batch-size-memory` is specified no other limit is applied by default. If both option are
     /// specified the batch size is the largest possible which satisfies both constraints.
     #[clap(long)]
     batch_size_row: Option<usize>,
