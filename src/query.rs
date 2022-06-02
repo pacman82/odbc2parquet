@@ -34,7 +34,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         parameters,
         query,
         batch_size_row,
-        batch_size_memory: batch_size_mib,
+        batch_size_memory,
         batches_per_file,
         encoding,
         prefer_varbinary,
@@ -45,7 +45,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 
     let batch_size = BatchSizeLimit::new(
         *batch_size_row,
-        batch_size_mib.map(|bs| bs.as_u64().try_into().unwrap()),
+        batch_size_memory.map(|bs| bs.as_u64().try_into().unwrap()),
     );
 
     // Convert the input strings into parameters suitable for use with ODBC.
