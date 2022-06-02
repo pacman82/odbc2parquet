@@ -7,6 +7,7 @@ use crate::enum_args::{
     column_encoding_from_str, compression_from_str, EncodingArgument, COMPRESSION_VARIANTS,
 };
 use anyhow::{bail, Error};
+use bytesize::ByteSize;
 use odbc_api::{
     escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
     Environment,
@@ -104,12 +105,17 @@ pub struct QueryOpt {
     /// Limits the size of a single batch. It does so by calculating the amount of memory each row
     /// requires in the allocated buffers and then limits the maximum number of rows so that the
     /// maximum buffer size comes as close as possbile, but does not exceed the specified amount.
-    /// Default is 2 GiB on 64 Bit platforms and 1 GiB on 32 Bit Platforms if `--batch-size-row` is
+    /// Default is 2GiB on 64 Bit platforms and 1GiB on 32 Bit Platforms if `--batch-size-row` is
     /// not specified. If `--batch-size-row` is not specified no memory limit is applied by default.
     /// If both option are specified the batch size is the largest possible which satisfies both
-    /// constraints.
+    /// constraints. This option controls the size of the buffers of data in transit, and therfore
+    /// the memory usage of this tool. It indirectly controls the size of the row groups written to
+    /// parquet (since each batch is written as one row group). It is hard to make a generic
+    /// statement about how much smaller the average row group will be.
+    /// This options allows you to specify the memory usage using SI units. So you can pass `2Gib`,
+    /// `600Mb` and so on.
     #[clap(long)]
-    batch_size_mib: Option<u32>,
+    batch_size_memory: Option<ByteSize>,
     /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
     /// single output file is produces. Otherwise each output file is closed after the maximum
     /// number of batches have been written and a new one with the suffix `_n` is started. There n

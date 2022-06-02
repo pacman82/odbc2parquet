@@ -38,6 +38,7 @@ num-bigint = "0.4.3"
 atoi = "1.0.0"
 num-traits = "0.2.15"
 clap_complete = "3.1.4"
+bytesize = "1.1.0"
 
 [dependencies.clap]
 version = "3.1.18"
