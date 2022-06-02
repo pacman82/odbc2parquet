@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+* Fixed bug causing `--batch-size-memory` to be interpreted as many times the specified limit.
+
 ## 0.7.0
 
 * Updated dependencies. Including `parquet 15.0.0`
