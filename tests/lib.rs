@@ -645,7 +645,7 @@ fn split_files() {
             MSSQL,
             "--batch-size-row",
             "1",
-            "--batches-per-file",
+            "--row-groups-per-file",
             "1",
             &query,
         ])

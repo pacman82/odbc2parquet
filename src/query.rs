@@ -35,7 +35,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         query,
         batch_size_row,
         batch_size_memory,
-        batches_per_file,
+        row_groups_per_file: batches_per_file,
         encoding,
         prefer_varbinary,
         column_compression_default,

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+* `--batches-per-file` is now named `--row-groups-per-file`.
+
 ## 0.7.1
 
 * Fixed bug causing `--batch-size-memory` to be interpreted as many times the specified limit.

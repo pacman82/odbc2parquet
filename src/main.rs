@@ -122,7 +122,7 @@ pub struct QueryOpt {
     /// is the of the produced output file starting at one for the first one. E.g. `out_1.par`,
     /// `out_2.par`, ...
     #[clap(long, default_value = "0")]
-    batches_per_file: u32,
+    row_groups_per_file: u32,
     /// Default compression used by the parquet file writer.
     #[clap(
         long,
