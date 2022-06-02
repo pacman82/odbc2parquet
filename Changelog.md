@@ -3,7 +3,7 @@
 ## 0.7.0
 
 * Updated dependencies. Including `parquet 15.0.0`
-* `batch-size-mib` is now `batch-size-memory` and allows specifying inputs with SI units. E.g. `2GiB`.
+* `query` option `--batch-size-mib` is now `--batch-size-memory` and allows specifying inputs with SI units. E.g. `2GiB`.
 
 ## 0.6.32
 
