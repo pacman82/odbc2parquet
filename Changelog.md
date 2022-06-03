@@ -3,6 +3,7 @@
 ## 0.8.0
 
 * `--batches-per-file` is now named `--row-groups-per-file`.
+* New `query` option `--file-size-threshold`.
 
 ## 0.7.1
 
