@@ -20,30 +20,35 @@ pub enum FileSizeLimit {
     None,
     /// Limits the file size by limiting the number of row groups we write to an individual file.
     RowGroups(u32),
+    Size(ByteSize),
+    Both {
+        row_groups: u32,
+        size: ByteSize,
+    },
 }
 
 impl FileSizeLimit {
-    pub fn new(num_row_groups: u32) -> Self {
-        if num_row_groups == 0 {
-            Self::None
-        } else {
-            Self::RowGroups(num_row_groups)
+    pub fn new(num_row_groups: u32, file_size_threshold: Option<ByteSize>) -> Self {
+        match (num_row_groups, file_size_threshold) {
+            (0, None) => Self::None,
+            (0, Some(size)) => Self::Size(size),
+            (row_groups, None) => Self::RowGroups(row_groups),
+            (row_groups, Some(size)) => Self::Both { row_groups, size },
         }
     }
 
     /// `true` if we (might) split the output across several files.
     pub fn output_is_splitted(&self) -> bool {
-        match self {
-            FileSizeLimit::None => false,
-            FileSizeLimit::RowGroups(_) => true,
-        }
+        !matches!(self, FileSizeLimit::None)
     }
 
-    pub fn should_start_new_file(&self, num_batch: u32) -> bool {
+    pub fn should_start_new_file(&self, num_batch: u32, current_file_size: ByteSize) -> bool {
         match self {
             FileSizeLimit::None => false,
-            FileSizeLimit::RowGroups(batches_per_file) => {
-                num_batch != 0 && num_batch % batches_per_file == 0
+            FileSizeLimit::RowGroups(row_groups) => num_batch != 0 && num_batch % row_groups == 0,
+            FileSizeLimit::Size(size) => &current_file_size >= size,
+            FileSizeLimit::Both { row_groups, size } => {
+                (num_batch != 0 && num_batch % row_groups == 0) || &current_file_size >= size
             }
         }
     }

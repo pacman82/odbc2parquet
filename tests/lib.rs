@@ -562,9 +562,9 @@ fn query_doubles() {
 }
 
 #[test]
-fn split_files() {
+fn split_files_on_num_row_groups() {
     // Setup table for test
-    let table_name = "SplitFiles";
+    let table_name = "SplitFilesOnNumRowGroups";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
@@ -592,6 +592,77 @@ fn split_files() {
             "1",
             "--row-groups-per-file",
             "1",
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Expect one file per row in table (3)
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(
+        &[
+            "--file-name",
+            out_dir.path().join("out_1.par").to_str().unwrap(),
+        ][..],
+    )
+    .assert()
+    .success();
+
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(
+        &[
+            "--file-name",
+            out_dir.path().join("out_2.par").to_str().unwrap(),
+        ][..],
+    )
+    .assert()
+    .success();
+
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(
+        &[
+            "--file-name",
+            out_dir.path().join("out_3.par").to_str().unwrap(),
+        ][..],
+    )
+    .assert()
+    .success();
+}
+
+#[test]
+fn split_files_on_size_limit() {
+    // Setup table for test
+    let table_name = "SplitFilesOnSizeLimit";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
+    conn.execute(&insert, ()).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {}", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--batch-size-row",
+            "1",
+            "--file-size-threshold",
+            "1B",
             &query,
         ])
         .assert()

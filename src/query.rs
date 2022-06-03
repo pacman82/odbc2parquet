@@ -36,6 +36,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         batch_size_row,
         batch_size_memory,
         row_groups_per_file,
+        file_size_threshold,
         encoding,
         prefer_varbinary,
         column_compression_default,
@@ -48,7 +49,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         *batch_size_memory,
     );
 
-    let file_size = FileSizeLimit::new(*row_groups_per_file);
+    let file_size = FileSizeLimit::new(*row_groups_per_file, *file_size_threshold);
 
     // Convert the input strings into parameters suitable for use with ODBC.
     let params: Vec<_> = parameters
@@ -166,7 +167,8 @@ fn cursor_to_parquet(
             column_writer.close()?;
             col_index += 1;
         }
-        row_group_writer.close()?;
+        let metadata = row_group_writer.close()?;
+        writer.update_current_file_size(metadata.compressed_size());
     }
 
     writer.close()?;

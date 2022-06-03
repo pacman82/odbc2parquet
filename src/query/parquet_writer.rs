@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{format_err, Error};
+use bytesize::ByteSize;
 use parquet::{
     basic::{Compression, Encoding},
     errors::ParquetError,
@@ -33,6 +34,8 @@ pub struct ParquetWriter<'p> {
     writer: SerializedFileWriter<File>,
     file_size: FileSizeLimit,
     num_file: u32,
+    /// Keep track of curret file size so we can split it, should it get too large.
+    current_file_size: ByteSize,
 }
 
 impl<'p> ParquetWriter<'p> {
@@ -66,7 +69,12 @@ impl<'p> ParquetWriter<'p> {
             writer,
             file_size,
             num_file: 1,
+            current_file_size: ByteSize::b(0)
         })
+    }
+
+    pub fn update_current_file_size(&mut self, row_group_size: i64) {
+        self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
     }
 
     /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
@@ -80,8 +88,9 @@ impl<'p> ParquetWriter<'p> {
         num_batch: u32,
     ) -> Result<SerializedRowGroupWriter<'_, File>, Error> {
         // Check if we need to write the next batch into a new file
-        if self.file_size.should_start_new_file(num_batch) {
+        if self.file_size.should_start_new_file(num_batch, self.current_file_size) {
             self.num_file += 1;
+            self.current_file_size = ByteSize::b(0);
             let suffix = format!("_{}", self.num_file);
             let path = Self::path_with_suffix(self.path, &suffix)?;
             let file = File::create(path)?;
