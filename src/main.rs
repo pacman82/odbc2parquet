@@ -123,20 +123,20 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[clap(long, default_value = "0")]
     row_groups_per_file: u32,
-    /// After the size of the currently written parquet files goes beyond this threshold it is
-    /// closed after finishing writing the current row group and a new one is started. If this
-    /// option is not set no size threshold is applied. If the threshold is applied the first file
-    /// name will have the suffix `_1`, the second the suffix `_2` and so on. Therfore the first
-    /// resulting file will be called e.g. `out_1.par`, if `out.par` has been specified as the
-    /// output argument.
+    /// Then the size of the currently written parquet files goes beyond this threshold the current
+    /// row group will be finished and then the file will be closed. So the file will be somewhat
+    /// larger than the threshold. All furthrer row groups will be written into new files to which
+    /// the threshold size limit is applied as well. If this option is not set, no size threshold is
+    /// applied. If the threshold is applied the first file name will have the suffix `_1`, the
+    /// second the suffix `_2` and so on. Therfore the first resulting file will be called e.g. 
+    /// `out_1.par`, if `out.par` has been specified as the output argument.
     /// Also note that this option will not act as an upper bound. It will act as a lower bound for
     /// all but the last file, all others however will not be larger than this threshold by more
-    /// than the size of one row group. You can use the `batch_size_row` and `batch_size_mib`
-    /// options to control the size of the row groups. Do not expect the `batch_size_mib` however to
-    /// be equal to the row group size. The row group size depends on the actual data in the
-    /// database, and is due to compression likely much smaller. This option can be used to gether
-    /// with `row-groups-per-file`. Values of this option can be specified in SI units. E.g.
-    /// `--file-size-threshold 1GiB`.
+    /// than the size of one row group. You can use the `batch_size_row` and `batch_size_memory`
+    /// options to control the size of the row groups. Do not expect the `batch_size_memory` however
+    /// to be equal to the row group size. The row group size depends on the actual data in the
+    /// database, and is due to compression likely much smaller. Values of this option can be
+    /// specified in SI units. E.g. `--file-size-threshold 1GiB`.
     #[clap(long)]
     file_size_threshold: Option<ByteSize>,
     /// Default compression used by the parquet file writer.
