@@ -268,9 +268,8 @@ trait InserterBuilderStart: DataType + Sized {
     fn map_identity(nullable: bool) -> Box<FnParquetToOdbcCol>
     where
         Self::T: BufferedDataType + Copy,
-        Self: for<'a, 'o> OdbcDataType<
+        Self: for<'a> OdbcDataType<
             'a,
-            'o,
             Required = &'a mut [<Self as DataType>::T],
             Optional = NullableSliceMut<'a, <Self as DataType>::T>,
         >,
@@ -326,12 +325,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
     fn with<F, E>(&self, f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
     where
         Pdt: DataType,
-        Odt: for<'a, 'o> OdbcDataType<
-            'a,
-            'o,
-            Required = &'a mut [E],
-            Optional = NullableSliceMut<'a, E>,
-        >,
+        Odt: for<'a> OdbcDataType<'a, Required = &'a mut [E], Optional = NullableSliceMut<'a, E>>,
         F: Fn(&Pdt::T) -> E + 'static,
         Pdt::T: BufferedDataType,
     {
@@ -686,12 +680,12 @@ fn parquet_type_to_odbc_buffer_desc(
     Ok((BufferDescription { nullable, kind }, parquet_to_odbc))
 }
 
-trait OdbcDataType<'a, 'o> {
+trait OdbcDataType<'a> {
     type Required;
     type Optional;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Required;
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Optional;
+    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required;
+    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional;
 }
 
 fn i128_from_be_slice(bytes: &[u8]) -> i128 {
@@ -776,17 +770,17 @@ where
 
 struct Text;
 
-impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for Text {
-    type Required = TextColumnSliceMut<'a, 'o, u8>;
-    type Optional = TextColumnSliceMut<'a, 'o, u8>;
+impl<'a> OdbcDataType<'a> for Text {
+    type Required = TextColumnSliceMut<'a, u8>;
+    type Optional = TextColumnSliceMut<'a, u8>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
         column_writer
             .as_text_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -794,17 +788,17 @@ impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for Text {
 
 struct WText;
 
-impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for WText {
-    type Required = TextColumnSliceMut<'a, 'o, u16>;
-    type Optional = TextColumnSliceMut<'a, 'o, u16>;
+impl<'a> OdbcDataType<'a> for WText {
+    type Required = TextColumnSliceMut<'a, u16>;
+    type Optional = TextColumnSliceMut<'a, u16>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
         column_writer
             .as_w_text_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -812,17 +806,17 @@ impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for WText {
 
 struct Binary;
 
-impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for Binary {
-    type Required = BinColumnSliceMut<'a, 'o>;
-    type Optional = BinColumnSliceMut<'a, 'o>;
+impl<'a> OdbcDataType<'a> for Binary {
+    type Required = BinColumnSliceMut<'a>;
+    type Optional = BinColumnSliceMut<'a>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
         column_writer
             .as_bin_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -830,11 +824,11 @@ impl<'a, 'o: 'a> OdbcDataType<'a, 'o> for Binary {
 
 macro_rules! impl_odbc_data_type {
     ($data_type:ident, $element:ident, $variant_cw_req:ident, $variant_cw_opt:ident) => {
-        impl<'a, 'o> OdbcDataType<'a, 'o> for $data_type {
+        impl<'a> OdbcDataType<'a> for $data_type {
             type Required = &'a mut [$element];
             type Optional = NullableSliceMut<'a, $element>;
 
-            fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Required {
+            fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
                 if let AnyColumnSliceMut::$variant_cw_req(inner) = column_writer {
                     inner
                 } else {
@@ -842,7 +836,7 @@ macro_rules! impl_odbc_data_type {
                 }
             }
 
-            fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a, 'o>) -> Self::Optional {
+            fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
                 if let AnyColumnSliceMut::$variant_cw_opt(inner) = column_writer {
                     inner
                 } else {

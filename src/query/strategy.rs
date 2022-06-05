@@ -53,7 +53,7 @@ pub fn strategy_from_column_description(
     prefer_varbinary: bool,
     driver_does_support_i64: bool,
     use_utf16: bool,
-    cursor: &impl Cursor,
+    cursor: &mut impl Cursor,
     index: i16,
 ) -> Result<Option<Box<dyn ColumnFetchStrategy>>, Error> {
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a

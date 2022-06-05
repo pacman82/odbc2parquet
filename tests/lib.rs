@@ -3165,9 +3165,9 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
 }
 
 /// Consumes a cursor and generates a CSV string from the result set.
-fn cursor_to_string(cursor: impl Cursor) -> String {
+fn cursor_to_string(mut cursor: impl Cursor) -> String {
     let batch_size = 20;
-    let mut buffer = TextRowSet::for_cursor(batch_size, &cursor, None).unwrap();
+    let mut buffer = TextRowSet::for_cursor(batch_size, &mut cursor, None).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let mut text = String::new();

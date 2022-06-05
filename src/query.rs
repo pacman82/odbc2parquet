@@ -88,14 +88,14 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 }
 
 fn cursor_to_parquet(
-    cursor: impl Cursor,
+    mut cursor: impl Cursor,
     path: &Path,
     batch_size: BatchSizeLimit,
     file_size: FileSizeLimit,
     mapping_options: MappingOptions,
     parquet_format_options: ParquetFormatOptions,
 ) -> Result<(), Error> {
-    let strategies = make_schema(&cursor, mapping_options)?;
+    let strategies = make_schema(&mut cursor, mapping_options)?;
 
     let parquet_schema = parquet_schema_from_strategies(&strategies);
 
@@ -186,7 +186,7 @@ struct MappingOptions {
 }
 
 fn make_schema(
-    cursor: &impl Cursor,
+    cursor: &mut impl Cursor,
     mapping_options: MappingOptions,
 ) -> Result<Vec<ColumnInfo>, Error> {
     let MappingOptions {
