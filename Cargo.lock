@@ -1009,9 +1009,9 @@ dependencies = [
 
 [[package]]
 name = "parquet"
-version = "15.0.0"
+version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94d31dde60b151ef88ec2c847e3a8f66d42d7dbdaeefd05d13d79db676b0b56f"
+checksum = "f11444503e702853d52a612828e238a8d0072f85f9a0427b5e2009da4ce61594"
 dependencies = [
  "base64",
  "brotli",
