@@ -41,7 +41,7 @@ clap_complete = "3.2.1"
 bytesize = "1.1.0"
 
 [dependencies.clap]
-version = "3.2.5"
+version = "3.2.6"
 features = ["derive", "env"]
 
 [dependencies.parquet]
