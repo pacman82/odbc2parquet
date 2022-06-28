@@ -37,7 +37,7 @@ chrono = "0.4.19"
 num-bigint = "0.4.3"
 atoi = "1.0.0"
 num-traits = "0.2.15"
-clap_complete = "3.2.2"
+clap_complete = "3.2.3"
 bytesize = "1.1.0"
 
 [dependencies.clap]
