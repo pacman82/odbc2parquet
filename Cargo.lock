@@ -809,7 +809,6 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43db66d1170d347f9a065114077f7dccb00c1b9478c89384490a3425279a4606"
 dependencies = [
- "num-bigint",
  "num-complex",
  "num-integer",
  "num-iter",
@@ -865,7 +864,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d41702bd167c2df5520b384281bc111a4b5efcf7fbc4c9c222c815b07e0a6a6a"
 dependencies = [
  "autocfg",
- "num-bigint",
  "num-integer",
  "num-traits",
 ]
@@ -1009,9 +1007,9 @@ dependencies = [
 
 [[package]]
 name = "parquet"
-version = "16.0.0"
+version = "17.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f11444503e702853d52a612828e238a8d0072f85f9a0427b5e2009da4ce61594"
+checksum = "367d46126e60d229e9e47e3d793c622a18c0e60a749573b7936bf3b0701cb8a3"
 dependencies = [
  "base64",
  "brotli",
