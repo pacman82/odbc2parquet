@@ -31,7 +31,7 @@ readme = "README.md"
 [dependencies]
 odbc-api = "0.45.0"
 anyhow = "1.0.58"
-stderrlog = "0.5.1"
+stderrlog = "0.5.3"
 log = "0.4.17"
 chrono = "0.4.19"
 num-bigint = "0.4.3"
