@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+
+* `query` now allows for specifying `-` as a positional output argument in order to stream to standard out instead of writing to a file.
+
 ## 0.8.0
 
 * `--batches-per-file` is now named `--row-groups-per-file`.
