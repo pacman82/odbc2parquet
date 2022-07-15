@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path, sync::Arc};
+use std::{fs::File, io::Write, path::Path, sync::Arc};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
@@ -9,14 +9,11 @@ use odbc_api::{
 use parquet::{
     column::writer::ColumnWriter,
     data_type::{ByteArray, FixedLenByteArray},
-    file::{
-        properties::WriterProperties,
-        writer::SerializedFileWriter,
-    },
+    file::{properties::WriterProperties, writer::SerializedFileWriter},
     schema::parser::parse_message_type,
 };
 use predicates::{ord::eq, str::contains};
-use tempfile::tempdir;
+use tempfile::{tempdir, NamedTempFile};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
@@ -2981,6 +2978,79 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".01\n-.01", actual);
+}
+
+/// Write query output to stdout
+#[test]
+pub fn write_query_result_to_stdout() {
+    // Given
+    let table_name = "WriteQueryResultToStdout";
+    // Prepare table
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (?)"),
+        [42i32, 5, 64].as_slice(),
+    )
+    .unwrap();
+
+    // When
+
+    // Query table and write contents to stdout
+    let query = format!("SELECT a FROM {table_name} ORDER BY id");
+    let command = Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "-", // Use `-` to explicitly write to stdout
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Then
+    let output = &command.get_output().stdout;
+    assert!(!output.is_empty());
+
+    // Write captured contents of stdout to temporary file so we can inspect it with read parquet
+    let mut output_file = NamedTempFile::new().unwrap();
+    output_file.write_all(output).unwrap();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let expected = "{a: 42}\n";
+
+    let output_path = output_file.path().to_str().unwrap();
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(&["--file-name", output_path])
+        .assert()
+        .success()
+        .stdout(eq(expected));
+}
+
+/// Write query output to stdout
+#[test]
+pub fn reject_writing_to_stdout_and_file_size_limit() {
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            "FakeConnectionString",
+            "--file-size-threshold",
+            "1GiB",
+            "-", // Use `-` to explicitly write to stdout
+            "SELECT a FROM FakeTableName ORDER BY id",
+        ])
+        .assert()
+        .failure()
+        .stderr(contains(
+            "file-size-threshold conflicts with specifying stdout ('-') as output.",
+        ));
 }
 
 /// This did not work in earlier versions there we set the batch write size of the parquet writer to

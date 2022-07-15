@@ -568,6 +568,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48dc51180a9b377fd75814d0cc02199c20f8e99433d6762f650d39cdbbd3b56f"
 
 [[package]]
+name = "io-arg"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a30f3af17be2c868cddee5dee2e1ab5dd92cd4c8288a4b8b090c8719eb4c473"
+
+[[package]]
 name = "itertools"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -948,6 +954,7 @@ dependencies = [
  "chrono",
  "clap",
  "clap_complete",
+ "io-arg",
  "lazy_static",
  "log",
  "num-bigint",
