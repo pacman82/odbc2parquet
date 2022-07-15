@@ -241,7 +241,7 @@ impl Cli {
 }
 
 fn main() -> Result<(), Error> {
-    let opt = Cli::try_parse()?;
+    let opt = Cli::parse();
     opt.perform_extra_validation()?;
 
     let verbose = if opt.quiet {
