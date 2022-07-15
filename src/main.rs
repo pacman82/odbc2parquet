@@ -8,6 +8,7 @@ use crate::enum_args::{
 };
 use anyhow::{bail, Error};
 use bytesize::ByteSize;
+use io_arg::IoArg;
 use odbc_api::{
     escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
     Environment,
@@ -31,9 +32,9 @@ struct Cli {
     /// 'v': Info level logging
     /// 'vv': Debug level logging
     /// 'vvv': Trace level logging
-    #[structopt(short = 'v', long, parse(from_occurrences))]
+    #[clap(short = 'v', long, parse(from_occurrences))]
     verbose: usize,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     command: Command,
 }
 
@@ -128,7 +129,7 @@ pub struct QueryOpt {
     /// larger than the threshold. All furthrer row groups will be written into new files to which
     /// the threshold size limit is applied as well. If this option is not set, no size threshold is
     /// applied. If the threshold is applied the first file name will have the suffix `_1`, the
-    /// second the suffix `_2` and so on. Therfore the first resulting file will be called e.g. 
+    /// second the suffix `_2` and so on. Therfore the first resulting file will be called e.g.
     /// `out_1.par`, if `out.par` has been specified as the output argument.
     /// Also note that this option will not act as an upper bound. It will act as a lower bound for
     /// all but the last file, all others however will not be larger than this threshold by more
@@ -169,10 +170,16 @@ pub struct QueryOpt {
     /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
     /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
     /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
-    #[clap(long, multiple_values=true, multiple_occurrences=true, parse(try_from_str=column_encoding_from_str))]
+    #[clap(
+        long,
+        multiple_values=true,
+        multiple_occurrences=true,
+        parse(try_from_str=column_encoding_from_str)
+    )]
     parquet_column_encoding: Vec<(String, Encoding)>,
-    /// Name of the output parquet file.
-    output: PathBuf,
+    /// Name of the output parquet file. Use `-` to indicate that the output should be written to
+    /// standard out instead.
+    output: IoArg,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
     query: String,
@@ -215,8 +222,27 @@ pub struct InsertOpt {
     table: String,
 }
 
+impl Cli {
+    /// Perform some validation logic, beyond what is possible (or sensible) to verify directly with
+    /// clap.
+    pub fn perform_extra_validation(&self) -> Result<(), Error> {
+        if let Command::Query { query_opt } = &self.command {
+            if !query_opt.output.is_file() {
+                if query_opt.file_size_threshold.is_some() {
+                    bail!("file-size-threshold conflicts with specifying stdout ('-') as output.")
+                }
+                if query_opt.row_groups_per_file != 0 {
+                    bail!("row-groups-per-file conflicts with specifying stdout ('-') as output.")
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 fn main() -> Result<(), Error> {
-    let opt = Cli::parse();
+    let opt = Cli::try_parse()?;
+    opt.perform_extra_validation()?;
 
     let verbose = if opt.quiet {
         // Log errors, but nothing else
@@ -241,7 +267,7 @@ fn main() -> Result<(), Error> {
 
     match opt.command {
         Command::Query { query_opt } => {
-            query::query(&odbc_env, &query_opt)?;
+            query::query(&odbc_env, query_opt)?;
         }
         Command::Insert { insert_opt } => {
             insert::insert(&odbc_env, &insert_opt)?;

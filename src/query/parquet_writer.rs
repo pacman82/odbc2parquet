@@ -1,5 +1,6 @@
 use std::{
     fs::File,
+    io::Write,
     mem::swap,
     path::{Path, PathBuf},
     sync::Arc,
@@ -7,6 +8,7 @@ use std::{
 
 use anyhow::{format_err, Error};
 use bytesize::ByteSize;
+use io_arg::IoArg;
 use parquet::{
     basic::{Compression, Encoding},
     errors::ParquetError,
@@ -27,20 +29,20 @@ pub struct ParquetFormatOptions {
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
-pub struct ParquetWriter<'p> {
-    path: &'p Path,
+pub struct ParquetWriter {
+    path: Option<PathBuf>,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
-    writer: SerializedFileWriter<File>,
+    writer: SerializedFileWriter<Box<dyn Write>>,
     file_size: FileSizeLimit,
     num_file: u32,
     /// Keep track of curret file size so we can split it, should it get too large.
     current_file_size: ByteSize,
 }
 
-impl<'p> ParquetWriter<'p> {
+impl ParquetWriter {
     pub fn new(
-        path: &'p Path,
+        output: IoArg,
         schema: Arc<Type>,
         file_size: FileSizeLimit,
         format_options: ParquetFormatOptions,
@@ -55,12 +57,23 @@ impl<'p> ParquetWriter<'p> {
             wpb = wpb.set_column_encoding(col, encoding)
         }
         let properties = Arc::new(wpb.build());
-        let file = if file_size.output_is_splitted() {
-            File::create(Self::path_with_suffix(path, "_1")?)?
-        } else {
-            File::create(path)?
+
+        let (output, path): (Box<dyn Write>, _) = match output {
+            IoArg::StdStream => {
+                let output = output.open_as_output()?.into_write();
+                (output, None)
+            }
+            IoArg::File(path) => {
+                let file = if file_size.output_is_splitted() {
+                    File::create(Self::path_with_suffix(&path, "_1")?)?
+                } else {
+                    File::create(&path)?
+                };
+                (Box::new(file), Some(path))
+            }
         };
-        let writer = SerializedFileWriter::new(file, schema.clone(), properties.clone())?;
+
+        let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
 
         Ok(Self {
             path,
@@ -69,7 +82,7 @@ impl<'p> ParquetWriter<'p> {
             writer,
             file_size,
             num_file: 1,
-            current_file_size: ByteSize::b(0)
+            current_file_size: ByteSize::b(0),
         })
     }
 
@@ -86,14 +99,17 @@ impl<'p> ParquetWriter<'p> {
     pub fn next_row_group(
         &mut self,
         num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, File>, Error> {
+    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write>>, Error> {
         // Check if we need to write the next batch into a new file
-        if self.file_size.should_start_new_file(num_batch, self.current_file_size) {
+        if self
+            .file_size
+            .should_start_new_file(num_batch, self.current_file_size)
+        {
             self.num_file += 1;
             self.current_file_size = ByteSize::b(0);
             let suffix = format!("_{}", self.num_file);
-            let path = Self::path_with_suffix(self.path, &suffix)?;
-            let file = File::create(path)?;
+            let path = Self::path_with_suffix(self.path.as_deref().unwrap(), &suffix)?;
+            let file: Box<dyn Write> = Box::new(File::create(path)?);
 
             // Create new writer as tmp writer
             let mut tmp_writer =

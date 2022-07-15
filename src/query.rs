@@ -17,9 +17,10 @@ use self::{
     strategy::{strategy_from_column_description, ColumnFetchStrategy},
 };
 
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::{bail, Error};
+use io_arg::IoArg;
 use log::{debug, info};
 use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter};
 use parquet::schema::types::{Type, TypePtr};
@@ -27,7 +28,7 @@ use parquet::schema::types::{Type, TypePtr};
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
-pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
+pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     let QueryOpt {
         connect_opts,
         output,
@@ -44,12 +45,9 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         driver_does_not_support_64bit_integers,
     } = opt;
 
-    let batch_size = BatchSizeLimit::new(
-        *batch_size_row,
-        *batch_size_memory,
-    );
+    let batch_size = BatchSizeLimit::new(batch_size_row, batch_size_memory);
 
-    let file_size = FileSizeLimit::new(*row_groups_per_file, *file_size_threshold);
+    let file_size = FileSizeLimit::new(row_groups_per_file, file_size_threshold);
 
     // Convert the input strings into parameters suitable for use with ODBC.
     let params: Vec<_> = parameters
@@ -57,20 +55,20 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         .map(|param| param.as_str().into_parameter())
         .collect();
 
-    let odbc_conn = open_connection(environment, connect_opts)?;
+    let odbc_conn = open_connection(environment, &connect_opts)?;
 
     let parquet_format_options = ParquetFormatOptions {
-        column_compression_default: *column_compression_default,
-        column_encodings: parquet_column_encoding.clone(),
+        column_compression_default,
+        column_encodings: parquet_column_encoding,
     };
 
     let mapping_options = MappingOptions {
         use_utf16: encoding.use_utf16(),
-        prefer_varbinary: *prefer_varbinary,
+        prefer_varbinary,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
     };
 
-    if let Some(cursor) = odbc_conn.execute(query, params.as_slice())? {
+    if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {
         cursor_to_parquet(
             cursor,
             output,
@@ -89,7 +87,7 @@ pub fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
 
 fn cursor_to_parquet(
     mut cursor: impl Cursor,
-    path: &Path,
+    path: IoArg,
     batch_size: BatchSizeLimit,
     file_size: FileSizeLimit,
     mapping_options: MappingOptions,
