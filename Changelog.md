@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+* Introduced flag `--no-color` which allows to supress emitting colors for the log output.
+
 ## 0.9.0
 
 * `query` now allows for specifying `-` as a positional output argument in order to stream to standard out instead of writing to a file.

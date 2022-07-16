@@ -14,6 +14,7 @@ use odbc_api::{
     Environment,
 };
 use parquet::basic::{Compression, Encoding};
+use stderrlog::ColorChoice;
 use std::{fs::File, path::PathBuf};
 
 use clap::{Args, IntoApp, Parser};
@@ -34,6 +35,13 @@ struct Cli {
     /// 'vvv': Trace level logging
     #[clap(short = 'v', long, parse(from_occurrences))]
     verbose: usize,
+    #[clap(long)]
+    /// Never emit colors.
+    /// 
+    /// Controls the colors of the log output. If specified the log output will never be colored.
+    /// If not specified the tool will try to emit Colors, but not force it. If `TERM=dumb` or
+    /// `NO_COLOR` is defined, then colors will not be used.
+    no_color: bool,
     #[clap(subcommand)]
     command: Command,
 }
@@ -252,12 +260,19 @@ fn main() -> Result<(), Error> {
         opt.verbose + 2
     };
 
+    let color_choice = if opt.no_color {
+        ColorChoice::Never
+    } else {
+        ColorChoice::Auto
+    };
+
     // Initialize logging
     stderrlog::new()
         .module(module_path!())
         .module("odbc_api")
         .quiet(false) // Even if `opt.quiet` is true, we still want to print errors
         .verbosity(verbose)
+        .color(color_choice)
         .timestamp(stderrlog::Timestamp::Second)
         .init()
         .unwrap();
