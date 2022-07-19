@@ -88,3 +88,22 @@ jobs:
           CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: |
           cargo publish --token "${CARGO_TOKEN}"
+
+  ubuntu:
+    name: Build and release for Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/odbc2parquet
+          asset_name: odbc2parquet-ubuntu
+          tag: ${{ github.ref }}

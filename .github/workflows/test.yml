@@ -28,6 +28,3 @@ jobs:
           cargo install parquet --features cli
           # Run test suite
           cargo test
-        
-
-
