@@ -101,12 +101,12 @@ jobs:
         run: |
           cargo build --release
           gzip  target/release/odbc2parquet
-          mv target/release/odbc2parquet.gz odbc2parquet-ubuntu.gz
+          mv target/release/odbc2parquet.gz odbc2parquet-x86_64-ubuntu.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: odbc2parquet-ubuntu.gz
-          asset_name: odbc2parquet-ubuntu.gz
+          file: odbc2parquet-x86_64-ubuntu.gz
+          asset_name: odbc2parquet-x86_64-ubuntu.gz
           tag: ${{ github.ref }}
