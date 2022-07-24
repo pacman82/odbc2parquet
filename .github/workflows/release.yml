@@ -100,7 +100,7 @@ jobs:
       - name: Build
         run: |
           cargo build --release
-          gzip  target/release/odbc2parquet
+          gzip --force target/release/odbc2parquet
           mv target/release/odbc2parquet.gz odbc2parquet-x86_64-ubuntu.gz
 
       - name: Github Upload

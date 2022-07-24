@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.2
+## 0.9.2-3
 
 * Updated dependencies
 * Release binary artifact for `x86_64-ubuntu`.
