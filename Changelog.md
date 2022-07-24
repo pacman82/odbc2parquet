@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2
+
+* Updated dependencies
+* Release binary artifact for `x86_64-ubuntu`.
+
 ## 0.9.1
 
 * Introduced flag `--no-color` which allows to supress emitting colors for the log output.
