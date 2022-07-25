@@ -558,6 +558,68 @@ fn query_doubles() {
         .stdout(contains(expected_schema));
 }
 
+/// Should read query from standard input if "-" is provided as query text.
+#[test]
+fn read_query_from_stdin() {
+    // Setup table for test
+    let table_name = "ReadQueryFromStdin";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        table_name,
+        &["INT"],
+    )
+    .unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (54),
+        (54),
+        (34),
+        (12);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let expected_values = "\
+        {a: 54}\n\
+        {a: 54}\n\
+        {a: 34}\n\
+        {a: 12}\n\
+    ";
+    let query = format!("SELECT a FROM {} ORDER BY id", table_name);
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "-",
+        ])
+        .write_stdin(query)
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(&["--file-name", out_str][..])
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+}
+
 #[test]
 fn split_files_on_num_row_groups() {
     // Setup table for test

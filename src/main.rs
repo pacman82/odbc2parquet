@@ -189,7 +189,10 @@ pub struct QueryOpt {
     /// standard out instead.
     output: IoArg,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
-    /// placeholders for positional parameters.
+    /// placeholders for positional parameters. E.g. "SELECT Name FROM Employees WHERE salary > ?;".
+    /// Instead of passing a query verbatum, you may pass a plain dash (`-`), to indicate that the
+    /// query should be read from standard input. In this case the entire input until EOF will be
+    /// considered the query.
     query: String,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.

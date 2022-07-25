@@ -17,7 +17,7 @@ use self::{
     strategy::{strategy_from_column_description, ColumnFetchStrategy},
 };
 
-use std::sync::Arc;
+use std::{sync::Arc, io::{stdin, Read}};
 
 use anyhow::{bail, Error};
 use io_arg::IoArg;
@@ -46,8 +46,8 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     } = opt;
 
     let batch_size = BatchSizeLimit::new(batch_size_row, batch_size_memory);
-
     let file_size = FileSizeLimit::new(row_groups_per_file, file_size_threshold);
+    let query = query_statement_text(query)?;
 
     // Convert the input strings into parameters suitable for use with ODBC.
     let params: Vec<_> = parameters
@@ -83,6 +83,19 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         );
     }
     Ok(())
+}
+
+/// The query statement is either passed verbatim at the command line, or via stdin. The latter is
+/// indicated by passing `-` at the command line instead of the string. This method reads stdin
+/// until EOF if required and always returns the statement text.
+fn query_statement_text(query: String) -> Result<String, Error> {
+    Ok(if query == "-" {
+        let mut buf = String::new();
+        stdin().lock().read_to_string(&mut buf)?;
+        buf
+    } else {
+        query
+    })
 }
 
 fn cursor_to_parquet(
