@@ -313,6 +313,62 @@ fn query_decimals() {
 }
 
 #[test]
+fn query_decimals_optional() {
+    // Setup table for test
+    let table_name = "QueryDecimalsOptional";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        table_name,
+        &["NUMERIC(3,2)", "DECIMAL(3,2)"],
+    )
+    .unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a,b)
+        VALUES
+        (1.23, 1.23),
+        (NULL, NULL),
+        (4.56, 4.56);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let expected_values = "{a: 1.23, b: 1.23}\n{a: null, b: null}\n{a: 4.56, b: 4.56}\n";
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a,b FROM {table_name} ORDER BY id;");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(&["--file-name", out_str][..])
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+}
+
+#[test]
 fn query_large_numeric_as_text() {
     // Setup table for test
     let table_name = "QueryLargeNumericAsText";
