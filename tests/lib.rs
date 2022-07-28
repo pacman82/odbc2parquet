@@ -3057,7 +3057,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
 
     let message_type = "
         message schema {
-            REQUIRED FIXED_LEN_BYTE_ARRAY(3) a (DECIMAL(5,2));
+            OPTIONAL FIXED_LEN_BYTE_ARRAY(3) a (DECIMAL(5,2));
         }
     ";
 
@@ -3095,7 +3095,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
-    assert_eq!(".01\n-.01", actual);
+    assert_eq!(".01\nNULL\n-.01", actual);
 }
 
 /// Write query output to stdout
