@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.5
+
+* Updated dependencies
+
 ## 0.9.4
 
 * Pass `-` as query string to read the query statement text from standard in instead.
