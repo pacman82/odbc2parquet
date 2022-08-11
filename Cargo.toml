@@ -25,7 +25,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 odbc-api = "0.45.1"
-anyhow = "1.0.60"
+anyhow = "1.0.61"
 stderrlog = "0.5.3"
 log = "0.4.17"
 chrono = "0.4.21"
