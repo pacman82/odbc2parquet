@@ -269,17 +269,8 @@ fn query_decimals() {
         &["NUMERIC(3,2) NOT NULL", "DECIMAL(3,2) NOT NULL"],
     )
     .unwrap();
-    let insert = format!(
-        "INSERT INTO {}
-        (a,b)
-        VALUES
-        (1.23, 1.23);",
-        table_name
-    );
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1.23, 1.23);");
     conn.execute(&insert, ()).unwrap();
-
-    let expected_values = "{a: 1.23, b: 1.23}\n";
-
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -289,7 +280,6 @@ fn query_decimals() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a,b FROM {};", table_name);
-
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args(&[
@@ -305,6 +295,7 @@ fn query_decimals() {
 
     // Use the parquet-read tool to verify the output. It can be installed with
     // `cargo install parquet`.
+    let expected_values = "{a: 1.23, b: 1.23}\n";
     let mut cmd = Command::new("parquet-read");
     cmd.args(&["--file-name", out_str][..])
         .assert()
