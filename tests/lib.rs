@@ -23,6 +23,12 @@ lazy_static! {
     static ref ENV: Environment = Environment::new().unwrap();
 }
 
+/// Assertions on the output of parquet_schema.
+fn parquet_schema_out(file: &str) -> Assert {
+    let mut cmd = Command::new("parquet-schema");
+    cmd.args(&["--file-path", file]).assert().success()
+}
+
 /// Query MSSQL database, yet do not specify username and password in the connection string, but
 /// pass them as separate command line options.
 #[test]
@@ -301,6 +307,11 @@ fn query_decimals() {
         .assert()
         .success()
         .stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains(
+        "message schema {\n  REQUIRED FIXED_LEN_BYTE_ARRAY (2) a (DECIMAL(3,2));\n  \
+                REQUIRED FIXED_LEN_BYTE_ARRAY (2) b (DECIMAL(3,2));\n}",
+    ));
 }
 
 #[test]
@@ -308,12 +319,7 @@ fn query_decimals_optional() {
     // Setup table for test
     let table_name = "QueryDecimalsOptional";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
-        &conn,
-        table_name,
-        &["NUMERIC(3,2)", "DECIMAL(3,2)"],
-    )
-    .unwrap();
+    setup_empty_table(&conn, table_name, &["NUMERIC(3,2)", "DECIMAL(3,2)"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a,b)
@@ -598,11 +604,7 @@ fn query_doubles() {
         .stdout(eq(expected_values));
 
     // Also verify schema to ensure f64 is choosen and not f32
-    let mut cmd = Command::new("parquet-schema");
-    cmd.args(&["--file-path", out_str][..])
-        .assert()
-        .success()
-        .stdout(contains(expected_schema));
+    parquet_schema_out(out_str).stdout(contains(expected_schema));
 }
 
 /// Should read query from standard input if "-" is provided as query text.
@@ -611,12 +613,7 @@ fn read_query_from_stdin() {
     // Setup table for test
     let table_name = "ReadQueryFromStdin";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
-        &conn,
-        table_name,
-        &["INT"],
-    )
-    .unwrap();
+    setup_empty_table(&conn, table_name, &["INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -646,14 +643,7 @@ fn read_query_from_stdin() {
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            out_str,
-            "--connection-string",
-            MSSQL,
-            "-",
-        ])
+        .args(&["-vvvv", "query", out_str, "--connection-string", MSSQL, "-"])
         .write_stdin(query)
         .assert()
         .success();
@@ -1043,11 +1033,7 @@ fn prefer_varbinary() {
         .success()
         .stdout(eq(expected));
 
-    let mut cmd = Command::new("parquet-schema");
-    cmd.args(&["--file-path", out_str][..])
-        .assert()
-        .success()
-        .stdout(contains("OPTIONAL BYTE_ARRAY a;"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL BYTE_ARRAY a;"));
 }
 
 /// Strings with interior nuls should be written into parquet file as they are.
