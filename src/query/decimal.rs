@@ -16,8 +16,16 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::strategy::ColumnFetchStrategy;
 
+pub fn decmial_fetch_strategy(
+    repetition: Repetition,
+    scale: i32,
+    precision: usize,
+) -> Box<dyn ColumnFetchStrategy> {
+    Box::new(Decimal::new(repetition, scale, precision))
+}
+
 /// Strategy for fetching decimal values which can not be represented as either 32Bit or 64Bit
-pub struct Decimal {
+struct Decimal {
     repetition: Repetition,
     scale: i32,
     precision: usize,

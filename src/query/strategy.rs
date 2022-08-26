@@ -19,7 +19,7 @@ use crate::{
         binary::Binary,
         boolean::Boolean,
         date::Date,
-        decimal::Decimal,
+        decimal::decmial_fetch_strategy,
         identical::{
             fetch_decimal_as_identical_with_precision, fetch_identical,
             fetch_identical_with_converted_type,
@@ -102,7 +102,7 @@ pub fn strategy_from_column_description(
             }
         }
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-            Box::new(Decimal::new(repetition, scale as i32, precision))
+            decmial_fetch_strategy(repetition, scale as i32, precision)
         }
         DataType::Timestamp { precision } => Box::new(Timestamp::new(repetition, precision)),
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
