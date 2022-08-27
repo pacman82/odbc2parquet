@@ -365,6 +365,8 @@ fn query_decimals_optional() {
         .stdout(eq(expected_values));
 }
 
+/// Query a numeric/decimal which could be represented is i64 as text instead to accomondate missing
+/// driver support for i64
 #[test]
 fn query_large_numeric_as_text() {
     // Setup table for test
@@ -413,6 +415,56 @@ fn query_large_numeric_as_text() {
         .assert()
         .success()
         .stdout(eq(expected_values));
+}
+
+#[test]
+fn query_large_numeric() {
+    // Setup table for test
+    let table_name = "QueryLargeNumeric";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (-1234567890.123);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Use the parquet-read tool to verify the output. It can be installed with
+    // `cargo install parquet`.
+    let expected_values = "{a: -1234567890.123}\n";
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(&["--file-name", out_str][..])
+        .assert()
+        .success()
+        .stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains(
+        "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (6) a (DECIMAL(13,3));\n}",
+    ));
 }
 
 #[test]
