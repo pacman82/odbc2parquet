@@ -62,7 +62,7 @@ pub fn decmial_fetch_strategy(
                 ))
             }
         }
-        (0..=18, 1..=18) => {
+        (10..=18, 1..=18) => {
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 18 we will store them as i64 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int64Type>::new(
