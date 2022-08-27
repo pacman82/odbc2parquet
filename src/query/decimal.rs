@@ -15,7 +15,7 @@ use parquet::{
 use crate::parquet_buffer::ParquetBuffer;
 
 use super::{
-    identical::fetch_decimal_as_identical_with_precision, integer::Int64FromText,
+    identical::fetch_decimal_as_identical_with_precision, integer::IntegerFromText,
     strategy::ColumnFetchStrategy,
 };
 
@@ -27,15 +27,26 @@ pub fn decmial_fetch_strategy(
     driver_does_support_i64: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
     match (precision, scale) {
-        // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can use
-        // the same physical type to store them in parquet.
         (0..=9, 0) => {
+            // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can
+            // use the same physical type to store them in parquet.
             fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, precision as i32)
         }
-        // Values with scale 0 and precision <= 18 can be fetched as i64 from the ODBC and we can
-        // use the same physical type to store them in parquet. That is, if the database does
-        // support fetching values as 64Bit integers.
+        // (0..=9, 1..=9) => {
+        //     // As these values have a scale unequal to 0 we read them from the datebase as text, but
+        //     // since their precision is <= 9 we will store them as i32 (physical parquet type)
+
+        //     let repetition = if is_optional {
+        //         Repetition::OPTIONAL
+        //     } else {
+        //         Repetition::REQUIRED
+        //     };
+        //     Box::new(DecimalAsBinary::new(repetition, scale, precision))
+        // }
         (10..=18, 0) => {
+            // Values with scale 0 and precision <= 18 can be fetched as i64 from the ODBC and we
+            // can use the same physical type to store them in parquet. That is, if the database
+            // does support fetching values as 64Bit integers.
             if driver_does_support_i64 {
                 fetch_decimal_as_identical_with_precision::<Int64Type>(
                     is_optional,
@@ -44,7 +55,7 @@ pub fn decmial_fetch_strategy(
             } else {
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.
-                Box::new(Int64FromText::new(precision, is_optional))
+                Box::new(IntegerFromText::<Int64Type>::new(precision, is_optional))
             }
         }
         (_, _) => {
@@ -53,20 +64,20 @@ pub fn decmial_fetch_strategy(
             } else {
                 Repetition::REQUIRED
             };
-            Box::new(Decimal::new(repetition, scale, precision))
+            Box::new(DecimalAsBinary::new(repetition, scale, precision))
         }
     }
 }
 
 /// Strategy for fetching decimal values which can not be represented as either 32Bit or 64Bit
-struct Decimal {
+struct DecimalAsBinary {
     repetition: Repetition,
     scale: i32,
     precision: usize,
     length_in_bytes: usize,
 }
 
-impl Decimal {
+impl DecimalAsBinary {
     pub fn new(repetition: Repetition, scale: i32, precision: usize) -> Self {
         // Length of the two's complement.
         let num_binary_digits = precision as f64 * 10f64.log2();
@@ -83,7 +94,7 @@ impl Decimal {
     }
 }
 
-impl ColumnFetchStrategy for Decimal {
+impl ColumnFetchStrategy for DecimalAsBinary {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
             .with_length(self.length_in_bytes.try_into().unwrap())

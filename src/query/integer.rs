@@ -1,42 +1,51 @@
+use std::marker::PhantomData;
+
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
 use parquet::{
     basic::{ConvertedType, Repetition},
     column::writer::ColumnWriter,
-    data_type::{DataType as _, Int64Type},
+    data_type::DataType,
     schema::types::Type,
 };
 
-use crate::parquet_buffer::ParquetBuffer;
+use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
 use super::strategy::ColumnFetchStrategy;
 
 /// Query a column as text and write it as 64 Bit integer.
-pub struct Int64FromText {
+pub struct IntegerFromText<Pdt> {
     /// Maximum number of expected digits of the integer
     num_digits: usize,
     /// `true` if NULL is allowed, `false` otherwise
     is_optional: bool,
+    /// Parquet Data Type
+    _pdt: PhantomData<Pdt>,
 }
 
-impl Int64FromText {
+impl<Pdt> IntegerFromText<Pdt> {
     pub fn new(num_digits: usize, is_optional: bool) -> Self {
         Self {
             num_digits,
             is_optional,
+            _pdt: PhantomData,
         }
     }
 }
 
-impl ColumnFetchStrategy for Int64FromText {
+impl<Pdt> ColumnFetchStrategy for IntegerFromText<Pdt>
+where
+    Pdt: DataType,
+    Pdt::T: FromRadix10Signed + BufferedDataType,
+{
     fn parquet_type(&self, name: &str) -> Type {
         let repetition = if self.is_optional {
             Repetition::OPTIONAL
         } else {
             Repetition::REQUIRED
         };
-        let physical_type = Int64Type::get_physical_type();
+        let physical_type = Pdt::get_physical_type();
 
         Type::primitive_type_builder(name, physical_type)
             .with_repetition(repetition)
@@ -61,12 +70,12 @@ impl ColumnFetchStrategy for Int64FromText {
         column_writer: &mut ColumnWriter,
         column_view: AnyColumnView,
     ) -> Result<(), Error> {
-        let column_writer = Int64Type::get_column_writer_mut(column_writer).unwrap();
+        let column_writer = Pdt::get_column_writer_mut(column_writer).unwrap();
         if let AnyColumnView::Text(view) = column_view {
             parquet_buffer.write_optional(
                 column_writer,
                 view.iter()
-                    .map(|value| value.map(|text| i64::from_radix_10_signed(text).0)),
+                    .map(|value| value.map(|text| Pdt::T::from_radix_10_signed(text).0)),
             )?;
         } else {
             panic!(
