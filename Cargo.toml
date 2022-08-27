@@ -24,7 +24,6 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = "0.48.0"
 anyhow = "1.0.62"
 stderrlog = "0.5.3"
 log = "0.4.17"
@@ -43,6 +42,21 @@ features = ["derive", "env"]
 version = "20.0.0"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
+
+# On windows we can not assume the default locale to be UTF-8, so we compile odbc-api with default
+# features implying the use of UTF-16 for queries, connection strings and error messages. This
+# should work on any system
+[target.'cfg(target_os = "windows")'.dependencies]
+odbc-api = "0.48.0"
+
+# On linux we assume use of a UTF-8 locale. So we set the narrow features implying that for queries,
+# connection strings and error messages the driver and driver manager supply utf8-strings. This
+# might also be slightly faster since no transcoding between UTF-8 and UTF-16 is required.
+# Overall speed always depends on the driver, but it is reasonable to assume this is faster, more
+# importantly, UTF-8 is likely to be more battled tested on these platforms, while UTF-16 is "only"
+# required by the standard.
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+odbc-api = { version = "0.48.0", features = ["narrow"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.4"
