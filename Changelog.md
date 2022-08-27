@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.0
+
+* Use narrow text on non-windows platforms by default. Connection strings, queries and error messages are assumed to be UTF-8 and not transcoded to and from UTF-16.
+
 ## 0.10.0
 
 * Physical type of `DECIMAL` is now `INT64` instead of `FIXED_LEN_BYTE_ARRAY` if precision does not exceed 18.
