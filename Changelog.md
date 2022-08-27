@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0
+
+* Fetching decimal columns with scale `0` and `--driver-does-not-support-64bit-integers` now specifies the logical type as `DECMIAL`. Physical type remains a 64 Bit Integer.
+* Updated dependencies
+
 ## 0.9.5
 
 * Updated dependencies

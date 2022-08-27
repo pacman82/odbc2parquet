@@ -4,7 +4,6 @@ mod boolean;
 mod date;
 mod decimal;
 mod identical;
-mod integer;
 mod parquet_writer;
 mod strategy;
 mod text;

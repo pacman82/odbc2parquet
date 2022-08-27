@@ -358,8 +358,6 @@ fn query_large_numeric_as_text() {
     );
     conn.execute(&insert, ()).unwrap();
 
-    let expected_values = "{a: 1234567890}\n";
-
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -384,7 +382,8 @@ fn query_large_numeric_as_text() {
         .assert()
         .success();
 
-    parquet_read_out(out_str).stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq("{a: 1234567890.}\n"));
+    parquet_schema_out(out_str).stdout(contains("{\n  REQUIRED INT64 a (DECIMAL(10));\n}"));
 }
 
 #[test]
