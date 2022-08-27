@@ -8,20 +8,48 @@ use odbc_api::{
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::{DataType as _, FixedLenByteArrayType},
+    data_type::{DataType as _, FixedLenByteArrayType, Int32Type, Int64Type},
     schema::types::Type,
 };
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::ColumnFetchStrategy;
+use super::{
+    identical::fetch_decimal_as_identical_with_precision, integer::Int64FromText,
+    strategy::ColumnFetchStrategy,
+};
 
+/// Choose how to fetch decimals from ODBC and store them in parquet
 pub fn decmial_fetch_strategy(
-    repetition: Repetition,
+    is_optional: bool,
     scale: i32,
     precision: usize,
+    driver_does_support_i64: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
-    Box::new(Decimal::new(repetition, scale, precision))
+    match (precision, scale, driver_does_support_i64) {
+        // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can use
+        // the same physical type to store them in parquet.
+        (0..=9, 0, _) => {
+            fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, precision as i32)
+        }
+        // Values with scale 0 and precision <= 18 can be fetched as i64 from the ODBC and we can
+        // use the same physical type to store them in parquet. That is, if the database does
+        // support fetching values as 64Bit integers.
+        (10..=18, 0, true) => {
+            fetch_decimal_as_identical_with_precision::<Int64Type>(is_optional, precision as i32)
+        }
+        // The database does not support 64Bit integers (looking at you Oracle). So we fetch the
+        // values as text and convert them into 64Bit integers.
+        (10..=18, 0, false) => Box::new(Int64FromText::new(precision, is_optional)),
+        (_, _, _) => {
+            let repetition = if is_optional {
+                Repetition::OPTIONAL
+            } else {
+                Repetition::REQUIRED
+            };
+            Box::new(Decimal::new(repetition, scale, precision))
+        }
+    }
 }
 
 /// Strategy for fetching decimal values which can not be represented as either 32Bit or 64Bit

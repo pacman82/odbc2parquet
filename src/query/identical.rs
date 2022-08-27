@@ -16,7 +16,7 @@ use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 use super::ColumnFetchStrategy;
 
 /// Copy identical optional data from ODBC to Parquet.
-struct IdenticalOptional<Pdt> {
+pub struct IdenticalOptional<Pdt> {
     converted_type: ConvertedType,
     precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
@@ -88,7 +88,7 @@ where
 
 /// Optimized strategy if ODBC and Parquet type are identical, and we know the data source not to
 /// contain any NULLs.
-struct IdenticalRequired<Pdt> {
+pub struct IdenticalRequired<Pdt> {
     converted_type: ConvertedType,
     precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,

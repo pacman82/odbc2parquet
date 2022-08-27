@@ -20,11 +20,7 @@ use crate::{
         boolean::Boolean,
         date::Date,
         decimal::decmial_fetch_strategy,
-        identical::{
-            fetch_decimal_as_identical_with_precision, fetch_identical,
-            fetch_identical_with_converted_type,
-        },
-        integer::Int64FromText,
+        identical::{fetch_identical, fetch_identical_with_converted_type},
         text::{Utf16ToUtf8, Utf8},
         timestamp::Timestamp,
     },
@@ -79,30 +75,13 @@ pub fn strategy_from_column_description(
             fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_32)
         }
         DataType::Date => Box::new(Date::new(repetition)),
-        DataType::Decimal {
-            scale: 0,
-            precision: p @ 0..=9,
-        }
-        | DataType::Numeric {
-            scale: 0,
-            precision: p @ 0..=9,
-        } => fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, p as i32),
-        DataType::Decimal {
-            scale: 0,
-            precision: p @ 0..=18,
-        }
-        | DataType::Numeric {
-            scale: 0,
-            precision: p @ 0..=18,
-        } => {
-            if driver_does_support_i64 {
-                fetch_decimal_as_identical_with_precision::<Int64Type>(is_optional, p as i32)
-            } else {
-                Box::new(Int64FromText::new(p, is_optional))
-            }
-        }
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-            decmial_fetch_strategy(repetition, scale as i32, precision)
+            decmial_fetch_strategy(
+                is_optional,
+                scale as i32,
+                precision,
+                driver_does_support_i64,
+            )
         }
         DataType::Timestamp { precision } => Box::new(Timestamp::new(repetition, precision)),
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
