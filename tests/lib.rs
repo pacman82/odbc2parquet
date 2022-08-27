@@ -15,8 +15,11 @@ use parquet::{
 use predicates::{ord::eq, str::contains};
 use tempfile::{tempdir, NamedTempFile};
 
-const MSSQL: &str =
-    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
+const MSSQL: &str = "Driver={ODBC Driver 18 for SQL Server};\
+    Server=localhost;\
+    TrustServerCertificate=yes;\
+    UID=SA;\
+    PWD=My@Test@Password1;";
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
@@ -45,7 +48,8 @@ fn append_user_and_password_to_connection_string() {
     setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     // Connection string without user name and password.
-    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+    let connection_string =
+        "Driver={ODBC Driver 18 for SQL Server};Server=localhost;TrustServerCertificate=yes;";
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -425,9 +429,7 @@ fn query_numeric_13_3() {
     let expected_values = "{a: -1234567890.123}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains(
-        "{\n  REQUIRED INT64 a (DECIMAL(13,3));\n}",
-    ));
+    parquet_schema_out(out_str).stdout(contains("{\n  REQUIRED INT64 a (DECIMAL(13,3));\n}"));
 }
 
 #[test]
@@ -1043,8 +1045,11 @@ fn nchar_not_truncated() {
     let table_name = "NCharNotTruncated";
     setup_empty_table(&conn, table_name, &["NCHAR(1)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &"Ü".into_parameter(),
+    )
+    .unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1084,8 +1089,11 @@ fn system_encoding() {
     let table_name = "SystemEncoding";
     setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &"Ü".into_parameter(),
+    )
+    .unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1124,8 +1132,11 @@ fn utf_16_encoding() {
     let table_name = "Utf16Encoding";
     setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &"Ü".into_parameter(),
+    )
+    .unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1164,8 +1175,11 @@ fn auto_encoding() {
     let table_name = "AutoEncoding";
     setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &"Ü".into_parameter(),
+    )
+    .unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
