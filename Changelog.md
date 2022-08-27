@@ -2,6 +2,7 @@
 
 ## 0.10.0
 
+* Physical type of `DECIMAL` is now `INT32` instead of `FIXED_LEN_BYTE_ARRAY` if precision does not exceed 9.
 * Dropped support for Decimals and a Numeric with precision higher than `38`. Please open issue if required. Microsoft SQL does support this type up to this precision so currently there is no easy way to test for `DECIMAL`s which can not be represented as `i128`.
 * Fetching decimal columns with scale `0` and `--driver-does-not-support-64bit-integers` now specifies the logical type as `DECIMAL`. Physical type remains a 64 Bit Integer.
 * Updated dependencies

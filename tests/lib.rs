@@ -291,8 +291,8 @@ fn query_decimals() {
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
-        "message schema {\n  REQUIRED FIXED_LEN_BYTE_ARRAY (2) a (DECIMAL(3,2));\n  \
-                REQUIRED FIXED_LEN_BYTE_ARRAY (2) b (DECIMAL(3,2));\n}",
+        "message schema {\n  REQUIRED INT32 a (DECIMAL(3,2));\n  \
+                REQUIRED INT32 b (DECIMAL(3,2));\n}",
     ));
 }
 
