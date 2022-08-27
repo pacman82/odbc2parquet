@@ -14,8 +14,8 @@ use odbc_api::{
     Environment,
 };
 use parquet::basic::{Compression, Encoding};
-use stderrlog::ColorChoice;
 use std::{fs::File, path::PathBuf};
+use stderrlog::ColorChoice;
 
 use clap::{Args, IntoApp, Parser};
 use clap_complete::{generate, Shell};
@@ -37,7 +37,7 @@ struct Cli {
     verbose: usize,
     #[clap(long)]
     /// Never emit colors.
-    /// 
+    ///
     /// Controls the colors of the log output. If specified the log output will never be colored.
     /// If not specified the tool will try to emit Colors, but not force it. If `TERM=dumb` or
     /// `NO_COLOR` is defined, then colors will not be used.

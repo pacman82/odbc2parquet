@@ -23,6 +23,12 @@ lazy_static! {
     static ref ENV: Environment = Environment::new().unwrap();
 }
 
+// Use the parquet-read tool to verify values. It can be installed with `cargo install parquet`.
+fn parquet_read_out(file: &str) -> Assert {
+    let mut cmd = Command::new("parquet-read");
+    cmd.args(&["--file-name", file]).assert().success()
+}
+
 /// Assertions on the output of parquet_schema.
 fn parquet_schema_out(file: &str) -> Assert {
     let mut cmd = Command::new("parquet-schema");
@@ -120,13 +126,7 @@ fn nullable_parquet_buffers() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 #[test]
@@ -193,13 +193,7 @@ fn parameters_in_query() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 #[test]
@@ -255,13 +249,7 @@ fn query_sales() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 #[test]
@@ -299,14 +287,8 @@ fn query_decimals() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
     let expected_values = "{a: 1.23, b: 1.23}\n";
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
         "message schema {\n  REQUIRED FIXED_LEN_BYTE_ARRAY (2) a (DECIMAL(3,2));\n  \
@@ -356,13 +338,7 @@ fn query_decimals_optional() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 /// Query a numeric/decimal which could be represented is i64 as text instead to accomondate missing
@@ -408,13 +384,7 @@ fn query_large_numeric_as_text() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 #[test]
@@ -453,14 +423,8 @@ fn query_large_numeric() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
     let expected_values = "{a: -1234567890.123}\n";
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
         "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (6) a (DECIMAL(13,3));\n}",
@@ -538,13 +502,7 @@ fn query_all_the_types() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 #[test]
@@ -593,13 +551,7 @@ fn query_bits() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 #[test]
@@ -647,13 +599,7 @@ fn query_doubles() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 
     // Also verify schema to ensure f64 is choosen and not f32
     parquet_schema_out(out_str).stdout(contains(expected_schema));
@@ -700,13 +646,7 @@ fn read_query_from_stdin() {
         .assert()
         .success();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected_values));
+    parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
 #[test]
@@ -747,37 +687,9 @@ fn split_files_on_num_row_groups() {
 
     // Expect one file per row in table (3)
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_1.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
-
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_2.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
-
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_3.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
+    parquet_read_out(out_dir.path().join("out_1.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_2.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_3.par").to_str().unwrap());
 }
 
 #[test]
@@ -818,37 +730,9 @@ fn split_files_on_size_limit() {
 
     // Expect one file per row in table (3)
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_1.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
-
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_2.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
-
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(
-        &[
-            "--file-name",
-            out_dir.path().join("out_3.par").to_str().unwrap(),
-        ][..],
-    )
-    .assert()
-    .success();
+    parquet_read_out(out_dir.path().join("out_1.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_2.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_3.par").to_str().unwrap());
 }
 
 #[test]
@@ -890,13 +774,7 @@ fn varbinary_column() {
 
     let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 #[test]
@@ -1020,14 +898,7 @@ fn binary_column() {
         .success();
 
     let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
-
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 /// The prefer-varbinary flag must enforce mapping of binary colmuns to BYTE_ARRAY instead of
@@ -1076,14 +947,7 @@ fn prefer_varbinary() {
         .success();
 
     let expected = "{a: [72, 101, 108, 108, 111]}\n{a: [87, 111, 114, 108, 100]}\n{a: null}\n";
-
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 
     parquet_schema_out(out_str).stdout(contains("OPTIONAL BYTE_ARRAY a;"));
 }
@@ -1125,13 +989,7 @@ fn interior_nul_in_varchar() {
 
     let expected = "{a: \"a\0b\"}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 /// Fixed size NCHAR column on database is not truncated then value is passed into a narrow buffer.
@@ -1172,13 +1030,7 @@ fn nchar_not_truncated() {
 
     let expected = "{a: \"Ü\"}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 /// Test non ASCII character with system encoding
@@ -1219,13 +1071,7 @@ fn system_encoding() {
 
     let expected = "{a: \"Ü\"}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 /// Test non ASCII character with utf16 encoding
@@ -1265,13 +1111,7 @@ fn utf_16_encoding() {
 
     let expected = "{a: \"Ü\"}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 /// Test non ASCII character with automatic codec detection
@@ -1311,13 +1151,7 @@ fn auto_encoding() {
 
     let expected = "{a: \"Ü\"}\n";
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(out_str).stdout(eq(expected));
 }
 
 #[test]
@@ -3166,16 +3000,10 @@ pub fn write_query_result_to_stdout() {
     let mut output_file = NamedTempFile::new().unwrap();
     output_file.write_all(output).unwrap();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
     let expected = "{a: 42}\n";
 
     let output_path = output_file.path().to_str().unwrap();
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", output_path])
-        .assert()
-        .success()
-        .stdout(eq(expected));
+    parquet_read_out(output_path).stdout(eq(expected));
 }
 
 /// Write query output to stdout
@@ -3372,13 +3200,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     )
     .unwrap();
 
-    // Use the parquet-read tool to verify the output. It can be installed with
-    // `cargo install parquet`.
-    let mut cmd = Command::new("parquet-read");
-    cmd.args(&["--file-name", out_str][..])
-        .assert()
-        .success()
-        .stdout(expectation)
+    parquet_read_out(out_str).stdout(expectation)
 }
 
 /// Consumes a cursor and generates a CSV string from the result set.

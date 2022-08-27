@@ -17,7 +17,10 @@ use self::{
     strategy::{strategy_from_column_description, ColumnFetchStrategy},
 };
 
-use std::{sync::Arc, io::{stdin, Read}};
+use std::{
+    io::{stdin, Read},
+    sync::Arc,
+};
 
 use anyhow::{bail, Error};
 use io_arg::IoArg;
