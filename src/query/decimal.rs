@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::{convert::TryInto, marker::PhantomData};
 
 use anyhow::Error;
 use atoi::FromRadix10Signed;
@@ -9,11 +9,11 @@ use odbc_api::{
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::{DataType as _, FixedLenByteArrayType, Int32Type, Int64Type},
+    data_type::{DataType as ParquetDataType, FixedLenByteArrayType, Int32Type, Int64Type},
     schema::types::Type,
 };
 
-use crate::parquet_buffer::ParquetBuffer;
+use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
 use super::{
     identical::fetch_decimal_as_identical_with_precision, strategy::ColumnFetchStrategy, text::Utf8,
@@ -41,7 +41,9 @@ pub fn decmial_fetch_strategy(
         (0..=9, 1..=9) => {
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 9 we will store them as i32 (physical parquet type)
-            Box::new(DecimalAsI32::new(precision, scale, repetition))
+            Box::new(DecimalTextToInteger::<Int32Type>::new(
+                precision, scale, repetition,
+            ))
         }
         (10..=18, 0) => {
             // Values with scale 0 and precision <= 18 can be fetched as i64 from the ODBC and we
@@ -55,8 +57,17 @@ pub fn decmial_fetch_strategy(
             } else {
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.
-                Box::new(TextAsI64::decimal(is_optional, precision as i32))
+                Box::new(DecimalTextToInteger::<Int64Type>::new(
+                    precision, 0, repetition,
+                ))
             }
+        }
+        (0..=18, 1..=18) => {
+            // As these values have a scale unequal to 0 we read them from the datebase as text, but
+            // since their precision is <= 18 we will store them as i64 (physical parquet type)
+            Box::new(DecimalTextToInteger::<Int64Type>::new(
+                precision, scale, repetition,
+            ))
         }
         (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
         (_, _) => {
@@ -71,25 +82,31 @@ pub fn decmial_fetch_strategy(
     }
 }
 
-struct DecimalAsI32 {
+struct DecimalTextToInteger<Pdt> {
     precision: usize,
     scale: i32,
     repetition: Repetition,
+    _pdt: PhantomData<Pdt>,
 }
 
-impl DecimalAsI32 {
+impl<Pdt> DecimalTextToInteger<Pdt> {
     fn new(precision: usize, scale: i32, repetition: Repetition) -> Self {
         Self {
             precision,
             scale,
             repetition,
+            _pdt: PhantomData,
         }
     }
 }
 
-impl ColumnFetchStrategy for DecimalAsI32 {
+impl<Pdt> ColumnFetchStrategy for DecimalTextToInteger<Pdt>
+where
+    Pdt: ParquetDataType,
+    Pdt::T: FromRadix10Signed + BufferedDataType,
+{
     fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, PhysicalType::INT32)
+        Type::primitive_type_builder(name, Pdt::get_physical_type())
             .with_converted_type(ConvertedType::DECIMAL)
             .with_precision(self.precision as i32)
             .with_scale(self.scale)
@@ -124,7 +141,7 @@ impl ColumnFetchStrategy for DecimalAsI32 {
         // allocated once and reused for each value.
         let mut digits: Vec<u8> = Vec::with_capacity(self.precision + 2);
 
-        let column_writer = Int32Type::get_column_writer_mut(column_writer).unwrap();
+        let column_writer = Pdt::get_column_writer_mut(column_writer).unwrap();
         let view = column_view.as_text_view().expect(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
             https://github.com/pacman82/odbc2parquet/issues.",
@@ -135,7 +152,7 @@ impl ColumnFetchStrategy for DecimalAsI32 {
                 value.map(|text| {
                     digits.clear();
                     digits.extend(text.iter().filter(|&&c| c != b'.'));
-                    i32::from_radix_10_signed(&digits).0
+                    Pdt::T::from_radix_10_signed(&digits).0
                 })
             }),
         )
@@ -240,75 +257,4 @@ fn write_decimal_col(
     )?;
 
     Ok(())
-}
-
-/// Query a column as text and write it as 64 Bit integer.
-struct TextAsI64 {
-    /// `true` if NULL is allowed, `false` otherwise
-    is_optional: bool,
-    /// Maximum total number of digits in the decimal
-    precision: i32,
-}
-
-impl TextAsI64 {
-    /// Converted type is decimal
-    pub fn decimal(is_optional: bool, precision: i32) -> Self {
-        Self {
-            is_optional,
-            precision,
-        }
-    }
-}
-
-impl ColumnFetchStrategy for TextAsI64 {
-    fn parquet_type(&self, name: &str) -> Type {
-        let repetition = if self.is_optional {
-            Repetition::OPTIONAL
-        } else {
-            Repetition::REQUIRED
-        };
-        let physical_type = Int64Type::get_physical_type();
-
-        Type::primitive_type_builder(name, physical_type)
-            .with_repetition(repetition)
-            .with_converted_type(ConvertedType::DECIMAL)
-            .with_precision(self.precision)
-            .with_scale(0)
-            .build()
-            .unwrap()
-    }
-
-    fn buffer_description(&self) -> BufferDescription {
-        // +1 not for terminating zero, but for the sign charactor like `-` or `+`. Also one
-        // additional space for the radix character
-        let max_str_len = odbc_api::DataType::Decimal {
-            precision: self.precision.try_into().unwrap(),
-            scale: 0,
-        }
-        .display_size()
-        .unwrap();
-        BufferDescription {
-            nullable: self.is_optional,
-            kind: BufferKind::Text { max_str_len },
-        }
-    }
-
-    fn copy_odbc_to_parquet(
-        &self,
-        parquet_buffer: &mut ParquetBuffer,
-        column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
-    ) -> Result<(), Error> {
-        let column_writer = Int64Type::get_column_writer_mut(column_writer).unwrap();
-        let view = column_view.as_text_view().expect(
-            "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
-            https://github.com/pacman82/odbc2parquet/issues.",
-        );
-        parquet_buffer.write_optional(
-            column_writer,
-            view.iter()
-                .map(|value| value.map(|text| i64::from_radix_10_signed(text).0)),
-        )?;
-        Ok(())
-    }
 }

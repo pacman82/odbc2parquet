@@ -426,7 +426,7 @@ fn query_numeric_13_3() {
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
-        "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (6) a (DECIMAL(13,3));\n}",
+        "{\n  REQUIRED INT64 a (DECIMAL(13,3));\n}",
     ));
 }
 
