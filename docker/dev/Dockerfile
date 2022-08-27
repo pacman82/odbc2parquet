@@ -15,7 +15,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     build-essential \
     unixodbc-dev \
-    msodbcsql18
+    msodbcsql17
 
 # Setup cargo and install cargo packages required for tests
 USER vscode

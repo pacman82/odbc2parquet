@@ -15,9 +15,8 @@ use parquet::{
 use predicates::{ord::eq, str::contains};
 use tempfile::{tempdir, NamedTempFile};
 
-const MSSQL: &str = "Driver={ODBC Driver 18 for SQL Server};\
+const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};\
     Server=localhost;\
-    TrustServerCertificate=yes;\
     UID=SA;\
     PWD=My@Test@Password1;";
 
