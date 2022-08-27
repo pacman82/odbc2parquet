@@ -1,4 +1,5 @@
 use anyhow::Error;
+use atoi::FromRadix10Signed;
 use chrono::NaiveDate;
 use num_bigint::BigInt;
 use odbc_api::sys::Timestamp;
@@ -60,15 +61,9 @@ impl ParquetBuffer {
 
     /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
     fn twos_complement_i128(
-        decimal: &[u8],
         length: usize,
-        digits: &mut Vec<u8>,
+        digits: &[u8],
     ) -> FixedLenByteArray {
-        use atoi::FromRadix10Signed;
-
-        digits.clear();
-        digits.extend(decimal.iter().filter(|&&c| c != b'.'));
-
         let (num, _consumed) = i128::from_radix_10_signed(digits);
 
         let out = num.to_be_bytes()[(16 - length)..].to_owned();
@@ -79,15 +74,9 @@ impl ParquetBuffer {
 
     // Use num big int to calculate the two complements of arbitrary size
     fn twos_complement_big_int(
-        decimal: &[u8],
         length: usize,
-        digits: &mut Vec<u8>,
+        digits: &[u8],
     ) -> FixedLenByteArray {
-        use atoi::FromRadix10Signed;
-
-        digits.clear();
-        digits.extend(decimal.iter().filter(|&&c| c != b'.'));
-
         let (num, _consumed) = BigInt::from_radix_10_signed(digits);
         let mut out = num.to_signed_bytes_be();
 
@@ -144,12 +133,16 @@ impl ParquetBuffer {
 
         if precision < 39 {
             self.write_optional_any(cw, source, |item| {
-                Self::twos_complement_i128(item, length_in_bytes, &mut digits)
+                digits.clear();
+                digits.extend(item.iter().filter(|&&c| c != b'.'));
+                Self::twos_complement_i128(length_in_bytes, &digits)
             })
         } else {
             // The big int implementation is slow, let's use it only if we have to
             self.write_optional_any(cw, source, |item| {
-                Self::twos_complement_big_int(item, length_in_bytes, &mut digits)
+                digits.clear();
+                digits.extend(item.iter().filter(|&&c| c != b'.'));
+                Self::twos_complement_big_int(length_in_bytes, &digits)
             })
         }
     }
