@@ -15,7 +15,9 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{identical::fetch_decimal_as_identical_with_precision, strategy::ColumnFetchStrategy};
+use super::{
+    identical::fetch_decimal_as_identical_with_precision, strategy::ColumnFetchStrategy, text::Utf8,
+};
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
 pub fn decmial_fetch_strategy(
@@ -24,6 +26,11 @@ pub fn decmial_fetch_strategy(
     precision: usize,
     driver_does_support_i64: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
+    let repetition = if is_optional {
+        Repetition::OPTIONAL
+    } else {
+        Repetition::REQUIRED
+    };
     match (precision, scale) {
         (0..=9, 0) => {
             // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can
@@ -56,13 +63,15 @@ pub fn decmial_fetch_strategy(
                 Box::new(I64FromText::decimal(is_optional, precision as i32))
             }
         }
+        (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
         (_, _) => {
-            let repetition = if is_optional {
-                Repetition::OPTIONAL
-            } else {
-                Repetition::REQUIRED
-            };
-            Box::new(DecimalAsBinary::new(repetition, scale, precision))
+            let length = odbc_api::DataType::Decimal {
+                precision,
+                scale: scale.try_into().unwrap(),
+            }
+            .display_size()
+            .unwrap();
+            Box::new(Utf8::with_bytes_length(repetition, length))
         }
     }
 }
@@ -141,9 +150,24 @@ fn write_decimal_col(
     length_in_bytes: usize,
     precision: usize,
 ) -> Result<(), Error> {
+    // This vec is going to hold the digits with sign, but without the decimal point. It is
+    // allocated once and reused for each value.
+    let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
+
     let column_writer = FixedLenByteArrayType::get_column_writer_mut(column_writer).unwrap();
     if let AnyColumnView::Text(view) = column_reader {
-        parquet_buffer.write_decimal(column_writer, view.iter(), length_in_bytes, precision)?;
+        parquet_buffer.write_twos_complement_i128(
+            column_writer,
+            view.iter().map(|field| {
+                field.map(|text| {
+                    digits.clear();
+                    digits.extend(text.iter().filter(|&&c| c != b'.'));
+                    let (num, _consumed) = i128::from_radix_10_signed(&digits);
+                    num
+                })
+            }),
+            length_in_bytes,
+        )?;
     } else {
         panic!(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \

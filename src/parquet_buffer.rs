@@ -1,7 +1,5 @@
 use anyhow::Error;
-use atoi::FromRadix10Signed;
 use chrono::NaiveDate;
-use num_bigint::BigInt;
 use odbc_api::sys::Timestamp;
 use parquet::{
     column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
@@ -59,40 +57,6 @@ impl ParquetBuffer {
         self.values_bool.resize(num_rows, false);
     }
 
-    /// Use an i128 to calculate the twos complement of Decimals with a precision up to and including 38
-    fn twos_complement_i128(
-        length: usize,
-        digits: &[u8],
-    ) -> FixedLenByteArray {
-        let (num, _consumed) = i128::from_radix_10_signed(digits);
-
-        let out = num.to_be_bytes()[(16 - length)..].to_owned();
-        // Vec<u8> -> ByteArray -> FixedLenByteArray
-        let out: ByteArray = out.into();
-        out.into()
-    }
-
-    // Use num big int to calculate the two complements of arbitrary size
-    fn twos_complement_big_int(
-        length: usize,
-        digits: &[u8],
-    ) -> FixedLenByteArray {
-        let (num, _consumed) = BigInt::from_radix_10_signed(digits);
-        let mut out = num.to_signed_bytes_be();
-
-        let num_leading_bytes = length - out.len();
-        let fill: u8 = if num.sign() == num_bigint::Sign::Minus {
-            255
-        } else {
-            0
-        };
-        out.resize(length, fill);
-        out.rotate_right(num_leading_bytes);
-        // Vec<u8> -> ByteArray -> FixedByteArray
-        let out: ByteArray = out.into();
-        out.into()
-    }
-
     fn timestamp_nanos(ts: &Timestamp) -> i64 {
         let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
             .and_hms_nano(
@@ -120,31 +84,19 @@ impl ParquetBuffer {
         Ok(())
     }
 
-    pub fn write_decimal<'o>(
+    /// Writes an i128 twos complement representation into a fixed sized byte array
+    pub fn write_twos_complement_i128(
         &mut self,
         cw: &mut ColumnWriterImpl<FixedLenByteArrayType>,
-        source: impl Iterator<Item = Option<&'o [u8]>>,
+        source: impl Iterator<Item = Option<i128>>,
         length_in_bytes: usize,
-        precision: usize,
     ) -> Result<(), Error> {
-        // This vec is going to hold the digits with sign, but without the decimal point. It is
-        // allocated once and reused for each value.
-        let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
-
-        if precision < 39 {
-            self.write_optional_any(cw, source, |item| {
-                digits.clear();
-                digits.extend(item.iter().filter(|&&c| c != b'.'));
-                Self::twos_complement_i128(length_in_bytes, &digits)
-            })
-        } else {
-            // The big int implementation is slow, let's use it only if we have to
-            self.write_optional_any(cw, source, |item| {
-                digits.clear();
-                digits.extend(item.iter().filter(|&&c| c != b'.'));
-                Self::twos_complement_big_int(length_in_bytes, &digits)
-            })
-        }
+        self.write_optional_any(cw, source, |num| {
+            let out = num.to_be_bytes()[(16 - length_in_bytes)..].to_owned();
+            // Vec<u8> -> ByteArray -> FixedLenByteArray
+            let out: ByteArray = out.into();
+            out.into()
+        })
     }
 
     fn write_optional_any<T, S>(

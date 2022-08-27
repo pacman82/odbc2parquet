@@ -1115,7 +1115,6 @@ dependencies = [
  "io-arg",
  "lazy_static",
  "log",
- "num-bigint",
  "num-traits",
  "odbc-api",
  "parquet",

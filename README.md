@@ -15,8 +15,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 
 | ODBC SQL Type         | Parquet Type            |
 |-----------------------|------------------------ |
-| Decimal(p, s)         | Decimal(p,s)            |
-| Numeric(p, s)         | Decimal(p,s)            |
+| Decimal(p < 39, s)    | Decimal(p,s)            |
+| Numeric(p < 39, s)    | Decimal(p,s)            |
 | Bit                   | Boolean                 |
 | Double                | Double                  |
 | Real                  | Float                   |

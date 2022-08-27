@@ -387,9 +387,9 @@ fn query_large_numeric_as_text() {
 }
 
 #[test]
-fn query_large_numeric() {
+fn query_numeric_13_3() {
     // Setup table for test
-    let table_name = "QueryLargeNumeric";
+    let table_name = "QueryNumeric13_3";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
     let insert = format!(
@@ -427,6 +427,50 @@ fn query_large_numeric() {
 
     parquet_schema_out(out_str).stdout(contains(
         "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (6) a (DECIMAL(13,3));\n}",
+    ));
+}
+
+#[test]
+fn query_numeric_33_3() {
+    // Setup table for test
+    let table_name = "QueryNumeric33_3";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["NUMERIC(33,3) NOT NULL"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        (-123456789012345678901234567890.123);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: -123456789012345678901234567890.123}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains(
+        "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (14) a (DECIMAL(33,3));\n}",
     ));
 }
 
