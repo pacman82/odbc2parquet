@@ -204,6 +204,13 @@ pub struct QueryOpt {
     /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
+    /// In case fetch results gets split into multiple files a suffix with a number will be appended
+    /// to each file name. Default suffix length is 2 leading to suffixes like e.g. `_03`. In case
+    /// you would expect thousands of files in your output you may want to set this to say `4` so
+    /// the zeros pad this to a 4 digit number in order to make the filenames more friendly for
+    /// lexical sorting.
+    #[clap(long, default_value="2")]
+    suffix_length: usize,
 }
 
 #[derive(Args)]

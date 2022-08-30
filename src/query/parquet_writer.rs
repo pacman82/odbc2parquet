@@ -38,6 +38,8 @@ pub struct ParquetWriter {
     num_file: u32,
     /// Keep track of curret file size so we can split it, should it get too large.
     current_file_size: ByteSize,
+    /// Length of the suffix, appended to the end of a file in case they are numbered.
+    suffix_length: usize,
 }
 
 impl ParquetWriter {
@@ -46,6 +48,7 @@ impl ParquetWriter {
         schema: Arc<Type>,
         file_size: FileSizeLimit,
         format_options: ParquetFormatOptions,
+        suffix_length: usize,
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
@@ -65,7 +68,7 @@ impl ParquetWriter {
             }
             IoArg::File(path) => {
                 let file = if file_size.output_is_splitted() {
-                    File::create(Self::path_with_suffix(&path, 1)?)?
+                    File::create(Self::path_with_suffix(&path, 1, suffix_length)?)?
                 } else {
                     File::create(&path)?
                 };
@@ -83,6 +86,7 @@ impl ParquetWriter {
             file_size,
             num_file: 1,
             current_file_size: ByteSize::b(0),
+            suffix_length,
         })
     }
 
@@ -93,7 +97,7 @@ impl ParquetWriter {
     /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
     /// previous one is reached.
     ///
-    /// # Parameters
+    /// # Parametersc
     ///
     /// * `num_batch`: Zero based num batch index
     pub fn next_row_group(
@@ -107,7 +111,11 @@ impl ParquetWriter {
         {
             self.num_file += 1;
             self.current_file_size = ByteSize::b(0);
-            let path = Self::path_with_suffix(self.path.as_deref().unwrap(), self.num_file)?;
+            let path = Self::path_with_suffix(
+                self.path.as_deref().unwrap(),
+                self.num_file,
+                self.suffix_length,
+            )?;
             let file: Box<dyn Write> = Box::new(File::create(path)?);
 
             // Create new writer as tmp writer
@@ -126,8 +134,12 @@ impl ParquetWriter {
         Ok(())
     }
 
-    fn path_with_suffix(path: &Path, num_file: u32) -> Result<PathBuf, Error> {
-        let suffix = format!("_{num_file:02}");
+    fn path_with_suffix(
+        path: &Path,
+        num_file: u32,
+        suffix_length: usize,
+    ) -> Result<PathBuf, Error> {
+        let suffix = pad_number(num_file, suffix_length);
         let mut stem = path
             .file_stem()
             .ok_or_else(|| format_err!("Output needs To have a file stem."))?
@@ -137,4 +149,17 @@ impl ParquetWriter {
         path_with_suffix = path_with_suffix.with_extension("par");
         Ok(path_with_suffix)
     }
+}
+
+fn pad_number(num_file: u32, suffix_length: usize) -> String {
+    let num_file = num_file.to_string();
+    let num_leading_zeroes = if suffix_length > num_file.len() {
+        suffix_length - num_file.len()
+    } else {
+        // Suffix is already large enough (if not too large) without leading zeroes
+        0
+    };
+    let padding = "0".repeat(num_leading_zeroes);
+    let suffix = format!("_{padding}{num_file}");
+    suffix
 }

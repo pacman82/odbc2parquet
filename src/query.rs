@@ -45,6 +45,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         column_compression_default,
         parquet_column_encoding,
         driver_does_not_support_64bit_integers,
+        suffix_length,
     } = opt;
 
     let batch_size = BatchSizeLimit::new(batch_size_row, batch_size_memory);
@@ -78,6 +79,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
             file_size,
             mapping_options,
             parquet_format_options,
+            suffix_length,
         )?;
     } else {
         eprintln!(
@@ -107,6 +109,7 @@ fn cursor_to_parquet(
     file_size: FileSizeLimit,
     mapping_options: MappingOptions,
     parquet_format_options: ParquetFormatOptions,
+    suffix_length: usize,
 ) -> Result<(), Error> {
     let strategies = make_schema(&mut cursor, mapping_options)?;
 
@@ -149,6 +152,7 @@ fn cursor_to_parquet(
         parquet_schema.clone(),
         file_size,
         parquet_format_options,
+        suffix_length
     )?;
 
     while let Some(buffer) = row_set_cursor
