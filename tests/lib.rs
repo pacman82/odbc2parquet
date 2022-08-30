@@ -780,6 +780,49 @@ fn split_files_on_size_limit() {
 }
 
 #[test]
+fn configurable_suffix_length() {
+    // Setup table for test
+    let table_name = "ConfigurableSuffixLength";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {} (A) VALUES(1)", table_name);
+    conn.execute(&insert, ()).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {}", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--batch-size-row",
+            "1",
+            "--file-size-threshold",
+            "1B",
+            "--suffix-length",
+            "4",
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Expect one file per row in table (3)
+
+    parquet_read_out(out_dir.path().join("out_0001.par").to_str().unwrap());
+}
+
+#[test]
 fn varbinary_column() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 
