@@ -65,7 +65,7 @@ impl ParquetWriter {
             }
             IoArg::File(path) => {
                 let file = if file_size.output_is_splitted() {
-                    File::create(Self::path_with_suffix(&path, "_1")?)?
+                    File::create(Self::path_with_suffix(&path, 1)?)?
                 } else {
                     File::create(&path)?
                 };
@@ -107,8 +107,7 @@ impl ParquetWriter {
         {
             self.num_file += 1;
             self.current_file_size = ByteSize::b(0);
-            let suffix = format!("_{}", self.num_file);
-            let path = Self::path_with_suffix(self.path.as_deref().unwrap(), &suffix)?;
+            let path = Self::path_with_suffix(self.path.as_deref().unwrap(), self.num_file)?;
             let file: Box<dyn Write> = Box::new(File::create(path)?);
 
             // Create new writer as tmp writer
@@ -127,7 +126,8 @@ impl ParquetWriter {
         Ok(())
     }
 
-    fn path_with_suffix(path: &Path, suffix: &str) -> Result<PathBuf, Error> {
+    fn path_with_suffix(path: &Path, num_file: u32) -> Result<PathBuf, Error> {
+        let suffix = format!("_{num_file:02}");
         let mut stem = path
             .file_stem()
             .ok_or_else(|| format_err!("Output needs To have a file stem."))?

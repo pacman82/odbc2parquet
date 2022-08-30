@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0
+
+* Pad suffixes `_01` with leading zeroes to make the file names more friendly for lexical sorting if splitting fetch output. Number is padded to two digits by default.
+* Updated dependencies
+
 ## 0.11.0
 
 * Use narrow text on non-windows platforms by default. Connection strings, queries and error messages are assumed to be UTF-8 and not transcoded to and from UTF-16.

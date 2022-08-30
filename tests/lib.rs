@@ -731,9 +731,9 @@ fn split_files_on_num_row_groups() {
 
     // Expect one file per row in table (3)
 
-    parquet_read_out(out_dir.path().join("out_1.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_2.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_3.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_01.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_02.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_03.par").to_str().unwrap());
 }
 
 #[test]
@@ -774,9 +774,9 @@ fn split_files_on_size_limit() {
 
     // Expect one file per row in table (3)
 
-    parquet_read_out(out_dir.path().join("out_1.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_2.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_3.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_01.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_02.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_03.par").to_str().unwrap());
 }
 
 #[test]

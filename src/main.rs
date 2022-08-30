@@ -128,7 +128,7 @@ pub struct QueryOpt {
     /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
     /// single output file is produces. Otherwise each output file is closed after the maximum
     /// number of batches have been written and a new one with the suffix `_n` is started. There n
-    /// is the of the produced output file starting at one for the first one. E.g. `out_1.par`,
+    /// is the of the produced output file starting at one for the first one. E.g. `out_01.par`,
     /// `out_2.par`, ...
     #[clap(long, default_value = "0")]
     row_groups_per_file: u32,
@@ -136,7 +136,7 @@ pub struct QueryOpt {
     /// row group will be finished and then the file will be closed. So the file will be somewhat
     /// larger than the threshold. All furthrer row groups will be written into new files to which
     /// the threshold size limit is applied as well. If this option is not set, no size threshold is
-    /// applied. If the threshold is applied the first file name will have the suffix `_1`, the
+    /// applied. If the threshold is applied the first file name will have the suffix `_01`, the
     /// second the suffix `_2` and so on. Therfore the first resulting file will be called e.g.
     /// `out_1.par`, if `out.par` has been specified as the output argument.
     /// Also note that this option will not act as an upper bound. It will act as a lower bound for
