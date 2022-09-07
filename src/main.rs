@@ -81,7 +81,7 @@ struct ConnectOpts {
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
-    #[clap(long, short = 'c')]
+    #[clap(long, short = 'c', env = "ODBC_CONNECTION_STRING")]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.

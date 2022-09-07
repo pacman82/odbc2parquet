@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.1
+
+* Allow specifying ODBC connection string via environment variable `ODBC_CONNECTION_STRING` instead of `--connection_string` option.
+
 ## 0.12.0
 
 * Pad suffixes `_01` with leading zeroes to make the file names more friendly for lexical sorting if splitting fetch output. Number is padded to two digits by default.

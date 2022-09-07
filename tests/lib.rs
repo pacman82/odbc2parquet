@@ -479,6 +479,7 @@ fn query_timestamp_with_timezone_mssql() {
     // Setup table for test
     let table_name = "QueryTimestampWithTimezoneMssql";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // ODBC data type: SqlDataType(-155), column_size: 34, decimal_digits: 7
     setup_empty_table(&conn, table_name, &["DATETIMEOFFSET"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
