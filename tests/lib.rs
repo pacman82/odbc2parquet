@@ -47,8 +47,7 @@ fn append_user_and_password_to_connection_string() {
     setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     // Connection string without user name and password.
-    let connection_string =
-        "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -473,6 +472,48 @@ fn query_numeric_33_3() {
     parquet_schema_out(out_str).stdout(contains(
         "{\n  REQUIRED FIXED_LEN_BYTE_ARRAY (14) a (DECIMAL(33,3));\n}",
     ));
+}
+
+#[test]
+fn query_timestamp_with_timezone_mssql() {
+    // Setup table for test
+    let table_name = "QueryTimestampWithTimezoneMssql";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["DATETIMEOFFSET"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        ('2022-09-07 16:04:12 +02:00');",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: \"2022-09-07 16:04:12.0000000 +02:00\"}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains("{\n  OPTIONAL BYTE_ARRAY a (UTF8);\n}"));
 }
 
 #[test]
