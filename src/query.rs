@@ -59,6 +59,8 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         .collect();
 
     let odbc_conn = open_connection(environment, &connect_opts)?;
+    let db_name = odbc_conn.database_management_system_name()?;
+    info!("Database Managment System Name: {db_name}");
 
     let parquet_format_options = ParquetFormatOptions {
         column_compression_default,
