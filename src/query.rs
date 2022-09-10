@@ -13,7 +13,7 @@ use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
     parquet_writer::ParquetFormatOptions,
     parquet_writer::ParquetWriter,
-    strategy::{strategy_from_column_description, ColumnFetchStrategy},
+    strategy::{strategy_from_column_description, ColumnFetchStrategy, MappingOptions},
 };
 
 use std::{
@@ -154,7 +154,7 @@ fn cursor_to_parquet(
         parquet_schema.clone(),
         file_size,
         parquet_format_options,
-        suffix_length
+        suffix_length,
     )?;
 
     while let Some(buffer) = row_set_cursor
@@ -197,23 +197,10 @@ fn cursor_to_parquet(
 
 type ColumnInfo = (u16, String, Box<dyn ColumnFetchStrategy>);
 
-/// Controls how columns a queried and mapped onto parquet columns
-struct MappingOptions {
-    use_utf16: bool,
-    prefer_varbinary: bool,
-    driver_does_support_i64: bool,
-}
-
 fn make_schema(
     cursor: &mut impl Cursor,
     mapping_options: MappingOptions,
 ) -> Result<Vec<ColumnInfo>, Error> {
-    let MappingOptions {
-        use_utf16,
-        prefer_varbinary,
-        driver_does_support_i64,
-    } = mapping_options;
-
     let num_cols = cursor.num_result_cols()?;
 
     let mut odbc_buffer_desc = Vec::new();
@@ -234,15 +221,9 @@ fn make_schema(
             name
         };
 
-        if let Some(column_fetch_strategy) = strategy_from_column_description(
-            &cd,
-            &name,
-            prefer_varbinary,
-            driver_does_support_i64,
-            use_utf16,
-            cursor,
-            index,
-        )? {
+        if let Some(column_fetch_strategy) =
+            strategy_from_column_description(&cd, &name, mapping_options, cursor, index)?
+        {
             odbc_buffer_desc.push((index as u16, name, column_fetch_strategy));
         }
     }

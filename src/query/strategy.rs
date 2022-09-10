@@ -43,15 +43,27 @@ pub trait ColumnFetchStrategy {
     ) -> Result<(), Error>;
 }
 
+/// Controls how columns a queried and mapped onto parquet columns
+#[derive(Clone, Copy)]
+pub struct MappingOptions {
+    pub use_utf16: bool,
+    pub prefer_varbinary: bool,
+    pub driver_does_support_i64: bool,
+}
+
 pub fn strategy_from_column_description(
     cd: &ColumnDescription,
     name: &str,
-    prefer_varbinary: bool,
-    driver_does_support_i64: bool,
-    use_utf16: bool,
+    mapping_options: MappingOptions,
     cursor: &mut impl Cursor,
     index: i16,
 ) -> Result<Option<Box<dyn ColumnFetchStrategy>>, Error> {
+    let MappingOptions {
+        use_utf16,
+        prefer_varbinary,
+        driver_does_support_i64,
+    } = mapping_options;
+
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
     // given column in the result may contain NULLs we assume it does.
     let repetition = match cd.nullability {

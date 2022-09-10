@@ -209,7 +209,7 @@ pub struct QueryOpt {
     /// you would expect thousands of files in your output you may want to set this to say `4` so
     /// the zeros pad this to a 4 digit number in order to make the filenames more friendly for
     /// lexical sorting.
-    #[clap(long, default_value="2")]
+    #[clap(long, default_value = "2")]
     suffix_length: usize,
 }
 
