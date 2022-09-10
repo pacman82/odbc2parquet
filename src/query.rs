@@ -8,7 +8,6 @@ mod parquet_writer;
 mod strategy;
 mod text;
 mod timestamp;
-mod timestamp_tz;
 
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
@@ -69,7 +68,6 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     };
 
     let mapping_options = MappingOptions {
-        db_name: &db_name,
         use_utf16: encoding.use_utf16(),
         prefer_varbinary,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,

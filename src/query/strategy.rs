@@ -2,7 +2,6 @@ use anyhow::Error;
 use log::{debug, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind},
-    sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Nullability,
 };
 use parquet::{
@@ -23,7 +22,7 @@ use crate::{
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_converted_type},
         text::{Utf16ToUtf8, Utf8},
-        timestamp::Timestamp, timestamp_tz::timestamp_tz,
+        timestamp::Timestamp,
     },
 };
 
@@ -46,8 +45,7 @@ pub trait ColumnFetchStrategy {
 
 /// Controls how columns a queried and mapped onto parquet columns
 #[derive(Clone, Copy)]
-pub struct MappingOptions<'a> {
-    pub db_name: &'a str,
+pub struct MappingOptions {
     pub use_utf16: bool,
     pub prefer_varbinary: bool,
     pub driver_does_support_i64: bool,
@@ -61,7 +59,6 @@ pub fn strategy_from_column_description(
     index: i16,
 ) -> Result<Option<Box<dyn ColumnFetchStrategy>>, Error> {
     let MappingOptions {
-        db_name,
         use_utf16,
         prefer_varbinary,
         driver_does_support_i64,
@@ -129,21 +126,15 @@ pub fn strategy_from_column_description(
                 Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
             }
         }
-        DataType::Other {
-            data_type: SqlDataType(-155),
-            column_size,
-            decimal_digits: _,
-        } => {
-            if db_name == "Microsoft SQL Server" {
-                // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
-                // give it special treatment so users can sort by time instead lexographically.
-                timestamp_tz(column_size, repetition)?
-            } else {
-                unknown_non_char_type(cd, cursor, index, repetition)?
-            }
-        }
         DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-            unknown_non_char_type(cd, cursor, index, repetition)?
+            let length = if let Some(len) = cd.data_type.utf8_len() {
+                len
+            } else {
+                cursor.col_display_size(index.try_into().unwrap())? as usize
+            };
+            // We assume the string representation of non character types to consist entirely of
+            // ASCII characters.
+            Box::new(Utf8::with_bytes_length(repetition, length))
         }
     };
 
@@ -169,18 +160,4 @@ pub fn strategy_from_column_description(
     } else {
         Ok(Some(strategy))
     }
-}
-
-fn unknown_non_char_type(
-    cd: &ColumnDescription,
-    cursor: &mut impl Cursor,
-    index: i16,
-    repetition: Repetition,
-) -> Result<Box<Utf8>, Error> {
-    let length = if let Some(len) = cd.data_type.utf8_len() {
-        len
-    } else {
-        cursor.col_display_size(index.try_into().unwrap())? as usize
-    };
-    Ok(Box::new(Utf8::with_bytes_length(repetition, length)))
 }
