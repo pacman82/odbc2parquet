@@ -1,11 +1,12 @@
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
 use parquet::{
-    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    basic::{LogicalType, Repetition, Type as PhysicalType, TimeUnit},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
     schema::types::Type,
 };
+use parquet_format::{MilliSeconds, MicroSeconds};
 
 use crate::parquet_buffer::ParquetBuffer;
 
@@ -28,11 +29,14 @@ impl Timestamp {
 impl ColumnFetchStrategy for Timestamp {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT64)
-            .with_converted_type(if self.precision <= 3 {
-                ConvertedType::TIMESTAMP_MILLIS
-            } else {
-                ConvertedType::TIMESTAMP_MICROS
-            })
+            .with_logical_type(Some(LogicalType::Timestamp {
+                is_adjusted_to_u_t_c: false,
+                unit: if self.precision <= 3 {
+                    TimeUnit::MILLIS(MilliSeconds{})
+                } else {
+                    TimeUnit::MICROS(MicroSeconds{})
+                },
+            }))
             .with_repetition(self.repetition)
             .build()
             .unwrap()

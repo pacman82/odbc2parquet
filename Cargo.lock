@@ -1121,6 +1121,7 @@ dependencies = [
  "odbc-api 0.48.0",
  "odbc-api 0.49.0",
  "parquet",
+ "parquet-format",
  "predicates",
  "stderrlog",
  "tempfile",

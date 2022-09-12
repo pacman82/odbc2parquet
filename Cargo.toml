@@ -33,6 +33,7 @@ num-traits = "0.2.15"
 clap_complete = "3.2.4"
 bytesize = "1.1.0"
 io-arg = "0.2.0"
+parquet-format = "4.0.0"
 
 [dependencies.clap]
 version = "3.2.20"
