@@ -95,8 +95,7 @@ fn to_utc_text_representation(bytes: &[u8]) -> ByteArray {
         .expect("Database must return timestamp in expecetd format.");
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
-
-    let utc_utf8 = utc.to_string();
+    let epoch = utc.timestamp_nanos();
 
     // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
     // happened after the to_string_lossy method, it implies we had to use a replacement
@@ -108,5 +107,5 @@ fn to_utc_text_representation(bytes: &[u8]) -> ByteArray {
             utf8
         );
     }
-    utc_utf8.into_bytes().into()
+    utf8.into_owned().into_bytes().into()
 }
