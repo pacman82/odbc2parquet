@@ -1,9 +1,15 @@
 use std::borrow::Cow;
 
 use anyhow::Error;
+use chrono::{DateTime, Utc};
 use log::warn;
-use odbc_api::{buffers::{BufferDescription, BufferKind, AnyColumnView}};
-use parquet::{basic::{Repetition, Type as PhysicalType, ConvertedType}, schema::types::Type, column::writer::ColumnWriter, data_type::ByteArray};
+use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
+use parquet::{
+    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    column::writer::ColumnWriter,
+    data_type::ByteArray,
+    schema::types::Type,
+};
 
 use crate::parquet_buffer::ParquetBuffer;
 
@@ -13,7 +19,10 @@ pub fn timestamp_tz(
     display_size: usize,
     repetition: Repetition,
 ) -> Result<Box<TimestampTz>, Error> {
-    Ok(Box::new(TimestampTz::with_bytes_length(repetition, display_size)))
+    Ok(Box::new(TimestampTz::with_bytes_length(
+        repetition,
+        display_size,
+    )))
 }
 
 pub struct TimestampTz {
@@ -66,7 +75,7 @@ fn write_to_utf8(
     {
         pb.write_optional(
             cw,
-            view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
+            view.iter().map(|item| item.map(to_utc_text_representation)),
         )?;
     } else {
         panic!(
@@ -77,18 +86,27 @@ fn write_to_utf8(
     Ok(())
 }
 
-fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
-    // Allocate string into a ByteArray and make sure it is all UTF-8 characters
-    let utf8_str = String::from_utf8_lossy(bytes);
+fn to_utc_text_representation(bytes: &[u8]) -> ByteArray {
+    // Text representation looks like e.g. 2022-09-07 16:04:12 +02:00
+    let utf8 = String::from_utf8_lossy(bytes);
+
+    // Parse to datetime
+    let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")
+        .expect("Database must return timestamp in expecetd format.");
+    // let utc = date_time.naive_utc();
+    let utc = date_time.with_timezone(&Utc);
+
+    let utc_utf8 = utc.to_string();
+
     // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
     // happened after the to_string_lossy method, it implies we had to use a replacement
     // character!
-    if matches!(utf8_str, Cow::Owned(_)) {
+    if matches!(utf8, Cow::Owned(_)) {
         warn!(
             "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
             UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
-            utf8_str
+            utf8
         );
     }
-    utf8_str.into_owned().into_bytes().into()
+    utc_utf8.into_bytes().into()
 }
