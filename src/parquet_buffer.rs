@@ -72,7 +72,7 @@ impl ParquetBuffer {
         &mut self,
         cw: &mut ColumnWriterImpl<Int64Type>,
         source: impl Iterator<Item = Option<&'o Timestamp>>,
-        precision: i16,
+        precision: u8,
     ) -> Result<(), Error> {
         if precision <= 3 {
             // Milliseconds precision

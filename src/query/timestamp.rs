@@ -14,11 +14,11 @@ use super::strategy::ColumnFetchStrategy;
 
 pub struct Timestamp {
     repetition: Repetition,
-    precision: i16,
+    precision: u8,
 }
 
 impl Timestamp {
-    pub fn new(repetition: Repetition, precision: i16) -> Self {
+    pub fn new(repetition: Repetition, precision: u8) -> Self {
         Self {
             repetition,
             precision,
@@ -31,11 +31,7 @@ impl ColumnFetchStrategy for Timestamp {
         Type::primitive_type_builder(name, PhysicalType::INT64)
             .with_logical_type(Some(LogicalType::Timestamp {
                 is_adjusted_to_u_t_c: false,
-                unit: if self.precision <= 3 {
-                    TimeUnit::MILLIS(MilliSeconds{})
-                } else {
-                    TimeUnit::MICROS(MicroSeconds{})
-                },
+                unit: precision_to_time_unit(self.precision),
             }))
             .with_repetition(self.repetition)
             .build()
@@ -59,11 +55,19 @@ impl ColumnFetchStrategy for Timestamp {
     }
 }
 
+pub fn precision_to_time_unit(precision: u8) -> TimeUnit {
+    if precision <= 3{
+        TimeUnit::MILLIS(MilliSeconds{})
+    } else {
+        TimeUnit::MICROS(MicroSeconds{})
+    }
+}
+
 fn write_timestamp_col(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
     column_reader: AnyColumnView,
-    precision: i16,
+    precision: u8,
 ) -> Result<(), Error> {
     let column_writer = Int64Type::get_column_writer_mut(column_writer).unwrap();
     if let AnyColumnView::NullableTimestamp(it) = column_reader {
