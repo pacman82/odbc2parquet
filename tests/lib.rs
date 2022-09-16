@@ -511,10 +511,10 @@ fn query_timestamp_with_timezone_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: \"2022-09-07 16:04:12.0000000 +02:00\"}\n";
+    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("{\n  OPTIONAL BYTE_ARRAY a (UTF8);\n}"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,true));"));
 }
 
 #[test]
@@ -554,10 +554,10 @@ fn query_timestamp_ms_with_timezone_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: \"2022-09-07 16:04:12.000 +02:00\"}\n";
+    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("{\n  OPTIONAL BYTE_ARRAY a (UTF8);\n}"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MILLIS,true));"));
 }
 
 #[test]

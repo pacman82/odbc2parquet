@@ -25,7 +25,8 @@ use crate::{
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_converted_type},
         text::{Utf16ToUtf8, Utf8},
-        timestamp::Timestamp, timestamp_tz::timestamp_tz,
+        timestamp::Timestamp,
+        timestamp_tz::timestamp_tz,
     },
 };
 
@@ -100,7 +101,9 @@ pub fn strategy_from_column_description(
                 driver_does_support_i64,
             )
         }
-        DataType::Timestamp { precision } => Box::new(Timestamp::new(repetition, precision.try_into().unwrap())),
+        DataType::Timestamp { precision } => {
+            Box::new(Timestamp::new(repetition, precision.try_into().unwrap()))
+        }
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
         DataType::TinyInt => {
@@ -139,7 +142,7 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexographically.
-                timestamp_tz(precision as usize, repetition)?
+                timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
                 unknown_non_char_type(cd, cursor, index, repetition)?
             }

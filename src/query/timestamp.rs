@@ -1,12 +1,12 @@
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
 use parquet::{
-    basic::{LogicalType, Repetition, Type as PhysicalType, TimeUnit},
+    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
     schema::types::Type,
 };
-use parquet_format::{MilliSeconds, MicroSeconds};
+use parquet_format::{MicroSeconds, MilliSeconds};
 
 use crate::parquet_buffer::ParquetBuffer;
 
@@ -56,10 +56,10 @@ impl ColumnFetchStrategy for Timestamp {
 }
 
 pub fn precision_to_time_unit(precision: u8) -> TimeUnit {
-    if precision <= 3{
-        TimeUnit::MILLIS(MilliSeconds{})
+    if precision <= 3 {
+        TimeUnit::MILLIS(MilliSeconds {})
     } else {
-        TimeUnit::MICROS(MicroSeconds{})
+        TimeUnit::MICROS(MicroSeconds {})
     }
 }
 
