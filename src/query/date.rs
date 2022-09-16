@@ -5,7 +5,7 @@ use odbc_api::{
     sys::Date as OdbcDate,
 };
 use parquet::{
-    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    basic::{Repetition, Type as PhysicalType, LogicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::Int32Type,
     schema::types::Type,
@@ -31,7 +31,7 @@ impl ColumnFetchStrategy for Date {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT32)
             .with_repetition(self.repetition)
-            .with_converted_type(ConvertedType::DATE)
+            .with_logical_type(Some(LogicalType::Date))
             .build()
             .unwrap()
     }
