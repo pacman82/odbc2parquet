@@ -13,28 +13,28 @@ A command line tool to query an ODBC data source and write the result into a par
 
 The tool queries the ODBC Data source for type information and maps it to parquet type as such:
 
-| ODBC SQL Type              | Parquet Type               |
-|----------------------------|----------------------------|
-| Decimal(p < 39, s)         | Decimal(p,s)               |
-| Numeric(p < 39, s)         | Decimal(p,s)               |
-| Bit                        | Boolean                    |
-| Double                     | Double                     |
-| Real                       | Float                      |
-| Float(p: 0..24)            | Float                      |
-| Float(p >= 25)             | Double                     |
-| Tiny Integer               | Int8                       |
-| Small Integer              | Int16                      |
-| Integer                    | Int32                      |
-| Big Int                    | Int64                      |
-| Date                       | Date                       |
-| Timestamp(p: 0..3)         | Timestamp Milliseconds     |
-| Timestamp(p >= 4)          | Timestamp Microseconds     |
+| ODBC SQL Type              | Parquet Type                 |
+|----------------------------|------------------------------|
+| Decimal(p < 39, s)         | Decimal(p,s)                 |
+| Numeric(p < 39, s)         | Decimal(p,s)                 |
+| Bit                        | Boolean                      |
+| Double                     | Double                       |
+| Real                       | Float                        |
+| Float(p: 0..24)            | Float                        |
+| Float(p >= 25)             | Double                       |
+| Tiny Integer               | Int8                         |
+| Small Integer              | Int16                        |
+| Integer                    | Int32                        |
+| Big Int                    | Int64                        |
+| Date                       | Date                         |
+| Timestamp(p: 0..3)         | Timestamp Milliseconds       |
+| Timestamp(p >= 4)          | Timestamp Microseconds       |
 | Datetimeoffset(p: 0..3)    | Timestamp Milliseconds (UTC) |
 | Datetimeoffset(p >= 4)     | Timestamp Microseconds (UTC) |
-| Varbinary                  | Byte Array                 |
-| Long Varbinary             | Byte Array                 |
-| Binary                     | Fixed Length Byte Array    |
-| All others                 | Utf8 Byte Array            |
+| Varbinary                  | Byte Array                   |
+| Long Varbinary             | Byte Array                   |
+| Binary                     | Fixed Length Byte Array      |
+| All others                 | Utf8 Byte Array              |
 
 `p` is short for `precision`. `s` is short for `scale`. Intervals are inclusive.
 
@@ -52,7 +52,7 @@ An ODBC driver manager is already preinstalled on windows. So is the `ODBC data 
 
 This tool links both at runtime and during build against `libodbc.so`. To get it you should install [unixODBC](http://www.unixodbc.org/). You can do this using your systems packet manager. For *ubuntu* you run:
 
-```
+```shell
 sudo apt install unixodbc-dev
 ```
 
@@ -60,7 +60,7 @@ sudo apt install unixodbc-dev
 
 This tool links both at runtime and during build against `libodbc.so`. To get it you should install [unixODBC](http://www.unixodbc.org/). To install it I recommend the [homebrew](https://brew.sh/) packet manager, which allows you to install it using:
 
-```
+```shell
 brew install unixodbc
 ```
 
