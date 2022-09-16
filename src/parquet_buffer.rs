@@ -62,7 +62,7 @@ impl ParquetBuffer {
         source: impl Iterator<Item = Option<i128>>,
         length_in_bytes: usize,
     ) -> Result<(), Error> {
-        self.write_optional_any(cw, source, |num| {
+        self.write_optional_any_falliable(cw, source.map(Ok), |num| {
             let out = num.to_be_bytes()[(16 - length_in_bytes)..].to_owned();
             // Vec<u8> -> ByteArray -> FixedLenByteArray
             let out: ByteArray = out.into();
@@ -70,10 +70,10 @@ impl ParquetBuffer {
         })
     }
 
-    fn write_optional_any<T, S>(
+    fn write_optional_any_falliable<T, S>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
-        source: impl Iterator<Item = Option<S>>,
+        source: impl Iterator<Item = Result<Option<S>, Error>>,
         mut into_physical: impl FnMut(S) -> T::T,
     ) -> Result<(), Error>
     where
@@ -83,7 +83,7 @@ impl ParquetBuffer {
         let (values, def_levels) = T::T::mut_buf(self);
         let mut values_index = 0;
         for (item, definition_level) in source.zip(&mut def_levels.iter_mut()) {
-            *definition_level = if let Some(value) = item {
+            *definition_level = if let Some(value) = item? {
                 values[values_index] = into_physical(value);
                 values_index += 1;
                 1
@@ -98,6 +98,21 @@ impl ParquetBuffer {
     /// Write to a parquet buffer using an iterator over optional source items. A default
     /// transformation, defined via the `IntoPhysical` trait is used to transform the items into
     /// buffer elements.
+    pub fn write_optional_falliable<T>(
+        &mut self,
+        cw: &mut ColumnWriterImpl<T>,
+        source: impl Iterator<Item = Result<Option<T::T>, Error>>,
+    ) -> Result<(), Error>
+    where
+        T: DataType,
+        T::T: BufferedDataType,
+    {
+        self.write_optional_any_falliable(cw, source, |s| s)
+    }
+
+    /// Write to a parquet buffer using an iterator over optional source items. A default
+    /// transformation, defined via the `IntoPhysical` trait is used to transform the items into
+    /// buffer elements.
     pub fn write_optional<T>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
@@ -107,7 +122,7 @@ impl ParquetBuffer {
         T: DataType,
         T::T: BufferedDataType,
     {
-        self.write_optional_any(cw, source, |s| s)
+        self.write_optional_any_falliable(cw, source.map(Ok), |s| s)
     }
 
     /// Iterate over the elements of a column reader over an optional column.

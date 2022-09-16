@@ -83,26 +83,26 @@ fn write_timestamp_tz(
         https://github.com/pacman82/odbc2parquet/issues.",
     );
     let cw = get_typed_column_writer_mut::<Int64Type>(column_writer);
-    pb.write_optional(
+    pb.write_optional_falliable(
         cw,
         view.iter()
-            .map(|item| item.map(|text| to_utc_epoch(text, precision))),
+            .map(|item| item.map(|text| to_utc_epoch(text, precision)).transpose()),
     )?;
     Ok(())
 }
 
-fn to_utc_epoch(bytes: &[u8], precision: u8) -> i64 {
+fn to_utc_epoch(bytes: &[u8], precision: u8) -> Result<i64, Error> {
     // Text representation looks like e.g. 2022-09-07 16:04:12 +02:00
     let utf8 = String::from_utf8_lossy(bytes);
 
     // Parse to datetime
-    let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")
-        .expect("Database must return timestamp in expecetd format.");
+    let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")?;
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
-    if precision <= 3 {
+    let integer = if precision <= 3 {
         utc.timestamp_millis()
     } else {
         utc.timestamp_micros()
-    }
+    };
+    Ok(integer)
 }
