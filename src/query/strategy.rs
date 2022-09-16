@@ -131,13 +131,13 @@ pub fn strategy_from_column_description(
         }
         DataType::Other {
             data_type: SqlDataType(-155),
-            column_size,
-            decimal_digits: _,
+            column_size: _,
+            decimal_digits: precision,
         } => {
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexographically.
-                timestamp_tz(column_size, repetition)?
+                timestamp_tz(precision as usize, repetition)?
             } else {
                 unknown_non_char_type(cd, cursor, index, repetition)?
             }
