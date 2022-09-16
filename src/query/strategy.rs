@@ -25,7 +25,7 @@ use crate::{
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_converted_type},
         text::{Utf16ToUtf8, Utf8},
-        timestamp::Timestamp,
+        timestamp::TimestampToInt,
         timestamp_tz::timestamp_tz,
     },
 };
@@ -101,9 +101,10 @@ pub fn strategy_from_column_description(
                 driver_does_support_i64,
             )
         }
-        DataType::Timestamp { precision } => {
-            Box::new(Timestamp::new(repetition, precision.try_into().unwrap()))
-        }
+        DataType::Timestamp { precision } => Box::new(TimestampToInt::new(
+            repetition,
+            precision.try_into().unwrap(),
+        )),
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
         DataType::TinyInt => {

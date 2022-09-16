@@ -1,9 +1,7 @@
 use anyhow::Error;
-use chrono::NaiveDate;
-use odbc_api::sys::Timestamp;
 use parquet::{
     column::{reader::ColumnReaderImpl, writer::ColumnWriterImpl},
-    data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType, Int64Type},
+    data_type::{ByteArray, DataType, FixedLenByteArray, FixedLenByteArrayType},
 };
 use std::mem::size_of;
 
@@ -55,33 +53,6 @@ impl ParquetBuffer {
         self.values_fixed_bytes_array
             .resize(num_rows, ByteArray::new().into());
         self.values_bool.resize(num_rows, false);
-    }
-
-    fn timestamp_nanos(ts: &Timestamp) -> i64 {
-        let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
-            .and_hms_nano(
-                ts.hour as u32,
-                ts.minute as u32,
-                ts.second as u32,
-                ts.fraction as u32,
-            );
-        datetime.timestamp_nanos()
-    }
-
-    pub fn write_timestamp<'o>(
-        &mut self,
-        cw: &mut ColumnWriterImpl<Int64Type>,
-        source: impl Iterator<Item = Option<&'o Timestamp>>,
-        precision: u8,
-    ) -> Result<(), Error> {
-        if precision <= 3 {
-            // Milliseconds precision
-            self.write_optional_any(cw, source, |ts| Self::timestamp_nanos(ts) / 1_000_000)?;
-        } else {
-            // Microseconds precision
-            self.write_optional_any(cw, source, |ts| Self::timestamp_nanos(ts) / 1_000)?;
-        }
-        Ok(())
     }
 
     /// Writes an i128 twos complement representation into a fixed sized byte array

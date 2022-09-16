@@ -1,5 +1,9 @@
 use anyhow::Error;
-use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
+use chrono::NaiveDate;
+use odbc_api::{
+    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    sys::Timestamp,
+};
 use parquet::{
     basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -12,12 +16,12 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::strategy::ColumnFetchStrategy;
 
-pub struct Timestamp {
+pub struct TimestampToInt {
     repetition: Repetition,
     precision: u8,
 }
 
-impl Timestamp {
+impl TimestampToInt {
     pub fn new(repetition: Repetition, precision: u8) -> Self {
         Self {
             repetition,
@@ -26,7 +30,7 @@ impl Timestamp {
     }
 }
 
-impl ColumnFetchStrategy for Timestamp {
+impl ColumnFetchStrategy for TimestampToInt {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT64)
             .with_logical_type(Some(LogicalType::Timestamp {
@@ -69,14 +73,25 @@ fn write_timestamp_col(
     column_reader: AnyColumnView,
     precision: u8,
 ) -> Result<(), Error> {
-    let column_writer = Int64Type::get_column_writer_mut(column_writer).unwrap();
-    if let AnyColumnView::NullableTimestamp(it) = column_reader {
-        pb.write_timestamp(column_writer, it, precision)?;
-    } else {
-        panic!(
-            "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
-            https://github.com/pacman82/odbc2parquet/issues."
-        )
-    }
+    let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();
+    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
+    let from = from.map(|option| option.map(|ts| timestamp_to_int(ts, precision)));
+    pb.write_optional(into, from)?;
     Ok(())
+}
+
+/// Convert an ODBC timestamp struct into nanoseconds.
+fn timestamp_to_int(ts: &Timestamp, precision: u8) -> i64 {
+    let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
+        .and_hms_nano(
+            ts.hour as u32,
+            ts.minute as u32,
+            ts.second as u32,
+            ts.fraction as u32,
+        );
+    if precision <= 3 {
+        datetime.timestamp_millis()
+    } else {
+        datetime.timestamp_micros()
+    }
 }
