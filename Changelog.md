@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1
+
+* The level of verbosity had been one to high:
+  * `--quiet` now suppresses warning messages as intended.
+  * `-v` -> `Info`
+  * `-vv` -> `Debug`
+
 ## 0.13.0
 
 * `DATETIMEOFFSET` on `Microsoft SQL Server` now is mapped to `TIMESTAMP` with instant semantics i.e. its mapped to UTC and understood to reference a specific point in time, rather than a wall clock time.

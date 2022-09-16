@@ -264,10 +264,10 @@ fn main() -> Result<(), Error> {
 
     let verbose = if opt.quiet {
         // Log errors, but nothing else
-        1
+        0
     } else {
         // Log warnings and one additional log level for each `-v` passed in the command line.
-        opt.verbose + 2
+        opt.verbose + 1
     };
 
     let color_choice = if opt.no_color {
