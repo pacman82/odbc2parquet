@@ -16,24 +16,24 @@ use crate::parquet_buffer::ParquetBuffer;
 use super::strategy::ColumnFetchStrategy;
 
 pub fn timestamp_tz(
-    display_size: usize,
+    precision: usize,
     repetition: Repetition,
 ) -> Result<Box<TimestampTz>, Error> {
     Ok(Box::new(TimestampTz::with_bytes_length(
         repetition,
-        display_size,
+        precision,
     )))
 }
 
 pub struct TimestampTz {
     repetition: Repetition,
-    // Maximum string length in bytes
-    length: usize,
+    // Precision
+    precision: usize,
 }
 
 impl TimestampTz {
-    pub fn with_bytes_length(repetition: Repetition, length: usize) -> Self {
-        Self { repetition, length }
+    pub fn with_bytes_length(repetition: Repetition, precision: usize) -> Self {
+        Self { repetition, precision }
     }
 }
 
@@ -47,9 +47,18 @@ impl ColumnFetchStrategy for TimestampTz {
     }
 
     fn buffer_description(&self) -> BufferDescription {
+        // Text representation looks like e.g. 2022-09-07 16:04:12 +02:00
+        // Text representation looks like e.g. 2022-09-07 16:04:12.123 +02:00
+
+        let max_str_len = 26 + if self.precision == 0 {
+            0
+        } else {
+            // Radix character `.` and precision.
+            1 + self.precision
+        };
         BufferDescription {
             kind: BufferKind::Text {
-                max_str_len: self.length,
+                max_str_len,
             },
             nullable: true,
         }
