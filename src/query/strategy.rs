@@ -97,7 +97,7 @@ pub fn strategy_from_column_description(
             decmial_fetch_strategy(
                 is_optional,
                 scale as i32,
-                precision,
+                precision.try_into().unwrap(),
                 driver_does_support_i64,
             )
         }

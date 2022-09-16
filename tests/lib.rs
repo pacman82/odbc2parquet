@@ -385,7 +385,7 @@ fn query_large_numeric_as_text() {
         .success();
 
     parquet_read_out(out_str).stdout(eq("{a: 1234567890.}\n"));
-    parquet_schema_out(out_str).stdout(contains("{\n  REQUIRED INT64 a (DECIMAL(10));\n}"));
+    parquet_schema_out(out_str).stdout(contains("{\n  REQUIRED INT64 a (DECIMAL(10,0));\n}"));
 }
 
 #[test]

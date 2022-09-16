@@ -5,7 +5,7 @@ use odbc_api::{
     sys::Date as OdbcDate,
 };
 use parquet::{
-    basic::{Repetition, Type as PhysicalType, LogicalType},
+    basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::Int32Type,
     schema::types::Type,

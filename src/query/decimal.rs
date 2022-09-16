@@ -7,7 +7,7 @@ use odbc_api::{
     DataType,
 };
 use parquet::{
-    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    basic::{ConvertedType, LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType as ParquetDataType, FixedLenByteArrayType, Int32Type, Int64Type},
     schema::types::Type,
@@ -23,7 +23,7 @@ use super::{
 pub fn decmial_fetch_strategy(
     is_optional: bool,
     scale: i32,
-    precision: usize,
+    precision: u8,
     driver_does_support_i64: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
     let repetition = if is_optional {
@@ -72,7 +72,7 @@ pub fn decmial_fetch_strategy(
         (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
         (_, _) => {
             let length = odbc_api::DataType::Decimal {
-                precision,
+                precision: precision as usize,
                 scale: scale.try_into().unwrap(),
             }
             .display_size()
@@ -83,14 +83,14 @@ pub fn decmial_fetch_strategy(
 }
 
 struct DecimalTextToInteger<Pdt> {
-    precision: usize,
+    precision: u8,
     scale: i32,
     repetition: Repetition,
     _pdt: PhantomData<Pdt>,
 }
 
 impl<Pdt> DecimalTextToInteger<Pdt> {
-    fn new(precision: usize, scale: i32, repetition: Repetition) -> Self {
+    fn new(precision: u8, scale: i32, repetition: Repetition) -> Self {
         Self {
             precision,
             scale,
@@ -107,7 +107,10 @@ where
 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, Pdt::get_physical_type())
-            .with_converted_type(ConvertedType::DECIMAL)
+            .with_logical_type(Some(LogicalType::Decimal {
+                scale: self.scale,
+                precision: self.precision as i32,
+            }))
             .with_precision(self.precision as i32)
             .with_scale(self.scale)
             .with_repetition(self.repetition)
@@ -120,7 +123,7 @@ where
 
         // Precision + 2. (One byte for the radix character and another for the sign)
         let max_str_len = DataType::Decimal {
-            precision: self.precision,
+            precision: self.precision as usize,
             scale: self.scale.try_into().unwrap(),
         }
         .display_size()
@@ -139,7 +142,7 @@ where
     ) -> Result<(), Error> {
         // This vec is going to hold the digits with sign and decimal point. It is
         // allocated once and reused for each value.
-        let mut digits: Vec<u8> = Vec::with_capacity(self.precision + 2);
+        let mut digits: Vec<u8> = Vec::with_capacity(self.precision as usize + 2);
 
         let column_writer = Pdt::get_column_writer_mut(column_writer).unwrap();
         let view = column_view.as_text_view().expect(
@@ -163,12 +166,12 @@ where
 struct DecimalAsBinary {
     repetition: Repetition,
     scale: i32,
-    precision: usize,
+    precision: u8,
     length_in_bytes: usize,
 }
 
 impl DecimalAsBinary {
-    pub fn new(repetition: Repetition, scale: i32, precision: usize) -> Self {
+    pub fn new(repetition: Repetition, scale: i32, precision: u8) -> Self {
         // Length of the two's complement.
         let num_binary_digits = precision as f64 * 10f64.log2();
         // Plus one bit for the sign (+/-)
@@ -199,7 +202,7 @@ impl ColumnFetchStrategy for DecimalAsBinary {
     fn buffer_description(&self) -> odbc_api::buffers::BufferDescription {
         // Precision + 2. (One byte for the radix character and another for the sign)
         let max_str_len = DataType::Decimal {
-            precision: self.precision,
+            precision: self.precision as usize,
             scale: self.scale.try_into().unwrap(),
         }
         .display_size()
@@ -231,11 +234,11 @@ fn write_decimal_col(
     column_writer: &mut ColumnWriter,
     column_reader: AnyColumnView,
     length_in_bytes: usize,
-    precision: usize,
+    precision: u8,
 ) -> Result<(), Error> {
     // This vec is going to hold the digits with sign, but without the decimal point. It is
     // allocated once and reused for each value.
-    let mut digits: Vec<u8> = Vec::with_capacity(precision + 1);
+    let mut digits: Vec<u8> = Vec::with_capacity(precision as usize + 1);
 
     let column_writer = FixedLenByteArrayType::get_column_writer_mut(column_writer).unwrap();
     let view = column_reader.as_text_view().expect(
