@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.0
+
+* `DATETIMEOFFSET` on `Microsoft SQL Server` now is mapped to `TIMESTAMP` with instant semantics i.e. its mapped to UTC and understood to reference a specific point in time, rather than a wall clock time.
+
 ## 0.12.1
 
 * Allow specifying ODBC connection string via environment variable `ODBC_CONNECTION_STRING` instead of `--connection_string` option.
