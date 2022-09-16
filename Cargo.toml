@@ -36,7 +36,7 @@ io-arg = "0.2.0"
 parquet-format = "4.0.0"
 
 [dependencies.clap]
-version = "3.2.21"
+version = "3.2.22"
 features = ["derive", "env"]
 
 [dependencies.parquet]
