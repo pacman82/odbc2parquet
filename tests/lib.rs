@@ -652,6 +652,48 @@ fn query_timestamp_with_timezone_postgres() {
 }
 
 #[test]
+fn query_timestamp_postgres() {
+    // Setup table for test
+    let table_name = "QueryTimestamp";
+    let conn = ENV.connect_with_connection_string(POSTGRES).unwrap();
+    setup_empty_table_pg(&conn, table_name, &["TIMESTAMP"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        ('2022-09-07 16:04:12');",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: 2022-09-07 16:04:12 +00:00}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,false));"));
+}
+
+#[test]
 fn query_all_the_types() {
     // Setup table for test
     let table_name = "AllTheTypes";
