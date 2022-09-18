@@ -639,7 +639,7 @@ fn query_timestamp_with_timezone_postgres() {
             "query",
             out_str,
             "--connection-string",
-            MSSQL,
+            POSTGRES,
             &query,
         ])
         .assert()
@@ -648,7 +648,7 @@ fn query_timestamp_with_timezone_postgres() {
     let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,true));"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,false));"));
 }
 
 #[test]
@@ -681,7 +681,7 @@ fn query_timestamp_postgres() {
             "query",
             out_str,
             "--connection-string",
-            MSSQL,
+            POSTGRES,
             &query,
         ])
         .assert()
