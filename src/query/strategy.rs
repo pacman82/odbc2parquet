@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use anyhow::Error;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind},
     sys::SqlDataType,
@@ -143,6 +143,7 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexographically.
+                info!("Detected Timestamp type with time zone. Appyling instant semantics for column {}.", cd.name_to_string()?);
                 timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
                 unknown_non_char_type(cd, cursor, index, repetition)?

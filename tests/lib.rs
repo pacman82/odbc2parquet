@@ -20,6 +20,13 @@ const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};\
     UID=SA;\
     PWD=My@Test@Password1;";
 
+const POSTGRES: &str = "Driver={PostgreSQL UNICODE};\
+    Server=localhost;\
+    Port=5432;\
+    Database=test;\
+    Uid=test;\
+    Pwd=test;";
+
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
     static ref ENV: Environment = Environment::new().unwrap();
@@ -44,7 +51,7 @@ fn append_user_and_password_to_connection_string() {
     // Setup table for test
     let table_name = "AppendUserAndPasswordToConnectionString";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     // Connection string without user name and password.
     let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
@@ -91,7 +98,7 @@ fn nullable_parquet_buffers() {
     // Setup table for test
     let table_name = "NullableParquetBuffers";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
     let insert = format!(
         "INSERT INTO {} (A) VALUES('Hello'),(NULL),('World'),(NULL)",
         table_name
@@ -160,7 +167,7 @@ fn parameters_in_query() {
     // Setup table for test
     let table_name = "ParamtersInQuery";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)", "INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)", "INTEGER"]).unwrap();
     let insert = format!(
         "INSERT INTO {} (A,B) VALUES('Wrong', 5),('Right', 42)",
         table_name
@@ -203,7 +210,7 @@ fn query_sales() {
     // Setup table for test
     let table_name = "QuerySales";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
+    setup_empty_table_mssql(
         &conn,
         table_name,
         &["DATE", "TIME(0)", "INT", "DECIMAL(10,2)"],
@@ -259,7 +266,7 @@ fn query_decimals() {
     // Setup table for test
     let table_name = "QueryDecimals";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
+    setup_empty_table_mssql(
         &conn,
         table_name,
         &["NUMERIC(3,2) NOT NULL", "DECIMAL(3,2) NOT NULL"],
@@ -303,7 +310,7 @@ fn query_decimals_optional() {
     // Setup table for test
     let table_name = "QueryDecimalsOptional";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["NUMERIC(3,2)", "DECIMAL(3,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(3,2)", "DECIMAL(3,2)"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a,b)
@@ -350,7 +357,7 @@ fn query_large_numeric_as_text() {
     // Setup table for test
     let table_name = "QueryLargeNumericAsText";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["NUMERIC(10,0) NOT NULL"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(10,0) NOT NULL"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -393,7 +400,7 @@ fn query_numeric_13_3() {
     // Setup table for test
     let table_name = "QueryNumeric13_3";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -435,7 +442,7 @@ fn query_numeric_33_3() {
     // Setup table for test
     let table_name = "QueryNumeric33_3";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["NUMERIC(33,3) NOT NULL"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(33,3) NOT NULL"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -477,10 +484,10 @@ fn query_numeric_33_3() {
 #[test]
 fn query_timestamp_with_timezone_mssql() {
     // Setup table for test
-    let table_name = "QueryTimestampWithTimezoneMssql";
+    let table_name = "QueryTimestampWithTimezone";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // ODBC data type: SqlDataType(-155), column_size: 34, decimal_digits: 7
-    setup_empty_table(&conn, table_name, &["DATETIMEOFFSET"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIMEOFFSET"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -520,10 +527,10 @@ fn query_timestamp_with_timezone_mssql() {
 #[test]
 fn query_timestamp_ms_with_timezone_mssql() {
     // Setup table for test
-    let table_name = "QueryTimestampMsWithTimezoneMssql";
+    let table_name = "QueryTimestampMsWithTimezone";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // ODBC data type: SqlDataType(-155), decimal_digits: 3
-    setup_empty_table(&conn, table_name, &["DATETIMEOFFSET(3)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIMEOFFSET(3)"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -561,11 +568,53 @@ fn query_timestamp_ms_with_timezone_mssql() {
 }
 
 #[test]
+fn query_timestamp_with_timezone_postgres() {
+    // Setup table for test
+    let table_name = "QueryTimestampWithTimezone";
+    let conn = ENV.connect_with_connection_string(POSTGRES).unwrap();
+    setup_empty_table_pg(&conn, table_name, &["TIMESTAMPTZ"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        ('2022-09-07 16:04:12 +02:00');",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,true));"));
+}
+
+#[test]
 fn query_all_the_types() {
     // Setup table for test
     let table_name = "AllTheTypes";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
+    setup_empty_table_mssql(
         &conn,
         table_name,
         &[
@@ -639,7 +688,7 @@ fn query_bits() {
     // Setup table for test
     let table_name = "QueryBits";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -688,7 +737,7 @@ fn query_doubles() {
     // Setup table for test
     let table_name = "QueryDoubles";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -740,7 +789,7 @@ fn read_query_from_stdin() {
     // Setup table for test
     let table_name = "ReadQueryFromStdin";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {}
         (a)
@@ -783,7 +832,7 @@ fn split_files_on_num_row_groups() {
     // Setup table for test
     let table_name = "SplitFilesOnNumRowGroups";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
     conn.execute(&insert, ()).unwrap();
 
@@ -826,7 +875,7 @@ fn split_files_on_size_limit() {
     // Setup table for test
     let table_name = "SplitFilesOnSizeLimit";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
     conn.execute(&insert, ()).unwrap();
 
@@ -869,7 +918,7 @@ fn configurable_suffix_length() {
     // Setup table for test
     let table_name = "ConfigurableSuffixLength";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {} (A) VALUES(1)", table_name);
     conn.execute(&insert, ()).unwrap();
 
@@ -911,7 +960,7 @@ fn configurable_suffix_length() {
 fn varbinary_column() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 
-    setup_empty_table(&conn, "VarbinaryColumn", &["VARBINARY(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, "VarbinaryColumn", &["VARBINARY(10)"]).unwrap();
     conn.execute(
         "INSERT INTO VarbinaryColumn (a) Values \
         (CONVERT(Binary(5), 'Hello')),\
@@ -954,7 +1003,7 @@ fn query_varchar_max() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "QueryVarcharMax";
 
-    setup_empty_table(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {} (a) Values ('Hello'), ('World');",
@@ -995,7 +1044,7 @@ fn query_varchar_max_utf16() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "QueryVarcharMaxUtf16";
 
-    setup_empty_table(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {} (a) Values ('Hello'), ('World');",
@@ -1036,7 +1085,7 @@ fn query_varchar_max_utf16() {
 fn binary_column() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 
-    setup_empty_table(&conn, "BinaryColumn", &["BINARY(5)"]).unwrap();
+    setup_empty_table_mssql(&conn, "BinaryColumn", &["BINARY(5)"]).unwrap();
     conn.execute(
         "INSERT INTO BinaryColumn (a) Values \
         (CONVERT(Binary(5), 'Hello')),\
@@ -1081,7 +1130,7 @@ fn prefer_varbinary() {
 
     let table_name = "PreferVarbinary";
 
-    setup_empty_table(&conn, table_name, &["BINARY(5)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BINARY(5)"]).unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {} (a) Values \
@@ -1128,7 +1177,7 @@ fn prefer_varbinary() {
 #[test]
 fn interior_nul_in_varchar() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
 
     conn.execute(
         "INSERT INTO InteriorNul (a) VALUES (?);",
@@ -1170,7 +1219,7 @@ fn interior_nul_in_varchar() {
 fn nchar_not_truncated() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "NCharNotTruncated";
-    setup_empty_table(&conn, table_name, &["NCHAR(1)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["NCHAR(1)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
@@ -1214,7 +1263,7 @@ fn nchar_not_truncated() {
 fn system_encoding() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "SystemEncoding";
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
@@ -1257,7 +1306,7 @@ fn system_encoding() {
 fn utf_16_encoding() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "Utf16Encoding";
-    setup_empty_table(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
@@ -1300,7 +1349,7 @@ fn utf_16_encoding() {
 fn auto_encoding() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "AutoEncoding";
-    setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
@@ -1343,7 +1392,7 @@ pub fn insert_32_bit_integer() {
     let table_name = "Insert32BitInteger";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
 
     // Prepare file
 
@@ -1388,7 +1437,7 @@ pub fn insert_optional_32_bit_integer() {
     let table_name = "InsertOptional32BitInteger";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
 
     // Prepare file
 
@@ -1433,7 +1482,7 @@ pub fn insert_64_bit_integer() {
     let table_name = "Insert64BitInteger";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
 
     // Prepare file
 
@@ -1478,7 +1527,7 @@ pub fn insert_optional_64_bit_integer() {
     let table_name = "InsertOptional64BitInteger";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIGINT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BIGINT"]).unwrap();
 
     // Prepare file
 
@@ -1523,7 +1572,7 @@ pub fn insert_utf8() {
     let table_name = "InsertUtf8";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
 
@@ -1574,7 +1623,7 @@ pub fn insert_optional_utf8() {
     let table_name = "InsertOptionalUtf8";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
 
@@ -1625,7 +1674,7 @@ pub fn insert_utf16() {
     let table_name = "InsertUtf16";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
 
@@ -1678,7 +1727,7 @@ pub fn insert_optional_utf16() {
     let table_name = "InsertOptionalUtf16";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
 
@@ -1731,7 +1780,7 @@ pub fn insert_bool() {
     let table_name = "InsertBool";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
 
     // Prepare file
 
@@ -1776,7 +1825,7 @@ pub fn insert_optional_bool() {
     let table_name = "InsertOptionalBool";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
 
     // Prepare file
 
@@ -1821,7 +1870,7 @@ pub fn insert_f32() {
     let table_name = "InsertF32";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["FLOAT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["FLOAT"]).unwrap();
 
     // Prepare file
 
@@ -1869,7 +1918,7 @@ pub fn insert_optional_f32() {
     let table_name = "InsertOptionalF32";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["FLOAT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["FLOAT"]).unwrap();
 
     // Prepare file
 
@@ -1914,7 +1963,7 @@ pub fn insert_f64() {
     let table_name = "InsertF64";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["FLOAT(53)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["FLOAT(53)"]).unwrap();
 
     // Prepare file
 
@@ -1959,7 +2008,7 @@ pub fn insert_optional_f64() {
     let table_name = "InsertOptionalF64";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["FLOAT(53)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["FLOAT(53)"]).unwrap();
 
     // Prepare file
 
@@ -2004,7 +2053,7 @@ pub fn insert_date() {
     let table_name = "InsertDate";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATE"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATE"]).unwrap();
 
     // Prepare file
 
@@ -2049,7 +2098,7 @@ pub fn insert_optional_date() {
     let table_name = "InsertOptionalDate";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["Date"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["Date"]).unwrap();
 
     // Prepare file
 
@@ -2094,7 +2143,7 @@ pub fn insert_time_ms() {
     let table_name = "InsertTimeMs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["TIME(3)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["TIME(3)"]).unwrap();
 
     // Prepare file
 
@@ -2145,7 +2194,7 @@ pub fn insert_optional_time_ms() {
     let table_name = "InsertOptionalTimeMs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["TIME(3)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["TIME(3)"]).unwrap();
 
     // Prepare file
 
@@ -2196,7 +2245,7 @@ pub fn insert_time_us() {
     let table_name = "InsertTimeUs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["TIME(6)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["TIME(6)"]).unwrap();
 
     // Prepare file
 
@@ -2247,7 +2296,7 @@ pub fn insert_optional_time_us() {
     let table_name = "InsertOptionalTimeUs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["TIME(6)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["TIME(6)"]).unwrap();
 
     // Prepare file
 
@@ -2298,7 +2347,7 @@ pub fn insert_decimal_from_i32() {
     let table_name = "InsertDecimalFromI32";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -2344,7 +2393,7 @@ pub fn insert_decimal_from_i32_optional() {
     let table_name = "InsertDecimalFromI32Optional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -2390,7 +2439,7 @@ pub fn insert_decimal_from_i64() {
     let table_name = "InsertDecimalFromI64";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -2436,7 +2485,7 @@ pub fn insert_decimal_from_i64_optional() {
     let table_name = "InsertDecimalFromI64Optional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -2482,7 +2531,7 @@ pub fn insert_timestamp_ms() {
     let table_name = "InsertTimestampMs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
 
     // Prepare file
 
@@ -2531,7 +2580,7 @@ pub fn insert_timestamp_ms_optional() {
     let table_name = "InsertTimestampMsOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
 
     // Prepare file
 
@@ -2585,7 +2634,7 @@ pub fn insert_timestamp_us() {
     let table_name = "InsertTimestampUs";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
 
     // Prepare file
 
@@ -2639,7 +2688,7 @@ pub fn insert_timestamp_us_optional() {
     let table_name = "InsertTimestampUsOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
 
     // Prepare file
 
@@ -2693,7 +2742,7 @@ pub fn insert_binary() {
     let table_name = "InsertBinary";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARBINARY(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARBINARY(50)"]).unwrap();
 
     // Prepare file
 
@@ -2747,7 +2796,7 @@ pub fn insert_binary_optional() {
     let table_name = "InsertBinaryOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["VARBINARY(50)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARBINARY(50)"]).unwrap();
 
     // Prepare file
 
@@ -2801,7 +2850,7 @@ pub fn insert_fixed_len_binary() {
     let table_name = "InsertFixedLenBinary";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BINARY(13)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BINARY(13)"]).unwrap();
 
     // Prepare file
 
@@ -2864,7 +2913,7 @@ pub fn insert_fixed_len_binary_optional() {
     let table_name = "InsertFixedLenBinaryOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BINARY(13)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BINARY(13)"]).unwrap();
 
     // Prepare file
 
@@ -2923,7 +2972,7 @@ pub fn insert_decimal_from_binary() {
     let table_name = "InsertDecimalFromBinary";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -2980,7 +3029,7 @@ pub fn insert_decimal_from_binary_optional() {
     let table_name = "InsertDecimalFromBinaryOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
 
@@ -3031,7 +3080,7 @@ pub fn insert_decimal_from_fixed_binary() {
     let table_name = "InsertDecimalFromFixedBinary";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
 
     // Prepare file
 
@@ -3092,7 +3141,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     let table_name = "InsertDecimalFromFixedBinaryOptional";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
 
     // Prepare file
 
@@ -3152,7 +3201,7 @@ pub fn write_query_result_to_stdout() {
     let table_name = "WriteQueryResultToStdout";
     // Prepare table
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?)"),
         [42i32, 5, 64].as_slice(),
@@ -3222,7 +3271,7 @@ fn query_4097_bits() {
     // Setup table for test
     let table_name = "Query4097Bits";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["BIT"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
 
     // Insert 4097 bits "false" (default constructed) into the table
     let insert = format!(
@@ -3290,13 +3339,17 @@ fn write_values_to_file<T>(
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
-pub fn setup_empty_table(
+pub fn setup_empty_table_mssql(
     conn: &Connection,
     table_name: &str,
     column_types: &[&str],
 ) -> Result<(), odbc_api::Error> {
-    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+    let identity = "int IDENTITY(1,1)";
+    setup_empty_table(table_name, column_types, conn, identity)
+}
 
+fn setup_empty_table(table_name: &str, column_types: &[&str], conn: &Connection, identity: &str) -> Result<(), odbc_api::Error> {
+    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
     let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
     let cols = column_types
         .iter()
@@ -3304,14 +3357,20 @@ pub fn setup_empty_table(
         .map(|(ty, name)| format!("{} {}", name, ty))
         .collect::<Vec<_>>()
         .join(", ");
-
-    let create_table = format!(
-        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
-        table_name, cols
-    );
+    let create_table = format!("CREATE TABLE {table_name} (id {identity},{cols});");
     conn.execute(drop_table, ())?;
     conn.execute(&create_table, ())?;
     Ok(())
+}
+
+/// Creates the table and assures it is empty (adapted for PostgreSQL). Columns are named a,b,c, etc.
+pub fn setup_empty_table_pg(
+    conn: &Connection,
+    table_name: &str,
+    column_types: &[&str],
+) -> Result<(), odbc_api::Error> {
+    let identity = "SERIAL PRIMARY KEY";
+    setup_empty_table(table_name, column_types, conn, identity)
 }
 
 /// Test helper using two commands to roundtrip parquet to and from a data source.

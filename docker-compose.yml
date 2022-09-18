@@ -9,6 +9,15 @@ services:
       - MSSQL_SA_PASSWORD=My@Test@Password1
     command: ["/opt/mssql/bin/sqlservr", "--accept-eula", "--reset-sa-password"]
 
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+
   dev:
     build: docker/dev
     volumes:
@@ -17,5 +26,5 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 
-    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
-    network_mode: service:mssql
+    # Allows accessing dbs through the port forwardings. dev container behaves like host for networking
+    network_mode: host

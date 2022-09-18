@@ -18,6 +18,15 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: My@Test@Password1
 
+      postgres:
+        image: postgres:13
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
