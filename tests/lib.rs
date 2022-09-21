@@ -3432,7 +3432,12 @@ pub fn setup_empty_table_mssql(
     setup_empty_table(table_name, column_types, conn, identity)
 }
 
-fn setup_empty_table(table_name: &str, column_types: &[&str], conn: &Connection, identity: &str) -> Result<(), odbc_api::Error> {
+fn setup_empty_table(
+    table_name: &str,
+    column_types: &[&str],
+    conn: &Connection,
+    identity: &str,
+) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
     let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
     let cols = column_types

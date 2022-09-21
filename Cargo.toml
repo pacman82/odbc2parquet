@@ -33,14 +33,13 @@ num-traits = "0.2.15"
 clap_complete = "3.2.5"
 bytesize = "1.1.0"
 io-arg = "0.2.0"
-parquet-format = "4.0.0"
 
 [dependencies.clap]
 version = "3.2.22"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "22.0.0"
+version = "23.0.0"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 

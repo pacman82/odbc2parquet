@@ -8,9 +8,9 @@ use parquet::{
     basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
+    format::{MicroSeconds, MilliSeconds},
     schema::types::Type,
 };
-use parquet_format::{MicroSeconds, MilliSeconds};
 
 use crate::parquet_buffer::ParquetBuffer;
 
