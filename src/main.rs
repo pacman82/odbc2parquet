@@ -4,20 +4,21 @@ mod parquet_buffer;
 mod query;
 
 use crate::enum_args::{
-    column_encoding_from_str, compression_from_str, EncodingArgument, COMPRESSION_VARIANTS,
+    column_encoding_from_str, EncodingArgument,
 };
 use anyhow::{bail, Error};
 use bytesize::ByteSize;
+use enum_args::CompressionVariants;
 use io_arg::IoArg;
 use odbc_api::{
     escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
     Environment,
 };
-use parquet::basic::{Compression, Encoding};
+use parquet::basic::Encoding;
 use std::{fs::File, path::PathBuf};
 use stderrlog::ColorChoice;
 
-use clap::{Args, IntoApp, Parser};
+use clap::{Args, Parser, CommandFactory, ArgAction};
 use clap_complete::{generate, Shell};
 
 /// Query an ODBC data source at store the result in a Parquet file.
@@ -26,23 +27,23 @@ use clap_complete::{generate, Shell};
 struct Cli {
     /// Only print errors to standard error stream. Supresses warnings and all other log levels
     /// independent of the verbose mode.
-    #[clap(short = 'q', long)]
+    #[arg(short = 'q', long)]
     quiet: bool,
     /// Verbose mode (-v, -vv, -vvv, etc)
     ///
     /// 'v': Info level logging
     /// 'vv': Debug level logging
     /// 'vvv': Trace level logging
-    #[clap(short = 'v', long, parse(from_occurrences))]
-    verbose: usize,
-    #[clap(long)]
+    #[arg(short = 'v', long, action = ArgAction::Count)]
+    verbose: u8,
+    #[arg(long)]
     /// Never emit colors.
     ///
     /// Controls the colors of the log output. If specified the log output will never be colored.
     /// If not specified the tool will try to emit Colors, but not force it. If `TERM=dumb` or
     /// `NO_COLOR` is defined, then colors will not be used.
     no_color: bool,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     command: Command,
 }
 
@@ -50,7 +51,7 @@ struct Cli {
 enum Command {
     /// Query a data source and write the result as parquet.
     Query {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         query_opt: QueryOpt,
     },
     /// List available drivers and their attributes.
@@ -64,7 +65,7 @@ enum Command {
     },
     /// Generate shell completions
     Completions {
-        #[structopt(long, short = 'o', default_value = ".")]
+        #[arg(long, short = 'o', default_value = ".")]
         /// Output directory
         output: PathBuf,
         /// Name of the shell to generate completions for.
@@ -75,27 +76,27 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(Args)]
 struct ConnectOpts {
-    #[clap(long, conflicts_with = "dsn")]
+    #[arg(long, conflicts_with = "dsn")]
     /// Prompts the user for missing information from the connection string. Only supported on
     /// windows platform.
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
-    #[clap(long, short = 'c', env = "ODBC_CONNECTION_STRING")]
+    #[arg(long, short = 'c', env = "ODBC_CONNECTION_STRING")]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
-    #[clap(long, conflicts_with = "connection-string")]
+    #[arg(long, conflicts_with = "connection_string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn. Should you specify a connection string
     /// instead of a Data Source Name the user name is going to be appended at the end of it as the
     /// `UID` attribute.
-    #[clap(long, short = 'u', env = "ODBC_USER")]
+    #[arg(long, short = 'u', env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string. Should you specify a Connection string instead of a Data Source Name the
     /// password is going to be appended at the end of it as the `PWD` attribute.
-    #[clap(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
+    #[arg(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
 
@@ -109,7 +110,7 @@ pub struct QueryOpt {
     /// This avoids issues with some ODBC drivers using 16Bit integers to represent batch sizes. If
     /// `--batch-size-memory` is specified no other limit is applied by default. If both option are
     /// specified the batch size is the largest possible which satisfies both constraints.
-    #[clap(long)]
+    #[arg(long)]
     batch_size_row: Option<usize>,
     /// Limits the size of a single batch. It does so by calculating the amount of memory each row
     /// requires in the allocated buffers and then limits the maximum number of rows so that the
@@ -123,14 +124,14 @@ pub struct QueryOpt {
     /// statement about how much smaller the average row group will be.
     /// This options allows you to specify the memory usage using SI units. So you can pass `2Gib`,
     /// `600Mb` and so on.
-    #[clap(long)]
+    #[arg(long)]
     batch_size_memory: Option<ByteSize>,
     /// Maximum number of batches in a single output parquet file. If this option is omitted or 0 a
     /// single output file is produces. Otherwise each output file is closed after the maximum
     /// number of batches have been written and a new one with the suffix `_n` is started. There n
     /// is the of the produced output file starting at one for the first one. E.g. `out_01.par`,
     /// `out_2.par`, ...
-    #[clap(long, default_value = "0")]
+    #[arg(long, default_value = "0")]
     row_groups_per_file: u32,
     /// Then the size of the currently written parquet files goes beyond this threshold the current
     /// row group will be finished and then the file will be closed. So the file will be somewhat
@@ -146,16 +147,15 @@ pub struct QueryOpt {
     /// to be equal to the row group size. The row group size depends on the actual data in the
     /// database, and is due to compression likely much smaller. Values of this option can be
     /// specified in SI units. E.g. `--file-size-threshold 1GiB`.
-    #[clap(long)]
+    #[arg(long)]
     file_size_threshold: Option<ByteSize>,
     /// Default compression used by the parquet file writer.
-    #[clap(
+    #[arg(
         long,
-        possible_values=COMPRESSION_VARIANTS,
+        value_enum,
         default_value="gzip",
-        parse(try_from_str=compression_from_str)
     )]
-    column_compression_default: Compression,
+    column_compression_default: CompressionVariants,
     /// Encoding used for character data requested from the data source.
     ///
     /// `Utf16`: The tool will use 16Bit characters for requesting text from the data source,
@@ -169,7 +169,7 @@ pub struct QueryOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[clap(long, arg_enum, default_value = "Auto", ignore_case = true)]
+    #[arg(long, value_enum, default_value = "Auto", ignore_case = true)]
     encoding: EncodingArgument,
     /// Map `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
@@ -178,25 +178,12 @@ pub struct QueryOpt {
     /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
     /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
     /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
-    #[clap(
+    #[arg(
         long,
-        multiple_values=true,
-        multiple_occurrences=true,
-        parse(try_from_str=column_encoding_from_str)
+        value_parser=column_encoding_from_str,
+        action = ArgAction::Append
     )]
     parquet_column_encoding: Vec<(String, Encoding)>,
-    /// Name of the output parquet file. Use `-` to indicate that the output should be written to
-    /// standard out instead.
-    output: IoArg,
-    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
-    /// placeholders for positional parameters. E.g. "SELECT Name FROM Employees WHERE salary > ?;".
-    /// Instead of passing a query verbatum, you may pass a plain dash (`-`), to indicate that the
-    /// query should be read from standard input. In this case the entire input until EOF will be
-    /// considered the query.
-    query: String,
-    /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
-    /// the end of the command line.
-    parameters: Vec<String>,
     /// Tells the odbc2parquet, that the ODBC driver does not support binding 64 Bit integers (aka
     /// S_C_BIGINT in ODBC speak). This will cause the odbc2parquet to query large integers as text
     /// instead and convert them to 64 Bit integers itself. Setting this flag will not affect the
@@ -211,6 +198,18 @@ pub struct QueryOpt {
     /// lexical sorting.
     #[clap(long, default_value = "2")]
     suffix_length: usize,
+    /// Name of the output parquet file. Use `-` to indicate that the output should be written to
+    /// standard out instead.
+    output: IoArg,
+    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// placeholders for positional parameters. E.g. "SELECT Name FROM Employees WHERE salary > ?;".
+    /// Instead of passing a query verbatum, you may pass a plain dash (`-`), to indicate that the
+    /// query should be read from standard input. In this case the entire input until EOF will be
+    /// considered the query.
+    query: String,
+    /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
+    /// the end of the command line.
+    parameters: Vec<String>,
 }
 
 #[derive(Args)]
@@ -230,7 +229,7 @@ pub struct InsertOpt {
     /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
     /// default option is the same as `System` on non-windows platforms. On windows the default is
     /// `Utf16`.
-    #[clap(long, arg_enum, default_value = "Auto", ignore_case = true)]
+    #[arg(long, value_enum, default_value = "Auto", ignore_case = true)]
     encoding: EncodingArgument,
     /// Path to the input parquet file which is used to fill the database table with values.
     input: PathBuf,
@@ -267,7 +266,7 @@ fn main() -> Result<(), Error> {
         0
     } else {
         // Log warnings and one additional log level for each `-v` passed in the command line.
-        opt.verbose + 1
+        opt.verbose as usize + 1
     };
 
     let color_choice = if opt.no_color {

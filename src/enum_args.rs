@@ -1,8 +1,8 @@
 use anyhow::{anyhow, bail, Error};
-use clap::ArgEnum;
+use clap::ValueEnum;
 use parquet::basic::{Compression, Encoding};
 
-#[derive(ArgEnum, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum EncodingArgument {
     System,
     Utf16,
@@ -26,30 +26,30 @@ impl EncodingArgument {
     }
 }
 
-/// Used to display a number of valid values for the compression argumet to the user.
-pub const COMPRESSION_VARIANTS: &[&str] = &[
-    "uncompressed",
-    "gzip",
-    "lz4",
-    "lz0",
-    "zstd",
-    "snappy",
-    "brotli",
-];
+/// Mirrors parquets `Compression` enum in order to parse it from the command line
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum CompressionVariants {
+    Uncompressed,
+    Gzip,
+    Lz4,
+    Lz0,
+    Zstd,
+    Snappy,
+    Brotli
+}
 
-/// Used to parse the compression from the command line argument.
-pub fn compression_from_str(source: &str) -> Result<Compression, Error> {
-    let compression = match source {
-        "uncompressed" => Compression::UNCOMPRESSED,
-        "gzip" => Compression::GZIP,
-        "lz4" => Compression::LZ4,
-        "lz0" => Compression::LZO,
-        "zstd" => Compression::ZSTD,
-        "snappy" => Compression::SNAPPY,
-        "brotli" => Compression::BROTLI,
-        _ => bail!("Sorry, I do not know this compression identifier."),
-    };
-    Ok(compression)
+impl CompressionVariants {
+    pub fn as_compression(self) -> Compression {
+        match self {
+            CompressionVariants::Uncompressed => Compression::UNCOMPRESSED,
+            CompressionVariants::Gzip => Compression::GZIP,
+            CompressionVariants::Lz4 => Compression::LZ4,
+            CompressionVariants::Lz0 => Compression::LZO,
+            CompressionVariants::Zstd => Compression::ZSTD,
+            CompressionVariants::Snappy => Compression::ZSTD,
+            CompressionVariants::Brotli => Compression::BROTLI,
+        }
+    }
 }
 
 pub fn encoding_from_str(source: &str) -> Result<Encoding, Error> {

@@ -64,7 +64,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     info!("Database Managment System Name: {db_name}");
 
     let parquet_format_options = ParquetFormatOptions {
-        column_compression_default,
+        column_compression_default: column_compression_default.as_compression(),
         column_encodings: parquet_column_encoding,
     };
 
