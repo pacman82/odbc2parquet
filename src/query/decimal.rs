@@ -20,11 +20,12 @@ use super::{
 };
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
-pub fn decmial_fetch_strategy(
+pub fn decimal_fetch_strategy(
     is_optional: bool,
     scale: i32,
     precision: u8,
     driver_does_support_i64: bool,
+    prefer_int_over_decimal: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
     let repetition = if is_optional {
         Repetition::OPTIONAL
@@ -36,7 +37,10 @@ pub fn decmial_fetch_strategy(
         (0..=9, 0) => {
             // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can
             // use the same physical type to store them in parquet.
-            fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, precision as i32)
+            fetch_decimal_as_identical_with_precision::<Int32Type>(
+                is_optional,
+                precision as i32,
+                prefer_int_over_decimal)
         }
         (0..=9, 1..=9) => {
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
@@ -53,7 +57,7 @@ pub fn decmial_fetch_strategy(
                 fetch_decimal_as_identical_with_precision::<Int64Type>(
                     is_optional,
                     precision as i32,
-                )
+                    prefer_int_over_decimal)
             } else {
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.

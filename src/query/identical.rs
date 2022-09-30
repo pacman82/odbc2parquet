@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, Item};
 use parquet::{
-    basic::{ConvertedType, Repetition},
+    basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::DataType,
     schema::types::Type,
@@ -24,7 +24,10 @@ pub struct IdenticalOptional<Pdt> {
 
 /// Columnar fetch strategy to be applied if Parquet and Odbc value type are binary identical.
 /// Generic argument is a parquet data type.
-impl<Pdt> IdenticalOptional<Pdt> {
+impl<Pdt> IdenticalOptional<Pdt>
+where
+    Pdt: DataType
+{
     pub fn new() -> Self {
         Self::with_converted_type(ConvertedType::NONE)
     }
@@ -41,11 +44,32 @@ impl<Pdt> IdenticalOptional<Pdt> {
 
     /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
     /// representation as either 32 or 64 bit integers.
-    pub fn decimal_with_precision(precision: i32) -> Self {
-        Self {
-            converted_type: ConvertedType::DECIMAL,
-            precision: Some(precision),
-            _parquet_data_type: PhantomData,
+    pub fn decimal_with_precision(precision: i32, prefer_int_over_decimal: bool) -> Self {
+        let physical_type = Pdt::get_physical_type();
+        if prefer_int_over_decimal {
+            match physical_type {
+                PhysicalType::INT32 => {
+                    Self {
+                        converted_type: ConvertedType::INT_32,
+                        precision: None,
+                        _parquet_data_type: PhantomData,
+                    }
+                }
+                PhysicalType::INT64 => {
+                    Self {
+                        converted_type: ConvertedType::INT_64,
+                        precision: None,
+                        _parquet_data_type: PhantomData,
+                    }
+                }
+                _ => panic!("Only INT32 and INT64 are allowed to represent Decimal with scale 0")
+            }
+        } else {
+            Self {
+                converted_type: ConvertedType::DECIMAL,
+                precision: Some(precision),
+                _parquet_data_type: PhantomData,
+            }
         }
     }
 }
@@ -94,7 +118,10 @@ pub struct IdenticalRequired<Pdt> {
     _parquet_data_type: PhantomData<Pdt>,
 }
 
-impl<Pdt> IdenticalRequired<Pdt> {
+impl<Pdt> IdenticalRequired<Pdt>
+where
+    Pdt: DataType
+{
     pub fn new() -> Self {
         Self::with_converted_type(ConvertedType::NONE)
     }
@@ -111,11 +138,32 @@ impl<Pdt> IdenticalRequired<Pdt> {
 
     /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
     /// representation as either 32 or 64 bit integers.
-    pub fn decimal_with_precision(precision: i32) -> Self {
-        Self {
-            converted_type: ConvertedType::DECIMAL,
-            precision: Some(precision),
-            _parquet_data_type: PhantomData,
+    pub fn decimal_with_precision(precision: i32, prefer_int_over_decimal: bool) -> Self {
+        let physical_type = Pdt::get_physical_type();
+        if prefer_int_over_decimal {
+            match physical_type {
+                PhysicalType::INT32 => {
+                    Self {
+                        converted_type: ConvertedType::INT_32,
+                        precision: None,
+                        _parquet_data_type: PhantomData,
+                    }
+                }
+                PhysicalType::INT64 => {
+                    Self {
+                        converted_type: ConvertedType::INT_64,
+                        precision: None,
+                        _parquet_data_type: PhantomData,
+                    }
+                }
+                _ => panic!("Only INT32 and INT64 are allowed to represent Decimal with scale 0")
+            }
+        } else {
+            Self {
+                converted_type: ConvertedType::DECIMAL,
+                precision: Some(precision),
+                _parquet_data_type: PhantomData,
+            }
         }
     }
 }
@@ -193,14 +241,15 @@ where
 pub fn fetch_decimal_as_identical_with_precision<Pdt>(
     is_optional: bool,
     precision: i32,
+    prefer_int_over_decimal: bool,
 ) -> Box<dyn ColumnFetchStrategy>
 where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,
 {
     if is_optional {
-        Box::new(IdenticalOptional::<Pdt>::decimal_with_precision(precision))
+        Box::new(IdenticalOptional::<Pdt>::decimal_with_precision(precision, prefer_int_over_decimal))
     } else {
-        Box::new(IdenticalRequired::<Pdt>::decimal_with_precision(precision))
+        Box::new(IdenticalRequired::<Pdt>::decimal_with_precision(precision, prefer_int_over_decimal))
     }
 }

@@ -22,7 +22,7 @@ use crate::{
         binary::Binary,
         boolean::Boolean,
         date::Date,
-        decimal::decmial_fetch_strategy,
+        decimal::decimal_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_converted_type},
         text::{Utf16ToUtf8, Utf8},
         timestamp::TimestampToInt,
@@ -54,6 +54,7 @@ pub struct MappingOptions<'a> {
     pub use_utf16: bool,
     pub prefer_varbinary: bool,
     pub driver_does_support_i64: bool,
+    pub prefer_int_over_decimal: bool,
 }
 
 pub fn strategy_from_column_description(
@@ -68,6 +69,7 @@ pub fn strategy_from_column_description(
         use_utf16,
         prefer_varbinary,
         driver_does_support_i64,
+        prefer_int_over_decimal,
     } = mapping_options;
 
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
@@ -94,11 +96,12 @@ pub fn strategy_from_column_description(
         }
         DataType::Date => Box::new(Date::new(repetition)),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-            decmial_fetch_strategy(
+            decimal_fetch_strategy(
                 is_optional,
                 scale as i32,
                 precision.try_into().unwrap(),
                 driver_does_support_i64,
+                prefer_int_over_decimal,
             )
         }
         DataType::Timestamp { precision } => Box::new(TimestampToInt::new(

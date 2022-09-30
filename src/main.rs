@@ -191,6 +191,12 @@ pub struct QueryOpt {
     /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
+    /// When writing to Parquet file prefer using Int over Decimal as the Converted type
+    /// when scale is 0.
+    /// Decimal(1-9, 0) -> INT_32,
+    /// Decimal(10-19, 0) -> INT_64
+    #[clap(long)]
+    prefer_int_over_decimal: bool,
     /// In case fetch results gets split into multiple files a suffix with a number will be appended
     /// to each file name. Default suffix length is 2 leading to suffixes like e.g. `_03`. In case
     /// you would expect thousands of files in your output you may want to set this to say `4` so

@@ -46,6 +46,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         column_compression_default,
         parquet_column_encoding,
         driver_does_not_support_64bit_integers,
+        prefer_int_over_decimal,
         suffix_length,
     } = opt;
 
@@ -73,6 +74,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         use_utf16: encoding.use_utf16(),
         prefer_varbinary,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
+        prefer_int_over_decimal: prefer_int_over_decimal,
     };
 
     if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {
