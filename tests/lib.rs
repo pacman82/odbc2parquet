@@ -269,10 +269,14 @@ fn query_decimals() {
     setup_empty_table_mssql(
         &conn,
         table_name,
-        &["NUMERIC(3,2) NOT NULL", "DECIMAL(3,2) NOT NULL"],
+        &[
+            "NUMERIC(3,2) NOT NULL",
+            "DECIMAL(3,2) NOT NULL",
+            "DECIMAL(3,0) NOT NULL",
+        ],
     )
     .unwrap();
-    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1.23, 1.23);");
+    let insert = format!("INSERT INTO {table_name} (a,b,c) VALUES (1.23, 1.23, 3);");
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -282,7 +286,7 @@ fn query_decimals() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b FROM {};", table_name);
+    let query = format!("SELECT a,b,c FROM {};", table_name);
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args(&[
@@ -296,12 +300,14 @@ fn query_decimals() {
         .assert()
         .success();
 
-    let expected_values = "{a: 1.23, b: 1.23}\n";
+    let expected_values = "{a: 1.23, b: 1.23, c: 3.}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
         "message schema {\n  REQUIRED INT32 a (DECIMAL(3,2));\n  \
-                REQUIRED INT32 b (DECIMAL(3,2));\n}",
+                REQUIRED INT32 b (DECIMAL(3,2));\n  \
+                REQUIRED INT32 c (DECIMAL(3));\n\
+            }",
     ));
 }
 
@@ -310,19 +316,22 @@ fn query_decimals_optional() {
     // Setup table for test
     let table_name = "QueryDecimalsOptional";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(3,2)", "DECIMAL(3,2)"]).unwrap();
+    setup_empty_table_mssql(
+        &conn,
+        table_name,
+        &["NUMERIC(3,2)", "DECIMAL(3,2)", "DECIMAL(3,0)"],
+    )
+    .unwrap();
     let insert = format!(
         "INSERT INTO {}
-        (a,b)
+        (a,b,c)
         VALUES
-        (1.23, 1.23),
-        (NULL, NULL),
-        (4.56, 4.56);",
+        (1.23, 1.23, 123),
+        (NULL, NULL, NULL),
+        (4.56, 4.56, 456);",
         table_name
     );
     conn.execute(&insert, ()).unwrap();
-
-    let expected_values = "{a: 1.23, b: 1.23}\n{a: null, b: null}\n{a: 4.56, b: 4.56}\n";
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -332,7 +341,7 @@ fn query_decimals_optional() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b FROM {table_name} ORDER BY id;");
+    let query = format!("SELECT a,b,c FROM {table_name} ORDER BY id;");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -347,6 +356,8 @@ fn query_decimals_optional() {
         .assert()
         .success();
 
+    let expected_values =
+        "{a: 1.23, b: 1.23, c: 123.}\n{a: null, b: null, c: null}\n{a: 4.56, b: 4.56, c: 456.}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
