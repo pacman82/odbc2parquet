@@ -171,7 +171,7 @@ pub struct QueryOpt {
     /// `Utf16`.
     #[arg(long, value_enum, default_value = "Auto", ignore_case = true)]
     encoding: EncodingArgument,
-    /// Map `BINARY` SQL colmuns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
+    /// Map `BINARY` SQL columns to `BYTE_ARRAY` instead of `FIXED_LEN_BYTE_ARRAY`. This flag has
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
     #[clap(long)]
     prefer_varbinary: bool,
