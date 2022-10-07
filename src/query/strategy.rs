@@ -8,7 +8,7 @@ use odbc_api::{
     ColumnDescription, Cursor, DataType, Nullability,
 };
 use parquet::{
-    basic::{ConvertedType, Repetition},
+    basic::{LogicalType, Repetition},
     column::writer::ColumnWriter,
     data_type::{
         ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type, Int64Type,
@@ -23,7 +23,9 @@ use crate::{
         boolean::Boolean,
         date::Date,
         decimal::decmial_fetch_strategy,
-        identical::{fetch_identical, fetch_identical_with_converted_type},
+        identical::{
+            fetch_identical, fetch_identical_with_logical_type,
+        },
         text::{Utf16ToUtf8, Utf8},
         timestamp::TimestampToInt,
         timestamp_tz::timestamp_tz,
@@ -86,12 +88,20 @@ pub fn strategy_from_column_description(
         // Map all precisions larger than 24 to double. Double would be technically precision 53.
         DataType::Float { precision: _ } => fetch_identical::<DoubleType>(is_optional),
         DataType::Double => fetch_identical::<DoubleType>(is_optional),
-        DataType::SmallInt => {
-            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_16)
-        }
-        DataType::Integer => {
-            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_32)
-        }
+        DataType::SmallInt => fetch_identical_with_logical_type::<Int32Type>(
+            is_optional,
+            LogicalType::Integer {
+                bit_width: 16,
+                is_signed: true,
+            },
+        ),
+        DataType::Integer => fetch_identical_with_logical_type::<Int32Type>(
+            is_optional,
+            LogicalType::Integer {
+                bit_width: 32,
+                is_signed: true,
+            },
+        ),
         DataType::Date => Box::new(Date::new(repetition)),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
             decmial_fetch_strategy(
@@ -108,7 +118,7 @@ pub fn strategy_from_column_description(
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
         DataType::TinyInt => {
-            fetch_identical_with_converted_type::<Int32Type>(is_optional, ConvertedType::INT_8)
+            fetch_identical_with_logical_type::<Int32Type>(is_optional, LogicalType::Integer { bit_width: 8, is_signed: true })
         }
         DataType::Binary { length } => {
             if prefer_varbinary {

@@ -40,17 +40,6 @@ impl<Pdt> IdenticalOptional<Pdt> {
             _parquet_data_type: PhantomData,
         }
     }
-
-    /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
-    /// a specific converted type (aka. former logical type).
-    pub fn with_converted_type(converted_type: ConvertedType) -> Self {
-        Self {
-            converted_type,
-            logical_type: None,
-            precision: None,
-            _parquet_data_type: PhantomData,
-        }
-    }
 }
 
 impl<Pdt> ColumnFetchStrategy for IdenticalOptional<Pdt>
@@ -109,17 +98,6 @@ pub struct IdenticalRequired<Pdt> {
 impl<Pdt> IdenticalRequired<Pdt> {
     pub fn new() -> Self {
         Self::with_logical_type(None)
-    }
-
-    /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
-    /// a specific converted type (aka. former logical type).
-    pub fn with_converted_type(converted_type: ConvertedType) -> Self {
-        Self {
-            logical_type: None,
-            converted_type,
-            precision: None,
-            _parquet_data_type: PhantomData,
-        }
     }
 
     /// ODBC buffer and parquet type are identical, but we want to annotate the parquet column with
@@ -188,25 +166,6 @@ where
         Box::new(IdenticalOptional::<Pdt>::new())
     } else {
         Box::new(IdenticalRequired::<Pdt>::new())
-    }
-}
-
-pub fn fetch_identical_with_converted_type<Pdt>(
-    is_optional: bool,
-    converted_type: ConvertedType,
-) -> Box<dyn ColumnFetchStrategy>
-where
-    Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
-{
-    if is_optional {
-        Box::new(IdenticalOptional::<Pdt>::with_converted_type(
-            converted_type,
-        ))
-    } else {
-        Box::new(IdenticalRequired::<Pdt>::with_converted_type(
-            converted_type,
-        ))
     }
 }
 
