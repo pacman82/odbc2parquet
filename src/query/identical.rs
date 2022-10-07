@@ -51,17 +51,6 @@ impl<Pdt> IdenticalOptional<Pdt> {
             _parquet_data_type: PhantomData,
         }
     }
-
-    /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
-    /// representation as either 32 or 64 bit integers.
-    pub fn decimal_with_precision(precision: i32) -> Self {
-        Self {
-            converted_type: ConvertedType::DECIMAL,
-            logical_type: None,
-            precision: Some(precision),
-            _parquet_data_type: PhantomData,
-        }
-    }
 }
 
 impl<Pdt> ColumnFetchStrategy for IdenticalOptional<Pdt>
@@ -73,6 +62,9 @@ where
         let physical_type = Pdt::get_physical_type();
         let mut builder = Type::primitive_type_builder(name, physical_type)
             .with_logical_type(self.logical_type.clone());
+        if let Some(LogicalType::Decimal { scale, precision }) = self.logical_type {
+            builder = builder.with_scale(scale).with_precision(precision);
+        }
         if self.logical_type.is_none() {
             let physical_type = Pdt::get_physical_type();
             let b = Type::primitive_type_builder(name, physical_type)
@@ -140,17 +132,6 @@ impl<Pdt> IdenticalRequired<Pdt> {
             _parquet_data_type: PhantomData,
         }
     }
-
-    /// For decimal types with a Scale of zero we can have a binary identical ODBC parquet
-    /// representation as either 32 or 64 bit integers.
-    pub fn decimal_with_precision(precision: i32) -> Self {
-        Self {
-            logical_type: None,
-            converted_type: ConvertedType::DECIMAL,
-            precision: Some(precision),
-            _parquet_data_type: PhantomData,
-        }
-    }
 }
 
 impl<Pdt> ColumnFetchStrategy for IdenticalRequired<Pdt>
@@ -163,6 +144,9 @@ where
         let mut builder = Type::primitive_type_builder(name, physical_type)
             .with_repetition(Repetition::REQUIRED)
             .with_logical_type(self.logical_type.clone());
+        if let Some(LogicalType::Decimal { scale, precision }) = self.logical_type {
+            builder = builder.with_scale(scale).with_precision(precision);
+        }
         if self.logical_type.is_none() {
             builder = builder.with_converted_type(self.converted_type);
         }
@@ -226,6 +210,25 @@ where
     }
 }
 
+pub fn fetch_identical_with_logical_type<Pdt>(
+    is_optional: bool,
+    logical_type: LogicalType,
+) -> Box<dyn ColumnFetchStrategy>
+where
+    Pdt: DataType,
+    Pdt::T: Item + BufferedDataType,
+{
+    if is_optional {
+        Box::new(IdenticalOptional::<Pdt>::with_logical_type(
+            Some(logical_type)
+        ))
+    } else {
+        Box::new(IdenticalRequired::<Pdt>::with_logical_type(
+            Some(logical_type),
+        ))
+    }
+}
+
 pub fn fetch_decimal_as_identical_with_precision<Pdt>(
     is_optional: bool,
     precision: i32,
@@ -234,9 +237,9 @@ where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,
 {
-    if is_optional {
-        Box::new(IdenticalOptional::<Pdt>::decimal_with_precision(precision))
-    } else {
-        Box::new(IdenticalRequired::<Pdt>::decimal_with_precision(precision))
-    }
+    let logical_type = LogicalType::Decimal {
+        scale: 0,
+        precision,
+    };
+    fetch_identical_with_logical_type::<Pdt>(is_optional, logical_type)
 }

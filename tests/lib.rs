@@ -306,7 +306,7 @@ fn query_decimals() {
     parquet_schema_out(out_str).stdout(contains(
         "message schema {\n  REQUIRED INT32 a (DECIMAL(3,2));\n  \
                 REQUIRED INT32 b (DECIMAL(3,2));\n  \
-                REQUIRED INT32 c (DECIMAL(3));\n\
+                REQUIRED INT32 c (DECIMAL(3,0));\n\
             }",
     ));
 }
