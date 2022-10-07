@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, Item};
 use parquet::{
-    basic::{ConvertedType, Repetition},
+    basic::{ConvertedType, LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::DataType,
     schema::types::Type,
@@ -18,6 +18,7 @@ use super::ColumnFetchStrategy;
 /// Copy identical optional data from ODBC to Parquet.
 pub struct IdenticalOptional<Pdt> {
     converted_type: ConvertedType,
+    logical_type: Option<LogicalType>,
     precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
 }
@@ -26,7 +27,18 @@ pub struct IdenticalOptional<Pdt> {
 /// Generic argument is a parquet data type.
 impl<Pdt> IdenticalOptional<Pdt> {
     pub fn new() -> Self {
-        Self::with_converted_type(ConvertedType::NONE)
+        Self::with_logical_type(None)
+    }
+
+    /// Odbc buffer and physical parquet type are identical, but we want to annotate the parquet
+    /// column with a specific logical type.
+    pub fn with_logical_type(logical_type: Option<LogicalType>) -> Self {
+        Self {
+            converted_type: ConvertedType::NONE,
+            logical_type,
+            precision: None,
+            _parquet_data_type: PhantomData,
+        }
     }
 
     /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
@@ -34,6 +46,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
     pub fn with_converted_type(converted_type: ConvertedType) -> Self {
         Self {
             converted_type,
+            logical_type: None,
             precision: None,
             _parquet_data_type: PhantomData,
         }
@@ -44,6 +57,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
     pub fn decimal_with_precision(precision: i32) -> Self {
         Self {
             converted_type: ConvertedType::DECIMAL,
+            logical_type: None,
             precision: Some(precision),
             _parquet_data_type: PhantomData,
         }
@@ -58,10 +72,15 @@ where
     fn parquet_type(&self, name: &str) -> Type {
         let physical_type = Pdt::get_physical_type();
         let mut builder = Type::primitive_type_builder(name, physical_type)
-            .with_repetition(Repetition::OPTIONAL)
-            .with_converted_type(self.converted_type);
-        if let Some(precision) = self.precision {
-            builder = builder.with_scale(0).with_precision(precision);
+            .with_logical_type(self.logical_type.clone());
+        if self.logical_type.is_none() {
+            let physical_type = Pdt::get_physical_type();
+            let b = Type::primitive_type_builder(name, physical_type)
+                .with_repetition(Repetition::OPTIONAL)
+                .with_converted_type(self.converted_type);
+            if let Some(precision) = self.precision {
+                builder = b.with_scale(0).with_precision(precision);
+            }
         }
         builder.build().unwrap()
     }
@@ -89,6 +108,7 @@ where
 /// Optimized strategy if ODBC and Parquet type are identical, and we know the data source not to
 /// contain any NULLs.
 pub struct IdenticalRequired<Pdt> {
+    logical_type: Option<LogicalType>,
     converted_type: ConvertedType,
     precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
@@ -96,14 +116,26 @@ pub struct IdenticalRequired<Pdt> {
 
 impl<Pdt> IdenticalRequired<Pdt> {
     pub fn new() -> Self {
-        Self::with_converted_type(ConvertedType::NONE)
+        Self::with_logical_type(None)
     }
 
     /// Odbc buffer and parquet type are identical, but we want to annotate the parquet column with
     /// a specific converted type (aka. former logical type).
     pub fn with_converted_type(converted_type: ConvertedType) -> Self {
         Self {
+            logical_type: None,
             converted_type,
+            precision: None,
+            _parquet_data_type: PhantomData,
+        }
+    }
+
+    /// ODBC buffer and parquet type are identical, but we want to annotate the parquet column with
+    /// a specific logical type which is not implied by its physical type.
+    pub fn with_logical_type(logical_type: Option<LogicalType>) -> Self {
+        Self {
+            logical_type,
+            converted_type: ConvertedType::NONE,
             precision: None,
             _parquet_data_type: PhantomData,
         }
@@ -113,6 +145,7 @@ impl<Pdt> IdenticalRequired<Pdt> {
     /// representation as either 32 or 64 bit integers.
     pub fn decimal_with_precision(precision: i32) -> Self {
         Self {
+            logical_type: None,
             converted_type: ConvertedType::DECIMAL,
             precision: Some(precision),
             _parquet_data_type: PhantomData,
@@ -129,7 +162,10 @@ where
         let physical_type = Pdt::get_physical_type();
         let mut builder = Type::primitive_type_builder(name, physical_type)
             .with_repetition(Repetition::REQUIRED)
-            .with_converted_type(self.converted_type);
+            .with_logical_type(self.logical_type.clone());
+        if self.logical_type.is_none() {
+            builder = builder.with_converted_type(self.converted_type);
+        }
         if let Some(precision) = self.precision {
             builder = builder.with_scale(0).with_precision(precision);
         }
