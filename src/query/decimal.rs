@@ -7,7 +7,7 @@ use odbc_api::{
     DataType,
 };
 use parquet::{
-    basic::{ConvertedType, LogicalType, Repetition, Type as PhysicalType},
+    basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType as ParquetDataType, FixedLenByteArrayType, Int32Type, Int64Type},
     schema::types::Type,
@@ -191,7 +191,10 @@ impl ColumnFetchStrategy for DecimalAsBinary {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
             .with_length(self.length_in_bytes.try_into().unwrap())
-            .with_converted_type(ConvertedType::DECIMAL)
+            .with_logical_type(Some(LogicalType::Decimal {
+                scale: self.scale,
+                precision: self.precision as i32,
+            }))
             .with_precision(self.precision.try_into().unwrap())
             .with_scale(self.scale)
             .with_repetition(self.repetition)
