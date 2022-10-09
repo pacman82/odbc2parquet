@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.2
+
+* Introduce flag `avoid-decmial` to produce output without logical type `DECIMAL`. This allows artefacts without decimal support to process the output of `odbc2parquet`.
+
 ## 0.13.1
 
 * The level of verbosity had been one to high:
