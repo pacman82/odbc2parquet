@@ -55,6 +55,7 @@ pub struct MappingOptions<'a> {
     pub db_name: &'a str,
     pub use_utf16: bool,
     pub prefer_varbinary: bool,
+    pub avoid_decimal: bool,
     pub driver_does_support_i64: bool,
 }
 
@@ -69,6 +70,7 @@ pub fn strategy_from_column_description(
         db_name,
         use_utf16,
         prefer_varbinary,
+        avoid_decimal,
         driver_does_support_i64,
     } = mapping_options;
 
@@ -108,6 +110,7 @@ pub fn strategy_from_column_description(
                 is_optional,
                 scale as i32,
                 precision.try_into().unwrap(),
+                avoid_decimal,
                 driver_does_support_i64,
             )
         }

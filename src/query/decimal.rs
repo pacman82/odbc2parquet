@@ -16,7 +16,7 @@ use parquet::{
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
 use super::{
-    identical::fetch_decimal_as_identical_with_precision, strategy::ColumnFetchStrategy, text::Utf8,
+    identical::fetch_identical_with_logical_type, strategy::ColumnFetchStrategy, text::Utf8,
 };
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
@@ -24,6 +24,7 @@ pub fn decmial_fetch_strategy(
     is_optional: bool,
     scale: i32,
     precision: u8,
+    avoid_decimal: bool,
     driver_does_support_i64: bool,
 ) -> Box<dyn ColumnFetchStrategy> {
     let repetition = if is_optional {
@@ -34,9 +35,17 @@ pub fn decmial_fetch_strategy(
 
     match (precision, scale) {
         (0..=9, 0) => {
+            let logical_type = if avoid_decimal {
+                LogicalType::Integer { bit_width: 32, is_signed: true }
+            } else {
+                LogicalType::Decimal {
+                    scale: 0,
+                    precision: precision as i32,
+                }
+            };
             // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can
             // use the same physical type to store them in parquet.
-            fetch_decimal_as_identical_with_precision::<Int32Type>(is_optional, precision as i32)
+            fetch_identical_with_logical_type::<Int32Type>(is_optional, logical_type)
         }
         (0..=9, 1..=9) => {
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
@@ -49,11 +58,16 @@ pub fn decmial_fetch_strategy(
             // Values with scale 0 and precision <= 18 can be fetched as i64 from the ODBC and we
             // can use the same physical type to store them in parquet. That is, if the database
             // does support fetching values as 64Bit integers.
+            let logical_type = if avoid_decimal {
+                LogicalType::Integer { bit_width: 64, is_signed: true }
+            } else {
+                LogicalType::Decimal {
+                    scale: 0,
+                    precision: precision as i32,
+                }
+            };
             if driver_does_support_i64 {
-                fetch_decimal_as_identical_with_precision::<Int64Type>(
-                    is_optional,
-                    precision as i32,
-                )
+                fetch_identical_with_logical_type::<Int64Type>(is_optional, logical_type)
             } else {
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.

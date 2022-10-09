@@ -169,18 +169,3 @@ where
         )))
     }
 }
-
-pub fn fetch_decimal_as_identical_with_precision<Pdt>(
-    is_optional: bool,
-    precision: i32,
-) -> Box<dyn ColumnFetchStrategy>
-where
-    Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
-{
-    let logical_type = LogicalType::Decimal {
-        scale: 0,
-        precision,
-    };
-    fetch_identical_with_logical_type::<Pdt>(is_optional, logical_type)
-}

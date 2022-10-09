@@ -273,10 +273,11 @@ fn query_decimals() {
             "NUMERIC(3,2) NOT NULL",
             "DECIMAL(3,2) NOT NULL",
             "DECIMAL(3,0) NOT NULL",
+            "DECIMAL(10,0) NOT NULL",
         ],
     )
     .unwrap();
-    let insert = format!("INSERT INTO {table_name} (a,b,c) VALUES (1.23, 1.23, 3);");
+    let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -286,7 +287,7 @@ fn query_decimals() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b,c FROM {};", table_name);
+    let query = format!("SELECT a,b,c,d FROM {};", table_name);
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args(&[
@@ -300,13 +301,14 @@ fn query_decimals() {
         .assert()
         .success();
 
-    let expected_values = "{a: 1.23, b: 1.23, c: 3.}\n";
+    let expected_values = "{a: 1.23, b: 1.23, c: 3., d: 1234567890.}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains(
         "message schema {\n  REQUIRED INT32 a (DECIMAL(3,2));\n  \
                 REQUIRED INT32 b (DECIMAL(3,2));\n  \
-                REQUIRED INT32 c (DECIMAL(3,0));\n\
+                REQUIRED INT32 c (DECIMAL(3,0));\n  \
+                REQUIRED INT64 d (DECIMAL(10,0));\n\
             }",
     ));
 }
