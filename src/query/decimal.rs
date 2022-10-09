@@ -33,6 +33,12 @@ pub fn decmial_fetch_strategy(
         Repetition::REQUIRED
     };
 
+    if avoid_decimal && scale != 0 {
+        // Precision + sign and radix character
+        let length = precision as usize + 2;
+        return Box::new(Utf8::with_bytes_length(repetition, length))
+    }
+
     match (precision, scale) {
         (0..=9, 0) => {
             let logical_type = if avoid_decimal {
@@ -51,7 +57,7 @@ pub fn decmial_fetch_strategy(
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 9 we will store them as i32 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int32Type>::new(
-                precision, scale, repetition,
+                precision, scale, repetition, LogicalType::Decimal { scale, precision: precision as i32 }
             ))
         }
         (10..=18, 0) => {
@@ -69,10 +75,15 @@ pub fn decmial_fetch_strategy(
             if driver_does_support_i64 {
                 fetch_identical_with_logical_type::<Int64Type>(is_optional, logical_type)
             } else {
+                let logical_type = if avoid_decimal {
+                    LogicalType::Integer { bit_width: 64, is_signed: true }
+                } else {
+                    LogicalType::Decimal { scale, precision: precision as i32 }
+                };
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.
                 Box::new(DecimalTextToInteger::<Int64Type>::new(
-                    precision, 0, repetition,
+                    precision, 0, repetition, logical_type
                 ))
             }
         }
@@ -80,7 +91,7 @@ pub fn decmial_fetch_strategy(
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 18 we will store them as i64 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int64Type>::new(
-                precision, scale, repetition,
+                precision, scale, repetition, LogicalType::Decimal { scale, precision: precision as i32 }
             ))
         }
         (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
@@ -100,15 +111,17 @@ struct DecimalTextToInteger<Pdt> {
     precision: u8,
     scale: i32,
     repetition: Repetition,
+    logical_type: LogicalType,
     _pdt: PhantomData<Pdt>,
 }
 
 impl<Pdt> DecimalTextToInteger<Pdt> {
-    fn new(precision: u8, scale: i32, repetition: Repetition) -> Self {
+    fn new(precision: u8, scale: i32, repetition: Repetition, logical_type: LogicalType) -> Self {
         Self {
             precision,
             scale,
             repetition,
+            logical_type,
             _pdt: PhantomData,
         }
     }
@@ -121,10 +134,7 @@ where
 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, Pdt::get_physical_type())
-            .with_logical_type(Some(LogicalType::Decimal {
-                scale: self.scale,
-                precision: self.precision as i32,
-            }))
+            .with_logical_type(Some(self.logical_type.clone()))
             .with_precision(self.precision as i32)
             .with_scale(self.scale)
             .with_repetition(self.repetition)

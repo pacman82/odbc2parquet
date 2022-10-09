@@ -313,6 +313,113 @@ fn query_decimals() {
     ));
 }
 
+/// Produce output for downstream artefacts like polars which lack support for decimal. In effect
+/// logical type decimal should not show up in the output
+#[test]
+fn query_decimals_avoid_decimal() {
+    // Setup table for test
+    let table_name = "QueryDecimalsAvoidDecimal";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table_mssql(
+        &conn,
+        table_name,
+        &[
+            "NUMERIC(3,2) NOT NULL",
+            "DECIMAL(3,2) NOT NULL",
+            "DECIMAL(3,0) NOT NULL",
+            "DECIMAL(10,0) NOT NULL",
+        ],
+    )
+    .unwrap();
+    let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a,b,c,d FROM {};", table_name);
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--avoid-decimal",
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: \"1.23\", b: \"1.23\", c: 3, d: 1234567890}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains(
+        "message schema {\n  \
+                REQUIRED BYTE_ARRAY a (UTF8);\n  \
+                REQUIRED BYTE_ARRAY b (UTF8);\n  \
+                REQUIRED INT32 c (INTEGER(32,true));\n  \
+                REQUIRED INT64 d (INTEGER(64,true));\n\
+            }",
+    ));
+}
+
+/// Combination of avoid-decimal and int64-not-supported by driver. E.g. querying Decimal columns
+/// from Oracle and using the output in polars
+#[test]
+fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
+    // Setup table for test
+    let table_name = "QueryDecimalsAvoidDecimalInt64NotSupportedByDriver";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table_mssql(
+        &conn,
+        table_name,
+        &[
+            "DECIMAL(10,0) NOT NULL",
+        ],
+    )
+    .unwrap();
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (1234567890);");
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--avoid-decimal",
+            "--driver-does-not-support-64bit-integers",
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: 1234567890}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains(
+        "message schema {\n  \
+                REQUIRED INT64 a (INTEGER(64,true));\n\
+            }",
+    ));
+}
+
 #[test]
 fn query_decimals_optional() {
     // Setup table for test

@@ -191,6 +191,13 @@ pub struct QueryOpt {
     /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
+    /// Use this flag if you want to avoid the logical type DECIMAL in the produced output. E.g.
+    /// because you want to process it with polars which does not support DECIMAL. In case the scale
+    /// of the relational Decimal type is 0, the output will be mapped to either 32Bit or 64Bit
+    /// Integeres with logical type none. If the scale is not 0 the Decimal column will be fetches
+    /// as text.
+    #[clap(long)]
+    avoid_decimal: bool,
     /// In case fetch results gets split into multiple files a suffix with a number will be appended
     /// to each file name. Default suffix length is 2 leading to suffixes like e.g. `_03`. In case
     /// you would expect thousands of files in your output you may want to set this to say `4` so

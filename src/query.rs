@@ -45,6 +45,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         prefer_varbinary,
         column_compression_default,
         parquet_column_encoding,
+        avoid_decimal,
         driver_does_not_support_64bit_integers,
         suffix_length,
     } = opt;
@@ -72,7 +73,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         db_name: &db_name,
         use_utf16: encoding.use_utf16(),
         prefer_varbinary,
-        avoid_decimal: false,
+        avoid_decimal,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
     };
 
