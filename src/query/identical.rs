@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use anyhow::Error;
 use odbc_api::buffers::{AnyColumnView, BufferDescription, Item};
 use parquet::{
-    basic::{ConvertedType, LogicalType, Repetition},
+    basic::{LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::DataType,
     schema::types::Type,
@@ -17,9 +17,7 @@ use super::ColumnFetchStrategy;
 
 /// Copy identical optional data from ODBC to Parquet.
 pub struct IdenticalOptional<Pdt> {
-    converted_type: ConvertedType,
     logical_type: Option<LogicalType>,
-    precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
 }
 
@@ -34,9 +32,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
     /// column with a specific logical type.
     pub fn with_logical_type(logical_type: Option<LogicalType>) -> Self {
         Self {
-            converted_type: ConvertedType::NONE,
             logical_type,
-            precision: None,
             _parquet_data_type: PhantomData,
         }
     }
@@ -48,22 +44,7 @@ where
     Pdt::T: Item + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
-        let physical_type = Pdt::get_physical_type();
-        let mut builder = Type::primitive_type_builder(name, physical_type)
-            .with_logical_type(self.logical_type.clone());
-        if let Some(LogicalType::Decimal { scale, precision }) = self.logical_type {
-            builder = builder.with_scale(scale).with_precision(precision);
-        }
-        if self.logical_type.is_none() {
-            let physical_type = Pdt::get_physical_type();
-            let b = Type::primitive_type_builder(name, physical_type)
-                .with_repetition(Repetition::OPTIONAL)
-                .with_converted_type(self.converted_type);
-            if let Some(precision) = self.precision {
-                builder = b.with_scale(0).with_precision(precision);
-            }
-        }
-        builder.build().unwrap()
+        parquet_data_type::<Pdt>(name, self.logical_type.clone(), Repetition::OPTIONAL)
     }
 
     fn buffer_description(&self) -> BufferDescription {
@@ -90,8 +71,6 @@ where
 /// contain any NULLs.
 pub struct IdenticalRequired<Pdt> {
     logical_type: Option<LogicalType>,
-    converted_type: ConvertedType,
-    precision: Option<i32>,
     _parquet_data_type: PhantomData<Pdt>,
 }
 
@@ -105,8 +84,6 @@ impl<Pdt> IdenticalRequired<Pdt> {
     pub fn with_logical_type(logical_type: Option<LogicalType>) -> Self {
         Self {
             logical_type,
-            converted_type: ConvertedType::NONE,
-            precision: None,
             _parquet_data_type: PhantomData,
         }
     }
@@ -118,20 +95,7 @@ where
     Pdt::T: Item + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
-        let physical_type = Pdt::get_physical_type();
-        let mut builder = Type::primitive_type_builder(name, physical_type)
-            .with_repetition(Repetition::REQUIRED)
-            .with_logical_type(self.logical_type.clone());
-        if let Some(LogicalType::Decimal { scale, precision }) = self.logical_type {
-            builder = builder.with_scale(scale).with_precision(precision);
-        }
-        if self.logical_type.is_none() {
-            builder = builder.with_converted_type(self.converted_type);
-        }
-        if let Some(precision) = self.precision {
-            builder = builder.with_scale(0).with_precision(precision);
-        }
-        builder.build().unwrap()
+        parquet_data_type::<Pdt>(name, self.logical_type.clone(), Repetition::REQUIRED)
     }
 
     fn buffer_description(&self) -> BufferDescription {
@@ -157,6 +121,24 @@ where
     }
 }
 
+fn parquet_data_type<Pdt>(
+    name: &str,
+    logical_type: Option<LogicalType>,
+    repetition: Repetition,
+) -> Type
+where
+    Pdt: DataType,
+{
+    let physical_type = Pdt::get_physical_type();
+    let mut builder = Type::primitive_type_builder(name, physical_type)
+        .with_repetition(repetition)
+        .with_logical_type(logical_type.clone());
+    if let Some(LogicalType::Decimal { scale, precision }) = logical_type {
+        builder = builder.with_scale(scale).with_precision(precision);
+    }
+    builder.build().unwrap()
+}
+
 pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn ColumnFetchStrategy>
 where
     Pdt: DataType,
@@ -178,13 +160,13 @@ where
     Pdt::T: Item + BufferedDataType,
 {
     if is_optional {
-        Box::new(IdenticalOptional::<Pdt>::with_logical_type(
-            Some(logical_type)
-        ))
+        Box::new(IdenticalOptional::<Pdt>::with_logical_type(Some(
+            logical_type,
+        )))
     } else {
-        Box::new(IdenticalRequired::<Pdt>::with_logical_type(
-            Some(logical_type),
-        ))
+        Box::new(IdenticalRequired::<Pdt>::with_logical_type(Some(
+            logical_type,
+        )))
     }
 }
 
