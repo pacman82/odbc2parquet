@@ -87,9 +87,9 @@ dependencies = [
 
 [[package]]
 name = "atoi"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7c57d12312ff59c811c0643f4d80830505833c9ffaebd193d819392b265be8e"
+checksum = "f28d99ec8bfea296261ca1af174f24225171fea9664ba9003cbebee704810528"
 dependencies = [
  "num-traits",
 ]
@@ -1034,6 +1034,20 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
+version = "0.49.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb9e4d6044395f754c61d0fd4aa676e9afe8973f13673ee3c896edcfcdbb596f"
+dependencies = [
+ "force-send-sync",
+ "log",
+ "odbc-sys",
+ "thiserror",
+ "widestring",
+ "winit",
+]
+
+[[package]]
+name = "odbc-api"
 version = "0.50.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe247d9885cf047857c624b50f04514dbb3ae6082f250a22275e495e45abf532"
@@ -1067,7 +1081,8 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api",
+ "odbc-api 0.49.0",
+ "odbc-api 0.50.1",
  "parquet",
  "predicates",
  "stderrlog",
