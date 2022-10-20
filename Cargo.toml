@@ -59,7 +59,7 @@ odbc-api = "0.50.2"
 odbc-api = { version = "0.50.2", features = ["narrow"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.4"
+assert_cmd = "2.0.5"
 lazy_static = "1.4.0"
 predicates = "2.1.1"
 tempfile = "3.3.0"
