@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.3
+
+* Fix: There had been an issue that for timestamps without timezone only the logical type has been emitted in the schema, yet the converted type had been omitted.
+
 ## 0.13.2
 
 * Introduce flag `avoid-decmial` to produce output without logical type `DECIMAL`. This allows artefacts without decimal support to process the output of `odbc2parquet`.
