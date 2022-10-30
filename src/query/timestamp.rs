@@ -5,7 +5,7 @@ use odbc_api::{
     sys::Timestamp,
 };
 use parquet::{
-    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType, ConvertedType},
+    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
     format::{MicroSeconds, MilliSeconds},
@@ -32,18 +32,11 @@ impl TimestampToInt {
 
 impl ColumnFetchStrategy for TimestampToInt {
     fn parquet_type(&self, name: &str) -> Type {
-        let ct = if self.precision <= 3 {
-            ConvertedType::TIMESTAMP_MILLIS
-        } else {
-            ConvertedType::TIMESTAMP_MICROS
-        };
-
         Type::primitive_type_builder(name, PhysicalType::INT64)
             .with_logical_type(Some(LogicalType::Timestamp {
                 is_adjusted_to_u_t_c: false,
                 unit: precision_to_time_unit(self.precision),
             }))
-            .with_converted_type(ct)
             .with_repetition(self.repetition)
             .build()
             .unwrap()

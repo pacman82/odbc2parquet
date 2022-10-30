@@ -1,8 +1,6 @@
 # Changelog
 
-## 0.13.3
-
-* Fix: There had been an issue that for timestamps without timezone only the logical type has been emitted in the schema, yet the converted type had been omitted.
+## 0.13.3 (next)
 
 ## 0.13.2
 
