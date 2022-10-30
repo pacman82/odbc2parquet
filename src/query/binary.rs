@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
 use parquet::{
     basic::{Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -66,10 +66,10 @@ where
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         let cw = get_typed_column_writer_mut::<Pdt>(column_writer);
-        if let AnyColumnView::Binary(view) = column_view {
+        if let AnySlice::Binary(view) = column_view {
             parquet_buffer.write_optional(
                 cw,
                 view.iter().map(|maybe_bytes| {

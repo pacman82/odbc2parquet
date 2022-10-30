@@ -376,14 +376,7 @@ fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
     // Setup table for test
     let table_name = "QueryDecimalsAvoidDecimalInt64NotSupportedByDriver";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table_mssql(
-        &conn,
-        table_name,
-        &[
-            "DECIMAL(10,0) NOT NULL",
-        ],
-    )
-    .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(10,0) NOT NULL"]).unwrap();
     let insert = format!("INSERT INTO {table_name} (a) VALUES (1234567890);");
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.

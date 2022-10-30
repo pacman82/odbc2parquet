@@ -1,7 +1,7 @@
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDescription, BufferKind},
     sys::Timestamp,
 };
 use parquet::{
@@ -53,7 +53,7 @@ impl ColumnFetchStrategy for TimestampToInt {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         write_timestamp_col(parquet_buffer, column_writer, column_view, self.precision)
     }
@@ -70,7 +70,7 @@ pub fn precision_to_time_unit(precision: u8) -> TimeUnit {
 fn write_timestamp_col(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
+    column_reader: AnySlice,
     precision: u8,
 ) -> Result<(), Error> {
     let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();

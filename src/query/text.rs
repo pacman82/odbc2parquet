@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use anyhow::Error;
 use log::warn;
-use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -48,7 +48,7 @@ impl ColumnFetchStrategy for Utf16ToUtf8 {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         write_utf16_to_utf8(parquet_buffer, column_writer, column_view)
     }
@@ -57,9 +57,9 @@ impl ColumnFetchStrategy for Utf16ToUtf8 {
 fn write_utf16_to_utf8(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
+    column_reader: AnySlice,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::WText(view)) =
+    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnySlice::WText(view)) =
         (column_writer, column_reader)
     {
         pb.write_optional(
@@ -118,7 +118,7 @@ impl ColumnFetchStrategy for Utf8 {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         write_to_utf8(parquet_buffer, column_writer, column_view)
     }
@@ -127,9 +127,9 @@ impl ColumnFetchStrategy for Utf8 {
 fn write_to_utf8(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
+    column_reader: AnySlice,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnyColumnView::Text(view)) =
+    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnySlice::Text(view)) =
         (column_writer, column_reader)
     {
         pb.write_optional(

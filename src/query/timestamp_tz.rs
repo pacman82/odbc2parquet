@@ -1,6 +1,6 @@
 use anyhow::Error;
 use chrono::{DateTime, Utc};
-use odbc_api::buffers::{AnyColumnView, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -66,7 +66,7 @@ impl ColumnFetchStrategy for TimestampTz {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         write_timestamp_tz(parquet_buffer, column_writer, column_view, self.precision)
     }
@@ -75,7 +75,7 @@ impl ColumnFetchStrategy for TimestampTz {
 fn write_timestamp_tz(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
+    column_reader: AnySlice,
     precision: u8,
 ) -> Result<(), Error> {
     let view = column_reader.as_text_view().expect(

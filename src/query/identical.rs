@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnyColumnView, BufferDescription, Item};
+use odbc_api::buffers::{AnySlice, BufferDescription, Item};
 use parquet::{
     basic::{LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -58,7 +58,7 @@ where
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         let it = Pdt::T::as_nullable_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
@@ -109,7 +109,7 @@ where
         &self,
         _parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         // We do not require to buffer the values, as they must neither be transformed, nor contain
         // any gaps due to null, we can use the ODBC buffer directly to write the batch.

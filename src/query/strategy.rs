@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use anyhow::Error;
 use log::{debug, info, warn};
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDescription, BufferKind},
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Nullability,
 };
@@ -23,9 +23,7 @@ use crate::{
         boolean::Boolean,
         date::Date,
         decimal::decmial_fetch_strategy,
-        identical::{
-            fetch_identical, fetch_identical_with_logical_type,
-        },
+        identical::{fetch_identical, fetch_identical_with_logical_type},
         text::{Utf16ToUtf8, Utf8},
         timestamp::TimestampToInt,
         timestamp_tz::timestamp_tz,
@@ -40,12 +38,12 @@ pub trait ColumnFetchStrategy {
     fn parquet_type(&self, name: &str) -> Type;
     /// Description of the buffer bound to the ODBC data source.
     fn buffer_description(&self) -> BufferDescription;
-    /// copy the contents of an ODBC `AnyColumnView` into a Parquet `ColumnWriter`.
+    /// copy the contents of an ODBC `AnySlice` into a Parquet `ColumnWriter`.
     fn copy_odbc_to_parquet(
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error>;
 }
 
@@ -120,9 +118,13 @@ pub fn strategy_from_column_description(
         )),
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
-        DataType::TinyInt => {
-            fetch_identical_with_logical_type::<Int32Type>(is_optional, LogicalType::Integer { bit_width: 8, is_signed: true })
-        }
+        DataType::TinyInt => fetch_identical_with_logical_type::<Int32Type>(
+            is_optional,
+            LogicalType::Integer {
+                bit_width: 8,
+                is_signed: true,
+            },
+        ),
         DataType::Binary { length } => {
             if prefer_varbinary {
                 Box::new(Binary::<ByteArrayType>::new(repetition, length))

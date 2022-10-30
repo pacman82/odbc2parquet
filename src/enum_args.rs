@@ -35,7 +35,7 @@ pub enum CompressionVariants {
     Lz0,
     Zstd,
     Snappy,
-    Brotli
+    Brotli,
 }
 
 impl CompressionVariants {

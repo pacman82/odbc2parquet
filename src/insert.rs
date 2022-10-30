@@ -12,7 +12,7 @@ use log::info;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
-        AnyColumnSliceMut, BinColumnSliceMut, BufferDescription, BufferKind, NullableSliceMut,
+        AnySliceMut, BinColumnSliceMut, BufferDescription, BufferKind, NullableSliceMut,
         TextColumnSliceMut,
     },
     sys::{Date, Timestamp},
@@ -119,7 +119,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
 /// Function extracting the contents of a single column out of the Parquet column reader and into an
 /// ODBC buffer.
 type FnParquetToOdbcCol =
-    dyn Fn(usize, &mut ParquetBuffer, ColumnReader, AnyColumnSliceMut) -> Result<(), Error>;
+    dyn Fn(usize, &mut ParquetBuffer, ColumnReader, AnySliceMut) -> Result<(), Error>;
 
 fn insert_statement_text(table: &str, column_names: &[&str]) -> String {
     // Generate statement text from table name and headline
@@ -147,7 +147,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Text::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
@@ -166,7 +166,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Text::unwrap_writer_optional(column_writer);
                     let it = pb.read_required(&mut cr, num_rows)?;
@@ -189,7 +189,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = WText::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
@@ -208,7 +208,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = WText::unwrap_writer_optional(column_writer);
                     let it = pb.read_required(&mut cr, num_rows)?;
@@ -231,7 +231,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Binary::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
@@ -250,7 +250,7 @@ trait InserterBuilderStart: DataType + Sized {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Binary::unwrap_writer_optional(column_writer);
                     let it = pb.read_required(&mut cr, num_rows)?;
@@ -279,7 +279,7 @@ trait InserterBuilderStart: DataType + Sized {
                 |num_rows: usize,
                  pb: &mut ParquetBuffer,
                  column_reader: ColumnReader,
-                 column_writer: AnyColumnSliceMut| {
+                 column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Self::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
@@ -292,7 +292,7 @@ trait InserterBuilderStart: DataType + Sized {
                 |num_rows: usize,
                  _: &mut ParquetBuffer,
                  column_reader: ColumnReader,
-                 column_writer: AnyColumnSliceMut| {
+                 column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let values = Self::unwrap_writer_required(column_writer);
                     // Do not utilize parquet buffer. just pass the values through.
@@ -334,7 +334,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Pdt::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Odt::unwrap_writer_optional(column_writer);
                     let it = pb.read_optional(&mut cr, num_rows)?;
@@ -347,7 +347,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
                 move |num_rows: usize,
                       pb: &mut ParquetBuffer,
                       column_reader: ColumnReader,
-                      column_writer: AnyColumnSliceMut| {
+                      column_writer: AnySliceMut| {
                     let mut cr = Pdt::get_column_reader(column_reader).expect(BUG);
                     let values = Odt::unwrap_writer_required(column_writer);
                     let it = pb.read_required(&mut cr, num_rows)?;
@@ -684,8 +684,8 @@ trait OdbcDataType<'a> {
     type Required;
     type Optional;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required;
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional;
+    fn unwrap_writer_required(column_writer: AnySliceMut<'a>) -> Self::Required;
+    fn unwrap_writer_optional(column_writer: AnySliceMut<'a>) -> Self::Optional;
 }
 
 fn i128_from_be_slice(bytes: &[u8]) -> i128 {
@@ -774,13 +774,13 @@ impl<'a> OdbcDataType<'a> for Text {
     type Required = TextColumnSliceMut<'a, u8>;
     type Optional = TextColumnSliceMut<'a, u8>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnySliceMut<'a>) -> Self::Required {
         column_writer
             .as_text_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnySliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -792,13 +792,13 @@ impl<'a> OdbcDataType<'a> for WText {
     type Required = TextColumnSliceMut<'a, u16>;
     type Optional = TextColumnSliceMut<'a, u16>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnySliceMut<'a>) -> Self::Required {
         column_writer
             .as_w_text_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnySliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -810,13 +810,13 @@ impl<'a> OdbcDataType<'a> for Binary {
     type Required = BinColumnSliceMut<'a>;
     type Optional = BinColumnSliceMut<'a>;
 
-    fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
+    fn unwrap_writer_required(column_writer: AnySliceMut<'a>) -> Self::Required {
         column_writer
             .as_bin_view()
             .expect("Unexpected column writer. Expected text column writer. This is a Bug.")
     }
 
-    fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
+    fn unwrap_writer_optional(column_writer: AnySliceMut<'a>) -> Self::Optional {
         // Both implementations are identical since the buffer for text is the same.
         Self::unwrap_writer_required(column_writer)
     }
@@ -828,16 +828,16 @@ macro_rules! impl_odbc_data_type {
             type Required = &'a mut [$element];
             type Optional = NullableSliceMut<'a, $element>;
 
-            fn unwrap_writer_required(column_writer: AnyColumnSliceMut<'a>) -> Self::Required {
-                if let AnyColumnSliceMut::$variant_cw_req(inner) = column_writer {
+            fn unwrap_writer_required(column_writer: AnySliceMut<'a>) -> Self::Required {
+                if let AnySliceMut::$variant_cw_req(inner) = column_writer {
                     inner
                 } else {
                     panic!("Unexpected column writer. This is a Bug.")
                 }
             }
 
-            fn unwrap_writer_optional(column_writer: AnyColumnSliceMut<'a>) -> Self::Optional {
-                if let AnyColumnSliceMut::$variant_cw_opt(inner) = column_writer {
+            fn unwrap_writer_optional(column_writer: AnySliceMut<'a>) -> Self::Optional {
+                if let AnySliceMut::$variant_cw_opt(inner) = column_writer {
                     inner
                 } else {
                     panic!("Unexpected column writer. This is a Bug.")

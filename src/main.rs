@@ -3,9 +3,7 @@ mod insert;
 mod parquet_buffer;
 mod query;
 
-use crate::enum_args::{
-    column_encoding_from_str, EncodingArgument,
-};
+use crate::enum_args::{column_encoding_from_str, EncodingArgument};
 use anyhow::{bail, Error};
 use bytesize::ByteSize;
 use enum_args::CompressionVariants;
@@ -18,7 +16,7 @@ use parquet::basic::Encoding;
 use std::{fs::File, path::PathBuf};
 use stderrlog::ColorChoice;
 
-use clap::{Args, Parser, CommandFactory, ArgAction};
+use clap::{ArgAction, Args, CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 
 /// Query an ODBC data source at store the result in a Parquet file.
@@ -150,11 +148,7 @@ pub struct QueryOpt {
     #[arg(long)]
     file_size_threshold: Option<ByteSize>,
     /// Default compression used by the parquet file writer.
-    #[arg(
-        long,
-        value_enum,
-        default_value="gzip",
-    )]
+    #[arg(long, value_enum, default_value = "gzip")]
     column_compression_default: CompressionVariants,
     /// Encoding used for character data requested from the data source.
     ///

@@ -3,7 +3,7 @@ use std::{convert::TryInto, marker::PhantomData};
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDescription, BufferKind},
     DataType,
 };
 use parquet::{
@@ -36,13 +36,16 @@ pub fn decmial_fetch_strategy(
     if avoid_decimal && scale != 0 {
         // Precision + sign and radix character
         let length = precision as usize + 2;
-        return Box::new(Utf8::with_bytes_length(repetition, length))
+        return Box::new(Utf8::with_bytes_length(repetition, length));
     }
 
     match (precision, scale) {
         (0..=9, 0) => {
             let logical_type = if avoid_decimal {
-                LogicalType::Integer { bit_width: 32, is_signed: true }
+                LogicalType::Integer {
+                    bit_width: 32,
+                    is_signed: true,
+                }
             } else {
                 LogicalType::Decimal {
                     scale: 0,
@@ -57,7 +60,13 @@ pub fn decmial_fetch_strategy(
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 9 we will store them as i32 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int32Type>::new(
-                precision, scale, repetition, LogicalType::Decimal { scale, precision: precision as i32 }
+                precision,
+                scale,
+                repetition,
+                LogicalType::Decimal {
+                    scale,
+                    precision: precision as i32,
+                },
             ))
         }
         (10..=18, 0) => {
@@ -65,7 +74,10 @@ pub fn decmial_fetch_strategy(
             // can use the same physical type to store them in parquet. That is, if the database
             // does support fetching values as 64Bit integers.
             let logical_type = if avoid_decimal {
-                LogicalType::Integer { bit_width: 64, is_signed: true }
+                LogicalType::Integer {
+                    bit_width: 64,
+                    is_signed: true,
+                }
             } else {
                 LogicalType::Decimal {
                     scale: 0,
@@ -76,14 +88,23 @@ pub fn decmial_fetch_strategy(
                 fetch_identical_with_logical_type::<Int64Type>(is_optional, logical_type)
             } else {
                 let logical_type = if avoid_decimal {
-                    LogicalType::Integer { bit_width: 64, is_signed: true }
+                    LogicalType::Integer {
+                        bit_width: 64,
+                        is_signed: true,
+                    }
                 } else {
-                    LogicalType::Decimal { scale, precision: precision as i32 }
+                    LogicalType::Decimal {
+                        scale,
+                        precision: precision as i32,
+                    }
                 };
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.
                 Box::new(DecimalTextToInteger::<Int64Type>::new(
-                    precision, 0, repetition, logical_type
+                    precision,
+                    0,
+                    repetition,
+                    logical_type,
                 ))
             }
         }
@@ -91,7 +112,13 @@ pub fn decmial_fetch_strategy(
             // As these values have a scale unequal to 0 we read them from the datebase as text, but
             // since their precision is <= 18 we will store them as i64 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int64Type>::new(
-                precision, scale, repetition, LogicalType::Decimal { scale, precision: precision as i32 }
+                precision,
+                scale,
+                repetition,
+                LogicalType::Decimal {
+                    scale,
+                    precision: precision as i32,
+                },
             ))
         }
         (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
@@ -162,7 +189,7 @@ where
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         // This vec is going to hold the digits with sign and decimal point. It is
         // allocated once and reused for each value.
@@ -244,7 +271,7 @@ impl ColumnFetchStrategy for DecimalAsBinary {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         write_decimal_col(
             parquet_buffer,
@@ -259,7 +286,7 @@ impl ColumnFetchStrategy for DecimalAsBinary {
 fn write_decimal_col(
     parquet_buffer: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnyColumnView,
+    column_reader: AnySlice,
     length_in_bytes: usize,
     precision: u8,
 ) -> Result<(), Error> {

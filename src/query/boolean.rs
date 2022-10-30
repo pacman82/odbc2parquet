@@ -1,6 +1,6 @@
 use anyhow::Error;
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind, Item},
+    buffers::{AnySlice, BufferDescription, BufferKind, Item},
     Bit,
 };
 use parquet::{
@@ -47,7 +47,7 @@ impl ColumnFetchStrategy for Boolean {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnyColumnView,
+        column_view: AnySlice,
     ) -> Result<(), Error> {
         let it = Bit::as_nullable_slice(column_view).unwrap();
         let column_writer = get_typed_column_writer_mut::<BoolType>(column_writer);
