@@ -723,6 +723,48 @@ fn query_timestamp_ms_with_timezone_mssql() {
 }
 
 #[test]
+fn query_time_mssql() {
+    // Setup table for test
+    let table_name = "QueryTime";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["TIME"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a)
+        VALUES
+        ('16:04:12');",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    let expected_values = "{a: \"16:04:12.0000000\"}\n";
+    parquet_read_out(out_str).stdout(eq(expected_values));
+
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL BYTE_ARRAY a (UTF8);"));
+}
+
+#[test]
 fn query_timestamp_with_timezone_postgres() {
     // Setup table for test
     let table_name = "QueryTimestampWithTimezone";
