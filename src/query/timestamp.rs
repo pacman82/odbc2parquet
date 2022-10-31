@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
@@ -5,34 +7,38 @@ use odbc_api::{
     sys::Timestamp,
 };
 use parquet::{
-    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
+    basic::{LogicalType, Repetition, TimeUnit},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
     format::{MicroSeconds, MilliSeconds},
     schema::types::Type,
 };
 
-use crate::parquet_buffer::ParquetBuffer;
+use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
 use super::strategy::ColumnFetchStrategy;
 
-pub struct TimestampToInt {
+pub fn timestamp_without_tz(repetition: Repetition, precision: u8) -> Box<dyn ColumnFetchStrategy> {
+    Box::new(TimestampToInt::<Int64Type> {
+        repetition,
+        precision,
+        _pdt: PhantomData,
+    })
+}
+
+struct TimestampToInt<Pdt> {
     repetition: Repetition,
     precision: u8,
+    _pdt: PhantomData<Pdt>,
 }
 
-impl TimestampToInt {
-    pub fn new(repetition: Repetition, precision: u8) -> Self {
-        Self {
-            repetition,
-            precision,
-        }
-    }
-}
-
-impl ColumnFetchStrategy for TimestampToInt {
+impl<Pdt> ColumnFetchStrategy for TimestampToInt<Pdt>
+where
+    Pdt: DataType,
+    Pdt::T: FromTimestampAndPrecision + BufferedDataType,
+{
     fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, PhysicalType::INT64)
+        Type::primitive_type_builder(name, Pdt::get_physical_type())
             .with_logical_type(Some(LogicalType::Timestamp {
                 is_adjusted_to_u_t_c: false,
                 unit: precision_to_time_unit(self.precision),
@@ -55,7 +61,7 @@ impl ColumnFetchStrategy for TimestampToInt {
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        write_timestamp_col(parquet_buffer, column_writer, column_view, self.precision)
+        write_timestamp_col::<Pdt>(parquet_buffer, column_writer, column_view, self.precision)
     }
 }
 
@@ -67,21 +73,42 @@ pub fn precision_to_time_unit(precision: u8) -> TimeUnit {
     }
 }
 
-fn write_timestamp_col(
+fn write_timestamp_col<Pdt>(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
     precision: u8,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    Pdt: DataType,
+    Pdt::T: FromTimestampAndPrecision + BufferedDataType,
+{
     let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();
-    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
-    let from = from.map(|option| option.map(|ts| timestamp_to_int(ts, precision)));
+    let into = Pdt::get_column_writer_mut(column_writer).unwrap();
+    let from =
+        from.map(|option| option.map(|ts| Pdt::T::from_timestamp_and_precision(ts, precision)));
     pb.write_optional(into, from)?;
     Ok(())
 }
 
+trait FromTimestampAndPrecision {
+    fn from_timestamp_and_precision(ts: &Timestamp, precision: u8) -> Self;
+}
+
+impl FromTimestampAndPrecision for i64 {
+    fn from_timestamp_and_precision(ts: &Timestamp, precision: u8) -> Self {
+        timestamp_to_i64(ts, precision)
+    }
+}
+
+impl FromTimestampAndPrecision for i32 {
+    fn from_timestamp_and_precision(ts: &Timestamp, precision: u8) -> Self {
+        timestamp_to_i64(ts, precision).try_into().unwrap()
+    }
+}
+
 /// Convert an ODBC timestamp struct into nanoseconds.
-fn timestamp_to_int(ts: &Timestamp, precision: u8) -> i64 {
+fn timestamp_to_i64(ts: &Timestamp, precision: u8) -> i64 {
     let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
         .and_hms_nano(
             ts.hour as u32,
