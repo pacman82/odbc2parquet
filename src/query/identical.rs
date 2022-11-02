@@ -13,7 +13,7 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::ColumnFetchStrategy;
+use super::FetchStrategy;
 
 /// Copy identical optional data from ODBC to Parquet.
 pub struct IdenticalOptional<Pdt> {
@@ -38,7 +38,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
     }
 }
 
-impl<Pdt> ColumnFetchStrategy for IdenticalOptional<Pdt>
+impl<Pdt> FetchStrategy for IdenticalOptional<Pdt>
 where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,
@@ -89,7 +89,7 @@ impl<Pdt> IdenticalRequired<Pdt> {
     }
 }
 
-impl<Pdt> ColumnFetchStrategy for IdenticalRequired<Pdt>
+impl<Pdt> FetchStrategy for IdenticalRequired<Pdt>
 where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,
@@ -139,7 +139,7 @@ where
     builder.build().unwrap()
 }
 
-pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn ColumnFetchStrategy>
+pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn FetchStrategy>
 where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,
@@ -154,7 +154,7 @@ where
 pub fn fetch_identical_with_logical_type<Pdt>(
     is_optional: bool,
     logical_type: LogicalType,
-) -> Box<dyn ColumnFetchStrategy>
+) -> Box<dyn FetchStrategy>
 where
     Pdt: DataType,
     Pdt::T: Item + BufferedDataType,

@@ -25,6 +25,7 @@ use crate::{
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_logical_type},
         text::{Utf16ToUtf8, Utf8},
+        time::time_from_text,
         timestamp::timestamp_without_tz,
         timestamp_tz::timestamp_tz,
     },
@@ -33,7 +34,7 @@ use crate::{
 /// Decisions on how to handle a particular column of the ODBC result set. What buffer to bind to it
 /// for fetching, into what parquet type it is going to be translated and how to translate it from
 /// the odbc buffer elements to afformentioned parquet type.
-pub trait ColumnFetchStrategy {
+pub trait FetchStrategy {
     /// Parquet column type used in parquet schema
     fn parquet_type(&self, name: &str) -> Type;
     /// Description of the buffer bound to the ODBC data source.
@@ -63,7 +64,7 @@ pub fn strategy_from_column_description(
     mapping_options: MappingOptions,
     cursor: &mut impl Cursor,
     index: i16,
-) -> Result<Option<Box<dyn ColumnFetchStrategy>>, Error> {
+) -> Result<Option<Box<dyn FetchStrategy>>, Error> {
     let MappingOptions {
         db_name,
         use_utf16,
@@ -81,7 +82,7 @@ pub fn strategy_from_column_description(
 
     let is_optional = cd.could_be_nullable();
 
-    let strategy: Box<dyn ColumnFetchStrategy> = match cd.data_type {
+    let strategy: Box<dyn FetchStrategy> = match cd.data_type {
         DataType::Float { precision: 0..=24 } | DataType::Real => {
             fetch_identical::<FloatType>(is_optional)
         }
@@ -147,6 +148,17 @@ pub fn strategy_from_column_description(
                 Box::new(Utf16ToUtf8::new(repetition, dt.utf16_len().unwrap()))
             } else {
                 Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
+            }
+        }
+        DataType::Other {
+            data_type: SqlDataType(-154),
+            column_size: _,
+            decimal_digits: precision,
+        } => {
+            if db_name == "Microsoft SQL Server" {
+                time_from_text(repetition, precision.try_into().unwrap())
+            } else {
+                unknown_non_char_type(cd, cursor, index, repetition)?
             }
         }
         DataType::Other {

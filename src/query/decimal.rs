@@ -15,9 +15,7 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::{
-    identical::fetch_identical_with_logical_type, strategy::ColumnFetchStrategy, text::Utf8,
-};
+use super::{identical::fetch_identical_with_logical_type, strategy::FetchStrategy, text::Utf8};
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
 pub fn decmial_fetch_strategy(
@@ -26,7 +24,7 @@ pub fn decmial_fetch_strategy(
     precision: u8,
     avoid_decimal: bool,
     driver_does_support_i64: bool,
-) -> Box<dyn ColumnFetchStrategy> {
+) -> Box<dyn FetchStrategy> {
     let repetition = if is_optional {
         Repetition::OPTIONAL
     } else {
@@ -154,7 +152,7 @@ impl<Pdt> DecimalTextToInteger<Pdt> {
     }
 }
 
-impl<Pdt> ColumnFetchStrategy for DecimalTextToInteger<Pdt>
+impl<Pdt> FetchStrategy for DecimalTextToInteger<Pdt>
 where
     Pdt: ParquetDataType,
     Pdt::T: FromRadix10Signed + BufferedDataType,
@@ -238,7 +236,7 @@ impl DecimalAsBinary {
     }
 }
 
-impl ColumnFetchStrategy for DecimalAsBinary {
+impl FetchStrategy for DecimalAsBinary {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
             .with_length(self.length_in_bytes.try_into().unwrap())

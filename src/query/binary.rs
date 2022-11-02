@@ -11,7 +11,7 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::strategy::ColumnFetchStrategy;
+use super::strategy::FetchStrategy;
 
 pub struct Binary<Pdt> {
     repetition: Repetition,
@@ -29,7 +29,7 @@ impl<Pdt> Binary<Pdt> {
     }
 }
 
-impl<Pdt> ColumnFetchStrategy for Binary<Pdt>
+impl<Pdt> FetchStrategy for Binary<Pdt>
 where
     Pdt: DataType,
     Pdt::T: BufferedDataType + From<ByteArray>,

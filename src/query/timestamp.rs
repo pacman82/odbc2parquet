@@ -14,9 +14,9 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::ColumnFetchStrategy;
+use super::strategy::FetchStrategy;
 
-pub fn timestamp_without_tz(repetition: Repetition, precision: u8) -> Box<dyn ColumnFetchStrategy> {
+pub fn timestamp_without_tz(repetition: Repetition, precision: u8) -> Box<dyn FetchStrategy> {
     Box::new(TimestampToI64 {
         repetition,
         precision,
@@ -28,7 +28,7 @@ struct TimestampToI64 {
     precision: u8,
 }
 
-impl ColumnFetchStrategy for TimestampToI64 {
+impl FetchStrategy for TimestampToI64 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, Int64Type::get_physical_type())
             .with_logical_type(Some(LogicalType::Timestamp {

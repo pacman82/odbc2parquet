@@ -12,7 +12,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::ColumnFetchStrategy;
+use super::strategy::FetchStrategy;
 
 /// Could be the identical strategy on most platform. Yet Rust does not give any guarantees with
 /// regard to the memory layout of a bool, so we do an explicit conversion from `Bit`.
@@ -28,7 +28,7 @@ impl Boolean {
     }
 }
 
-impl ColumnFetchStrategy for Boolean {
+impl FetchStrategy for Boolean {
     fn parquet_type(&self, name: &str) -> parquet::schema::types::Type {
         Type::primitive_type_builder(name, PhysicalType::BOOLEAN)
             .with_repetition(self.repetition)

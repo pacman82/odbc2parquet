@@ -12,7 +12,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::ColumnFetchStrategy;
+use super::strategy::FetchStrategy;
 
 pub struct Utf16ToUtf8 {
     repetition: Repetition,
@@ -26,7 +26,7 @@ impl Utf16ToUtf8 {
     }
 }
 
-impl ColumnFetchStrategy for Utf16ToUtf8 {
+impl FetchStrategy for Utf16ToUtf8 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
             .with_converted_type(ConvertedType::UTF8)
@@ -96,7 +96,7 @@ impl Utf8 {
     }
 }
 
-impl ColumnFetchStrategy for Utf8 {
+impl FetchStrategy for Utf8 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
             .with_converted_type(ConvertedType::UTF8)

@@ -7,6 +7,7 @@ mod identical;
 mod parquet_writer;
 mod strategy;
 mod text;
+mod time;
 mod timestamp;
 mod timestamp_tz;
 
@@ -14,7 +15,7 @@ use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
     parquet_writer::ParquetFormatOptions,
     parquet_writer::ParquetWriter,
-    strategy::{strategy_from_column_description, ColumnFetchStrategy, MappingOptions},
+    strategy::{strategy_from_column_description, FetchStrategy, MappingOptions},
 };
 
 use std::{
@@ -199,7 +200,7 @@ fn cursor_to_parquet(
     Ok(())
 }
 
-type ColumnInfo = (u16, String, Box<dyn ColumnFetchStrategy>);
+type ColumnInfo = (u16, String, Box<dyn FetchStrategy>);
 
 fn make_schema(
     cursor: &mut impl Cursor,
@@ -235,9 +236,7 @@ fn make_schema(
     Ok(odbc_buffer_desc)
 }
 
-fn parquet_schema_from_strategies(
-    strategies: &[(u16, String, Box<dyn ColumnFetchStrategy>)],
-) -> TypePtr {
+fn parquet_schema_from_strategies(strategies: &[(u16, String, Box<dyn FetchStrategy>)]) -> TypePtr {
     let mut fields = strategies
         .iter()
         .map(|(_index, name, s)| Arc::new(s.parquet_type(name)))
