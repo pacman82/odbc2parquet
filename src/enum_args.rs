@@ -46,7 +46,7 @@ impl CompressionVariants {
             CompressionVariants::Lz4 => Compression::LZ4,
             CompressionVariants::Lz0 => Compression::LZO,
             CompressionVariants::Zstd => Compression::ZSTD,
-            CompressionVariants::Snappy => Compression::ZSTD,
+            CompressionVariants::Snappy => Compression::SNAPPY,
             CompressionVariants::Brotli => Compression::BROTLI,
         }
     }

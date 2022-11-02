@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.13.3 (next)
+## 0.13.3
+
+* Fix: Fixed an issue there setting the `--column-compression-default` to `snappy` did result in the column compression default actually being set to `zstd`.
 
 ## 0.13.2
 
