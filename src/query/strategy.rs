@@ -112,10 +112,9 @@ pub fn strategy_from_column_description(
                 driver_does_support_i64,
             )
         }
-        DataType::Timestamp { precision } => timestamp_without_tz(
-            repetition,
-            precision.try_into().unwrap(),
-        ),
+        DataType::Timestamp { precision } => {
+            timestamp_without_tz(repetition, precision.try_into().unwrap())
+        }
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
         DataType::TinyInt => fetch_identical_with_logical_type::<Int32Type>(

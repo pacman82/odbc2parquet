@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
@@ -14,31 +12,25 @@ use parquet::{
     schema::types::Type,
 };
 
-use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
+use crate::parquet_buffer::ParquetBuffer;
 
 use super::strategy::ColumnFetchStrategy;
 
 pub fn timestamp_without_tz(repetition: Repetition, precision: u8) -> Box<dyn ColumnFetchStrategy> {
-    Box::new(TimestampToInt::<Int64Type> {
+    Box::new(TimestampToI64 {
         repetition,
         precision,
-        _pdt: PhantomData,
     })
 }
 
-struct TimestampToInt<Pdt> {
+struct TimestampToI64 {
     repetition: Repetition,
     precision: u8,
-    _pdt: PhantomData<Pdt>,
 }
 
-impl<Pdt> ColumnFetchStrategy for TimestampToInt<Pdt>
-where
-    Pdt: DataType,
-    Pdt::T: FromTimestampAndPrecision + BufferedDataType,
-{
+impl ColumnFetchStrategy for TimestampToI64 {
     fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, Pdt::get_physical_type())
+        Type::primitive_type_builder(name, Int64Type::get_physical_type())
             .with_logical_type(Some(LogicalType::Timestamp {
                 is_adjusted_to_u_t_c: false,
                 unit: precision_to_time_unit(self.precision),
@@ -61,7 +53,7 @@ where
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        write_timestamp_col::<Pdt>(parquet_buffer, column_writer, column_view, self.precision)
+        write_timestamp_col(parquet_buffer, column_writer, column_view, self.precision)
     }
 }
 
@@ -73,20 +65,15 @@ pub fn precision_to_time_unit(precision: u8) -> TimeUnit {
     }
 }
 
-fn write_timestamp_col<Pdt>(
+fn write_timestamp_col(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
     precision: u8,
-) -> Result<(), Error>
-where
-    Pdt: DataType,
-    Pdt::T: FromTimestampAndPrecision + BufferedDataType,
-{
+) -> Result<(), Error> {
     let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();
-    let into = Pdt::get_column_writer_mut(column_writer).unwrap();
-    let from =
-        from.map(|option| option.map(|ts| Pdt::T::from_timestamp_and_precision(ts, precision)));
+    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
+    let from = from.map(|option| option.map(|ts| i64::from_timestamp_and_precision(ts, precision)));
     pb.write_optional(into, from)?;
     Ok(())
 }
