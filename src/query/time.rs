@@ -65,26 +65,25 @@ impl FetchStrategy for TimeFromText {
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        write_time_i64(self.precision, parquet_buffer, column_writer, column_view)
+        write_time_ns(parquet_buffer, column_writer, column_view)
     }
 }
 
-fn write_time_i64(
-    _precision: u8,
+fn write_time_ns(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
-    let factor = 10_i64.pow(9);
     let from = column_reader.as_text_view().unwrap();
     let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
     pb.write_optional(
         into,
-        from.iter()
-            .map(|field| field.map(|text| {
+        from.iter().map(|field| {
+            field.map(|text| {
                 let time = parse_time(text);
-                time.num_seconds_from_midnight() as i64 * factor + time.nanosecond() as i64
-            })),
+                time.num_seconds_from_midnight() as i64 * 1_000_000_000 + time.nanosecond() as i64
+            })
+        }),
     )?;
     Ok(())
 }
