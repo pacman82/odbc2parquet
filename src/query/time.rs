@@ -137,4 +137,11 @@ mod tests {
         };
         NaiveTime::from_hms_nano(hour, min, sec, nano)
     }
+
+    #[test]
+    fn parse_timestamps() {
+        assert_eq!(parse_time(b"16:04:12"), NaiveTime::from_hms(16, 4, 12));
+        assert_eq!(parse_time(b"16:04:12.0000000"), NaiveTime::from_hms(16, 4, 12));
+        assert_eq!(parse_time(b"16:04:12.123456"), NaiveTime::from_hms_micro(16, 4, 12, 123456));
+    }
 }
