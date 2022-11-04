@@ -229,10 +229,10 @@ fn query_sales() {
     conn.execute(&insert, ()).unwrap();
 
     let expected_values = "\
-        {a: 2020-09-09 +00:00, b: \"00:05:34\", c: 54, d: 9.99}\n\
-        {a: 2020-09-10 +00:00, b: \"12:05:32\", c: 54, d: 9.99}\n\
-        {a: 2020-09-10 +00:00, b: \"14:05:32\", c: 34, d: 2.00}\n\
-        {a: 2020-09-11 +00:00, b: \"06:05:12\", c: 12, d: -1.50}\n\
+        {a: 2020-09-09 +00:00, b: 334000000000, c: 54, d: 9.99}\n\
+        {a: 2020-09-10 +00:00, b: 43532000000000, c: 54, d: 9.99}\n\
+        {a: 2020-09-10 +00:00, b: 50732000000000, c: 34, d: 2.00}\n\
+        {a: 2020-09-11 +00:00, b: 21912000000000, c: 12, d: -1.50}\n\
     ";
 
     let query = format!("SELECT a,b,c,d FROM {} ORDER BY id", table_name);
@@ -758,10 +758,10 @@ fn query_time_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: \"16:04:12.0000000\"}\n";
+    let expected_values = "{a: 57852000000000}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL BYTE_ARRAY a (UTF8);"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIME(NANOS,false));"));
 }
 
 #[test]
@@ -892,7 +892,7 @@ fn query_all_the_types() {
         h: 1.23, \
         i: \"Hello, World!\", \
         j: 2020-09-16 +00:00, \
-        k: \"03:54:12.0000000\", \
+        k: 14052000000000, \
         l: 2020-09-16 03:54:12 +00:00\
     }\n";
 

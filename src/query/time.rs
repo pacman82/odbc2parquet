@@ -1,12 +1,12 @@
-use std::borrow::Cow;
-
 use anyhow::Error;
-use log::warn;
+use atoi::FromRadix10;
+use chrono::{NaiveTime, Timelike};
 use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
 use parquet::{
-    basic::{ConvertedType, Repetition, Type as PhysicalType},
+    basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::ByteArray,
+    data_type::{DataType, Int64Type},
+    format::{NanoSeconds, TimeUnit},
     schema::types::Type,
 };
 
@@ -35,8 +35,11 @@ impl TimeFromText {
 
 impl FetchStrategy for TimeFromText {
     fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
-            .with_converted_type(ConvertedType::UTF8)
+        Type::primitive_type_builder(name, PhysicalType::INT64)
+            .with_logical_type(Some(LogicalType::Time {
+                is_adjusted_to_u_t_c: false,
+                unit: TimeUnit::NANOS(NanoSeconds {}),
+            }))
             .with_repetition(self.repetition)
             .build()
             .unwrap()
@@ -62,86 +65,74 @@ impl FetchStrategy for TimeFromText {
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        write_to_utf8(self.precision, parquet_buffer, column_writer, column_view)
+        write_time_i64(self.precision, parquet_buffer, column_writer, column_view)
     }
 }
 
-fn write_to_utf8(
+fn write_time_i64(
     _precision: u8,
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnySlice::Text(view)) =
-        (column_writer, column_reader)
-    {
-        pb.write_optional(
-            cw,
-            view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
-        )?;
-    } else {
-        panic!(
-            "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
-            https://github.com/pacman82/odbc2parquet/issues."
-        )
-    }
+    let factor = 10_i64.pow(9);
+    let from = column_reader.as_text_view().unwrap();
+    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
+    pb.write_optional(
+        into,
+        from.iter()
+            .map(|field| field.map(|text| {
+                let time = parse_time(text);
+                time.num_seconds_from_midnight() as i64 * factor + time.nanosecond() as i64
+            })),
+    )?;
     Ok(())
 }
 
-fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
-    // Allocate string into a ByteArray and make sure it is all UTF-8 characters
-    let utf8_str = String::from_utf8_lossy(bytes);
-    // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
-    // happened after the to_string_lossy method, it implies we had to use a replacement
-    // character!
-    if matches!(utf8_str, Cow::Owned(_)) {
-        warn!(
-            "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
-            UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
-            utf8_str
-        );
-    }
-    utf8_str.into_owned().into_bytes().into()
+/// Parse timestamp from representation HH:MM:SS[.FFF]
+fn parse_time(bytes: &[u8]) -> NaiveTime {
+    // From radix ten also returns the number of bytes extracted. We don't care. Should always
+    // be two, for hour, min and sec.
+    let (hour, _) = u32::from_radix_10(&bytes[0..2]);
+    let (min, _) = u32::from_radix_10(&bytes[3..5]);
+    let (sec, _) = u32::from_radix_10(&bytes[6..8]);
+    // If a fractional part is present, we parse it.
+    let nano = if bytes.len() > 9 {
+        let (fraction, precision) = u32::from_radix_10(&bytes[9..]);
+        match precision {
+            0..=8 => {
+                // Pad value with `0` to represent nanoseconds
+                fraction * 10_u32.pow(9 - precision as u32)
+            }
+            9 => fraction,
+            _ => {
+                // More than nanoseconds precision. Let's just remove the additional digits at the
+                // end.
+                fraction / 10_u32.pow(precision as u32 - 9)
+            }
+        }
+    } else {
+        0
+    };
+    NaiveTime::from_hms_nano(hour, min, sec, nano)
 }
 
 #[cfg(test)]
 mod tests {
-    use atoi::FromRadix10;
     use chrono::NaiveTime;
 
-
-    /// Parse timestamp from representation HH:MM:SS[.FFF]
-    fn parse_time(bytes: &[u8]) -> NaiveTime {
-        // From radix ten also returns the number of bytes extracted. We don't care. Should always
-        // be two, for hour, min and sec.
-        let (hour, _) = u32::from_radix_10(&bytes[0..2]);
-        let (min, _) = u32::from_radix_10(&bytes[3..5]);
-        let (sec, _) = u32::from_radix_10(&bytes[6..8]);
-        // If a fractional part is present, we parse it.
-        let nano = if bytes.len() > 9 {
-            let (fraction, precision) = u32::from_radix_10(&bytes[9..]);
-            match precision {
-                0..=8 => {
-                    // Pad value with `0` to represent nanoseconds
-                    fraction * 10_u32.pow(9 - precision as u32)
-                }
-                9 => fraction,
-                _ => {
-                    // More than nanoseconds precision. Let's just remove the additional digits at the
-                    // end.
-                    fraction / 10_u32.pow(precision as u32 - 9)
-                }
-            }
-        } else {
-            0
-        };
-        NaiveTime::from_hms_nano(hour, min, sec, nano)
-    }
+    use crate::query::time::parse_time;
 
     #[test]
     fn parse_timestamps() {
         assert_eq!(parse_time(b"16:04:12"), NaiveTime::from_hms(16, 4, 12));
-        assert_eq!(parse_time(b"16:04:12.0000000"), NaiveTime::from_hms(16, 4, 12));
-        assert_eq!(parse_time(b"16:04:12.123456"), NaiveTime::from_hms_micro(16, 4, 12, 123456));
+        assert_eq!(
+            parse_time(b"16:04:12.0000000"),
+            NaiveTime::from_hms(16, 4, 12)
+        );
+        assert_eq!(
+            parse_time(b"16:04:12.123456"),
+            NaiveTime::from_hms_micro(16, 4, 12, 123456)
+        );
     }
 }
