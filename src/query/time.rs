@@ -26,7 +26,10 @@ pub struct TimeFromText {
 
 impl TimeFromText {
     pub fn new(repetition: Repetition, precision: u8) -> Self {
-        Self { repetition, precision }
+        Self {
+            repetition,
+            precision,
+        }
     }
 }
 
@@ -74,9 +77,7 @@ fn write_to_utf8(
     {
         pb.write_optional(
             cw,
-            view.iter().map(|item| {
-                item.map(utf8_bytes_to_byte_array)}
-            ),
+            view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
         )?;
     } else {
         panic!(
@@ -101,4 +102,39 @@ fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
         );
     }
     utf8_str.into_owned().into_bytes().into()
+}
+
+#[cfg(test)]
+mod tests {
+    use atoi::FromRadix10;
+    use chrono::NaiveTime;
+
+
+    /// Parse timestamp from representation HH:MM:SS[.FFF]
+    fn parse_time(bytes: &[u8]) -> NaiveTime {
+        // From radix ten also returns the number of bytes extracted. We don't care. Should always
+        // be two, for hour, min and sec.
+        let (hour, _) = u32::from_radix_10(&bytes[0..2]);
+        let (min, _) = u32::from_radix_10(&bytes[3..5]);
+        let (sec, _) = u32::from_radix_10(&bytes[6..8]);
+        // If a fractional part is present, we parse it.
+        let nano = if bytes.len() > 9 {
+            let (fraction, precision) = u32::from_radix_10(&bytes[9..]);
+            match precision {
+                0..=8 => {
+                    // Pad value with `0` to represent nanoseconds
+                    fraction * 10_u32.pow(9 - precision as u32)
+                }
+                9 => fraction,
+                _ => {
+                    // More than nanoseconds precision. Let's just remove the additional digits at the
+                    // end.
+                    fraction / 10_u32.pow(precision as u32 - 9)
+                }
+            }
+        } else {
+            0
+        };
+        NaiveTime::from_hms_nano(hour, min, sec, nano)
+    }
 }
