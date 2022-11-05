@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0
+
+* Time(p) is mapped to Timestamp Nanoseconds for Microsoft SQL Server
+
 ## 0.13.3
 
 * Fix: Fixed an issue there setting the `--column-compression-default` to `snappy` did result in the column compression default actually being set to `zstd`.

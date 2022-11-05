@@ -27,6 +27,7 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Integer                    | Int32                        |
 | Big Int                    | Int64                        |
 | Date                       | Date                         |
+| Time*                      | Time Nanoseconds             |
 | Timestamp(p: 0..3)         | Timestamp Milliseconds       |
 | Timestamp(p >= 4)          | Timestamp Microseconds       |
 | Datetimeoffset(p: 0..3)    | Timestamp Milliseconds (UTC) |
@@ -37,6 +38,7 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | All others                 | Utf8 Byte Array              |
 
 `p` is short for `precision`. `s` is short for `scale`. Intervals are inclusive.
+* Time is only supported for Microsoft SQL Server
 
 ## Installation
 
