@@ -50,7 +50,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
 
     let odbc_conn = open_connection(odbc_env, connect_opts)?;
 
-    let file = File::open(&input)?;
+    let file = File::open(input)?;
     let reader = SerializedFileReader::new(file)?;
 
     let parquet_metadata = reader.metadata();
