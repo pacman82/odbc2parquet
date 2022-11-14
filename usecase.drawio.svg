@@ -1,0 +1,97 @@
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="742px" height="477px" viewBox="-0.5 -0.5 742 477" content="&lt;mxfile&gt;&lt;diagram id=&quot;URv9brg-lNayAiWf62T3&quot; name=&quot;Page-1&quot;&gt;7VhNc9sgEP01PiYjJEuxj5GdtIdmmpl0pskRS1higoWDUO3k13exQB+gJK7rfHSmJ8PCLvD2vQV5FMxW2y8Cr/MrnhI28r10OwrmI99Hk8kEfpTlUVsQ8mpLJmiqba3hhj4RbTTTKpqSsjdRcs4kXfeNCS8KksieDQvBN/1pS876q65xRhzDTYKZa/1JU5nX1knotfavhGa5WRl5emSBk/tM8KrQ6xW8IPXICpswemqZ45RvOqbgYhTMBOeybq22M8IUrgax2u/ymdFmy4IUch8Hv3b4hVmlTz3HEi9wqTdcykcDx+5ARPmhURBvcirJzRonanQDDABbLldMD2OR6IRGHnRLKfh9gyKcMtbrEiHJ9tm9owYRYBnhKyLFI0zZ9nmi+WUg3bS5ahiXd/I01jas6ZE1gVucoKGhGoYtcGD7Po/By5sLCmdysIM0r1UTKKPOFvPlsiRSIzR5M4AmfYTQAELeAELRERDyTl1qxaSUykLJBnik9gHbAFHnQDZYMmIKGqw2I8hy5xI9VEoJwCypRH+ulvcvM/CrFqcJX0EHC0rYyQIgqaAn8eokFXhDeesMrUz9/ji/UvCxKqOFWU0FMONO1gB52ae1ySMsc72Lc0XLkhbZS/nS5QkvTFjvT/PoW3kcR24i/aFE+uHfJ3LspNHBiaRQN3WXsAXfXLSGLnoMLwiLm+I444wLGNqVxyBu64uqGLs40M65oE+8kJgpY5Geq8IO9oRhQD6pjZeUNYWH0ayANiNLlTuypfJWD6n2nQp/GurefGtWU51H0ykAottup+Oluq3brmf8alwUGC/rFbDjlUhIrwJLLDIiO9XFZUMn25OBZBubIAxLqEL9+3CAAXqFa04L2ZItsMvqmVUN6s1rr+7VYgeaWtVnagWqj+wE2hGyOfZeHD17naNNBU6kIl3c8uqbYuU1L6mkXDFH1JDaTGLPTHuTyh2O/dOwj17gaj4IXRaER6jdk/3hrEpSEz5W56WJkulcCuUXd8uC1nhHwNoCAW4A5w6wGm89MKcCimc90gQx+mwleddT5LA+TS1o9X/XqQzDteAwTaPAFfXZcMK7uUPRcSSMfOu+CA6UsB3IqQXHk/D0mRdVNNpVpCA2LyvvChfwjPosb6wg/Lg3FnKfWHsI1dXggFBdWVbrYVESXHYvWm90wEWL3uOinR5y0R5LkoGlJGR/hewrybH9prcDHU+SyP3K4eki8QHnh4rITyLAEH2gAPd4HP8X4Eu34vT9FDi27jKbAPsqMPReCXREBYYOv66N+Dz46CGlQ7dP9y9NFFlwufqcDsjzGP/SoOh1ef4D366fWNGhq2j0oV+vka1ydKDKz+wL235DH6xy6Lb/79bT2z/Qg4vf&lt;/diagram&gt;&lt;/mxfile&gt;">
+    <defs/>
+    <g>
+        <rect x="1" y="11" width="110" height="40" rx="24" ry="24" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 108px; height: 1px; padding-top: 31px; margin-left: 2px;">
+                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                                Database
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="56" y="35" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    Database
+                </text>
+            </switch>
+        </g>
+        <path d="M 171 1 L 271 1 L 271 61 L 171 61 L 171 1 Z" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <g fill="rgb(0, 0, 0)" font-family="Helvetica" text-anchor="middle" font-size="12px">
+            <text x="220.5" y="35.5">
+                ODBC Driver
+            </text>
+        </g>
+        <rect x="271" y="451" width="200" height="25" fill="none" stroke="none" pointer-events="all"/>
+        <path d="M 111 31 L 141 31 L 164.63 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 169.88 31 L 162.88 34.5 L 164.63 31 L 162.88 27.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 533.5 121 L 566.83 121 L 566.83 171 L 533.5 171 L 533.5 121 Z" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <ellipse cx="550.17" cy="129.13" rx="7.083333333333334" ry="5.625" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="all"/>
+        <path d="M 550.17 134.75 L 550.17 153.5 M 550.17 141.5 L 536 138.5 M 550.17 141.5 L 564.33 138.5 M 550.17 153.5 L 536 168.5 M 550.17 153.5 L 564.33 168.5" fill="none" stroke="rgb(0, 0, 0)" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 551 61 L 551 83" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <ellipse cx="551" cy="91" rx="8" ry="8" fill="none" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="stroke"/>
+        <path d="M 551 99 L 551 121" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 341 1 L 441 1 L 441 61 L 341 61 L 341 1 Z" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <g fill="rgb(0, 0, 0)" font-family="Helvetica" text-anchor="middle" font-size="12px">
+            <text x="390.5" y="28.5">
+                ODBC
+            </text>
+            <text x="390.5" y="42.5">
+                Driver Manager
+            </text>
+        </g>
+        <path d="M 341 31 L 314 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <ellipse cx="306" cy="31" rx="8" ry="8" fill="none" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="stroke"/>
+        <path d="M 298 31 L 271 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 301 6 L 291 11 L 301 16 L 299 11 L 301 6 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+        <g fill="rgb(0, 0, 0)" font-family="Arial,Helvetica" font-size="11px">
+            <text x="305.5" y="15.5">
+                R
+            </text>
+        </g>
+        <path d="M 501 1 L 601 1 L 601 61 L 501 61 L 501 1 Z" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/>
+        <g fill="rgb(0, 0, 0)" font-family="Helvetica" text-anchor="middle" font-size="12px">
+            <text x="550.5" y="35.5">
+                odbc2parquet
+            </text>
+        </g>
+        <path d="M 501 31 L 479 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <ellipse cx="471" cy="31" rx="8" ry="8" fill="none" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="stroke"/>
+        <path d="M 463 31 L 441 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 466 6 L 456 11 L 466 16 L 464 11 L 466 6 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+        <g fill="rgb(0, 0, 0)" font-family="Arial,Helvetica" font-size="11px">
+            <text x="470.5" y="15.5">
+                R
+            </text>
+        </g>
+        <rect x="651" y="11" width="90" height="40" rx="24" ry="24" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-width="2" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 88px; height: 1px; padding-top: 31px; margin-left: 652px;">
+                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                                Parquet Files
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="696" y="35" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    Parquet Files
+                </text>
+            </switch>
+        </g>
+        <path d="M 651 31 L 627 31 L 607.37 31" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 602.12 31 L 609.12 27.5 L 607.37 31 L 609.12 34.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    </g>
+    <switch>
+        <g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/>
+        <a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank">
+            <text text-anchor="middle" font-size="10px" x="50%" y="100%">
+                Viewer does not support full SVG 1.1
+            </text>
+        </a>
+    </switch>
+</svg>
