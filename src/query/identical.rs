@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnySlice, BufferDesc, BufferDescription, Item};
+use odbc_api::buffers::{AnySlice, BufferDesc, Item};
 use parquet::{
     basic::{LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -48,11 +48,7 @@ where
     }
 
     fn buffer_desc(&self) -> BufferDesc {
-        BufferDescription {
-            kind: Pdt::T::BUFFER_KIND,
-            nullable: true,
-        }
-        .into()
+        Pdt::T::buffer_desc(true)
     }
 
     fn copy_odbc_to_parquet(
@@ -100,11 +96,7 @@ where
     }
 
     fn buffer_desc(&self) -> BufferDesc {
-        BufferDescription {
-            kind: Pdt::T::BUFFER_KIND,
-            nullable: false,
-        }
-        .into()
+        Pdt::T::buffer_desc(false)
     }
 
     fn copy_odbc_to_parquet(
