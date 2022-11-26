@@ -1,6 +1,6 @@
 use anyhow::Error;
 use chrono::{DateTime, Utc};
-use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -45,7 +45,7 @@ impl FetchStrategy for TimestampTz {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
+    fn buffer_desc(&self) -> BufferDesc {
         // Text representation looks like e.g. 2022-09-07 16:04:12 +02:00
         // Text representation looks like e.g. 2022-09-07 16:04:12.123 +02:00
 
@@ -56,10 +56,7 @@ impl FetchStrategy for TimestampTz {
                 // Radix character `.` and precision.
                 1 + self.precision as usize
             };
-        BufferDescription {
-            kind: BufferKind::Text { max_str_len },
-            nullable: true,
-        }
+        BufferDesc::Text { max_str_len }
     }
 
     fn copy_odbc_to_parquet(

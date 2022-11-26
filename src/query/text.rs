@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use anyhow::Error;
 use log::warn;
-use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -35,12 +35,9 @@ impl FetchStrategy for Utf16ToUtf8 {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
-        BufferDescription {
-            kind: BufferKind::WText {
-                max_str_len: self.length,
-            },
-            nullable: true,
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::WText {
+            max_str_len: self.length,
         }
     }
 
@@ -105,12 +102,9 @@ impl FetchStrategy for Utf8 {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
-        BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: self.length,
-            },
-            nullable: true,
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::Text {
+            max_str_len: self.length,
         }
     }
 

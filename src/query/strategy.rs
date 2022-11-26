@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use anyhow::Error;
 use log::{debug, info, warn};
 use odbc_api::{
-    buffers::{AnySlice, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Nullability,
 };
@@ -38,7 +38,7 @@ pub trait FetchStrategy {
     /// Parquet column type used in parquet schema
     fn parquet_type(&self, name: &str) -> Type;
     /// Description of the buffer bound to the ODBC data source.
-    fn buffer_description(&self) -> BufferDescription;
+    fn buffer_desc(&self) -> BufferDesc;
     /// copy the contents of an ODBC `AnySlice` into a Parquet `ColumnWriter`.
     fn copy_odbc_to_parquet(
         &self,
@@ -183,12 +183,12 @@ pub fn strategy_from_column_description(
     debug!(
         "ODBC buffer description for column {}: {:?}",
         index,
-        strategy.buffer_description()
+        strategy.buffer_desc()
     );
 
     if matches!(
-        strategy.buffer_description().kind,
-        BufferKind::Text { max_str_len: 0 } | BufferKind::WText { max_str_len: 0 }
+        strategy.buffer_desc(),
+        BufferDesc::Text { max_str_len: 0 } | BufferDesc::WText { max_str_len: 0 }
     ) {
         warn!(
             "Ignoring column '{}' with index {}. Driver reported a display length of 0. \

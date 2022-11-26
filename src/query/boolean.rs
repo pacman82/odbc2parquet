@@ -1,6 +1,6 @@
 use anyhow::Error;
 use odbc_api::{
-    buffers::{AnySlice, BufferDescription, BufferKind, Item},
+    buffers::{AnySlice, BufferDesc, Item},
     Bit,
 };
 use parquet::{
@@ -36,11 +36,8 @@ impl FetchStrategy for Boolean {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> odbc_api::buffers::BufferDescription {
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::Bit,
-        }
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::Bit { nullable: true }
     }
 
     fn copy_odbc_to_parquet(

@@ -1,7 +1,7 @@
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
-    buffers::{AnySlice, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDesc},
     sys::Timestamp,
 };
 use parquet::{
@@ -40,11 +40,8 @@ impl FetchStrategy for TimestampToI64 {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
-        BufferDescription {
-            kind: BufferKind::Timestamp,
-            nullable: true,
-        }
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::Timestamp { nullable: true }
     }
 
     fn copy_odbc_to_parquet(

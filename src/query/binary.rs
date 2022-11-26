@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -53,12 +53,9 @@ where
         }
     }
 
-    fn buffer_description(&self) -> BufferDescription {
-        BufferDescription {
-            kind: BufferKind::Binary {
-                length: self.length,
-            },
-            nullable: true,
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::Binary {
+            length: self.length,
         }
     }
 

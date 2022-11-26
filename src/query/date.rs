@@ -1,7 +1,7 @@
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
-    buffers::{AnySlice, BufferDescription, BufferKind, Item},
+    buffers::{AnySlice, BufferDesc, Item},
     sys::Date as OdbcDate,
 };
 use parquet::{
@@ -36,11 +36,8 @@ impl FetchStrategy for Date {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::Date,
-        }
+    fn buffer_desc(&self) -> BufferDesc {
+        BufferDesc::Date { nullable: true }
     }
 
     fn copy_odbc_to_parquet(

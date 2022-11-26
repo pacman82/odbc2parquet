@@ -3,7 +3,7 @@ use std::{convert::TryInto, marker::PhantomData};
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
-    buffers::{AnySlice, BufferDescription, BufferKind},
+    buffers::{AnySlice, BufferDesc},
     DataType,
 };
 use parquet::{
@@ -167,7 +167,7 @@ where
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
+    fn buffer_desc(&self) -> BufferDesc {
         // Since we cannot assume scale to be zero we fetch these decimal as text
 
         // Precision + 2. (One byte for the radix character and another for the sign)
@@ -177,10 +177,7 @@ where
         }
         .display_size()
         .unwrap();
-        BufferDescription {
-            nullable: self.repetition == Repetition::OPTIONAL,
-            kind: BufferKind::Text { max_str_len },
-        }
+        BufferDesc::Text { max_str_len }
     }
 
     fn copy_odbc_to_parquet(
@@ -251,7 +248,7 @@ impl FetchStrategy for DecimalAsBinary {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> odbc_api::buffers::BufferDescription {
+    fn buffer_desc(&self) -> BufferDesc {
         // Precision + 2. (One byte for the radix character and another for the sign)
         let max_str_len = DataType::Decimal {
             precision: self.precision as usize,
@@ -259,10 +256,7 @@ impl FetchStrategy for DecimalAsBinary {
         }
         .display_size()
         .unwrap();
-        BufferDescription {
-            kind: BufferKind::Text { max_str_len },
-            nullable: true,
-        }
+        BufferDesc::Text { max_str_len }
     }
 
     fn copy_odbc_to_parquet(

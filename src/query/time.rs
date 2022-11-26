@@ -1,7 +1,7 @@
 use anyhow::Error;
 use atoi::FromRadix10;
 use chrono::{NaiveTime, Timelike};
-use odbc_api::buffers::{AnySlice, BufferDescription, BufferKind};
+use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -45,17 +45,14 @@ impl FetchStrategy for TimeFromText {
             .unwrap()
     }
 
-    fn buffer_description(&self) -> BufferDescription {
+    fn buffer_desc(&self) -> BufferDesc {
         let length = if self.precision == 0 {
             8
         } else {
             9 + self.precision as usize
         };
-        BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: length,
-            },
-            nullable: true,
+        BufferDesc::Text {
+            max_str_len: length,
         }
     }
 
