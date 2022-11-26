@@ -470,10 +470,11 @@ fn parquet_type_to_odbc_buffer_desc(
                 BufferKind::Timestamp,
                 Int64Type::map_to::<Timestamp>().with(
                     |&microseconds_since_epoch| {
-                        let dt = NaiveDateTime::from_timestamp(
+                        let dt = NaiveDateTime::from_timestamp_opt(
                             microseconds_since_epoch / 1_000_000,
                             ((microseconds_since_epoch % 1_000_000) * 1_000) as u32,
-                        );
+                        )
+                        .unwrap();
                         Timestamp {
                             year: dt.year().try_into().unwrap(),
                             month: dt.month() as u16,
@@ -491,10 +492,11 @@ fn parquet_type_to_odbc_buffer_desc(
                 BufferKind::Timestamp,
                 Int64Type::map_to::<Timestamp>().with(
                     |&milliseconds_since_epoch| {
-                        let dt = NaiveDateTime::from_timestamp(
+                        let dt = NaiveDateTime::from_timestamp_opt(
                             milliseconds_since_epoch / 1000,
                             ((milliseconds_since_epoch % 1000) * 1_000_000) as u32,
-                        );
+                        )
+                        .unwrap();
                         Timestamp {
                             year: dt.year().try_into().unwrap(),
                             month: dt.month() as u16,
@@ -699,7 +701,7 @@ fn i128_from_be_slice(bytes: &[u8]) -> i128 {
 }
 
 fn days_since_epoch_to_odbc_date(days_since_epoch: i32) -> odbc_api::sys::Date {
-    let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
+    let unix_epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
     let naive_date = unix_epoch.add(Duration::days(days_since_epoch as i64));
     odbc_api::sys::Date {
         year: naive_date.year().try_into().unwrap(),

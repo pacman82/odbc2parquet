@@ -58,8 +58,9 @@ impl FetchStrategy for Date {
 
 /// Transform date to days since unix epoch as i32
 fn days_since_epoch(date: &OdbcDate) -> i32 {
-    let unix_epoch = NaiveDate::from_ymd(1970, 1, 1);
-    let date = NaiveDate::from_ymd(date.year as i32, date.month as u32, date.day as u32);
+    let unix_epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+    let date =
+        NaiveDate::from_ymd_opt(date.year as i32, date.month as u32, date.day as u32).unwrap();
     let duration = date.signed_duration_since(unix_epoch);
     duration.num_days().try_into().unwrap()
 }

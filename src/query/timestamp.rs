@@ -96,13 +96,15 @@ impl FromTimestampAndPrecision for i32 {
 
 /// Convert an ODBC timestamp struct into nanoseconds.
 fn timestamp_to_i64(ts: &Timestamp, precision: u8) -> i64 {
-    let datetime = NaiveDate::from_ymd(ts.year as i32, ts.month as u32, ts.day as u32)
-        .and_hms_nano(
+    let datetime = NaiveDate::from_ymd_opt(ts.year as i32, ts.month as u32, ts.day as u32)
+        .unwrap()
+        .and_hms_nano_opt(
             ts.hour as u32,
             ts.minute as u32,
             ts.second as u32,
             ts.fraction as u32,
-        );
+        )
+        .unwrap();
     if precision <= 3 {
         datetime.timestamp_millis()
     } else {
