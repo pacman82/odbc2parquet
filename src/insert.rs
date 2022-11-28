@@ -11,10 +11,7 @@ use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
 use log::info;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
-    buffers::{
-        AnySliceMut, BinColumnSliceMut, BufferDescription, BufferKind, NullableSliceMut,
-        TextColumnSliceMut, BufferDesc,
-    },
+    buffers::{AnySliceMut, BinColumnSliceMut, BufferDesc, NullableSliceMut, TextColumnSliceMut},
     sys::{Date, Timestamp},
     Bit, Environment, U16String,
 };
@@ -388,10 +385,10 @@ fn parquet_type_to_odbc_buffer_desc(
         )
     };
 
-    let (kind, parquet_to_odbc): (_, Box<FnParquetToOdbcCol>) = match pt {
+    let (desc, parquet_to_odbc): (_, Box<FnParquetToOdbcCol>) = match pt {
         PhysicalType::BOOLEAN => match lt {
             ConvertedType::NONE => (
-                BufferKind::Bit,
+                BufferDesc::Bit { nullable },
                 BoolType::map_to::<Bit>().with(|&b| Bit(b as u8), nullable),
             ),
             _ => unexpected(),
@@ -405,10 +402,13 @@ fn parquet_type_to_odbc_buffer_desc(
             | ConvertedType::INT_16
             | ConvertedType::UINT_16
             | ConvertedType::INT_8
-            | ConvertedType::UINT_8 => (BufferKind::I32, Int32Type::map_identity(nullable)),
+            | ConvertedType::UINT_8 => (
+                BufferDesc::I32 { nullable },
+                Int32Type::map_identity(nullable),
+            ),
             ConvertedType::TIME_MILLIS => (
                 // Time represented in format hh:mm:ss.fff
-                BufferKind::Text { max_str_len: 12 },
+                BufferDesc::Text { max_str_len: 12 },
                 Int32Type::map_to_text(
                     |&milliseconds_since_midnight: &i32,
                      index: usize,
@@ -421,7 +421,7 @@ fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::DATE => (
-                BufferKind::Date,
+                BufferDesc::Date { nullable },
                 Int32Type::map_to::<Date>().with(|&i| days_since_epoch_to_odbc_date(i), nullable),
             ),
             ConvertedType::DECIMAL => {
@@ -435,7 +435,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     precision + 1 + 1
                 };
                 (
-                    BufferKind::Text { max_str_len },
+                    BufferDesc::Text { max_str_len },
                     Int32Type::map_to_text(
                         move |&n, index, odbc_buf| {
                             let buf = odbc_buf.set_mut(index, max_str_len);
@@ -449,12 +449,13 @@ fn parquet_type_to_odbc_buffer_desc(
             _ => unexpected(),
         },
         PhysicalType::INT64 => match lt {
-            ConvertedType::NONE | ConvertedType::INT_64 | ConvertedType::UINT_64 => {
-                (BufferKind::I64, Int64Type::map_identity(nullable))
-            }
+            ConvertedType::NONE | ConvertedType::INT_64 | ConvertedType::UINT_64 => (
+                BufferDesc::I64 { nullable },
+                Int64Type::map_identity(nullable),
+            ),
             ConvertedType::TIME_MICROS => (
                 // Time represented in format hh:mm::ss.ffffff
-                BufferKind::Text { max_str_len: 15 },
+                BufferDesc::Text { max_str_len: 15 },
                 Int64Type::map_to_text(
                     |&microseconds_since_midnight: &i64,
                      index: usize,
@@ -467,7 +468,7 @@ fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::TIMESTAMP_MICROS => (
-                BufferKind::Timestamp,
+                BufferDesc::Timestamp { nullable },
                 Int64Type::map_to::<Timestamp>().with(
                     |&microseconds_since_epoch| {
                         let dt = NaiveDateTime::from_timestamp_opt(
@@ -489,7 +490,7 @@ fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::TIMESTAMP_MILLIS => (
-                BufferKind::Timestamp,
+                BufferDesc::Timestamp { nullable },
                 Int64Type::map_to::<Timestamp>().with(
                     |&milliseconds_since_epoch| {
                         let dt = NaiveDateTime::from_timestamp_opt(
@@ -521,7 +522,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     precision + 1 + 1
                 };
                 (
-                    BufferKind::Text { max_str_len },
+                    BufferDesc::Text { max_str_len },
                     Int64Type::map_to_text(
                         move |&n, index, odbc_buf| {
                             let buf = odbc_buf.set_mut(index, max_str_len);
@@ -541,11 +542,17 @@ fn parquet_type_to_odbc_buffer_desc(
             name,
         ),
         PhysicalType::FLOAT => match lt {
-            ConvertedType::NONE => (BufferKind::F32, FloatType::map_identity(nullable)),
+            ConvertedType::NONE => (
+                BufferDesc::F32 { nullable },
+                FloatType::map_identity(nullable),
+            ),
             _ => unexpected(),
         },
         PhysicalType::DOUBLE => match lt {
-            ConvertedType::NONE => (BufferKind::F64, DoubleType::map_identity(nullable)),
+            ConvertedType::NONE => (
+                BufferDesc::F64 { nullable },
+                DoubleType::map_identity(nullable),
+            ),
             _ => unexpected(),
         },
         PhysicalType::BYTE_ARRAY => {
@@ -555,7 +562,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     let max_str_len = 1;
                     if use_utf16 {
                         (
-                            BufferKind::WText { max_str_len },
+                            BufferDesc::WText { max_str_len },
                             ByteArrayType::map_to_wtext(
                                 move |text, index, odbc_buf| {
                                     // This allocation is not strictly neccessary, we could just as
@@ -574,7 +581,7 @@ fn parquet_type_to_odbc_buffer_desc(
                         )
                     } else {
                         (
-                            BufferKind::Text { max_str_len },
+                            BufferDesc::Text { max_str_len },
                             ByteArrayType::map_to_text(
                                 |text, index, odbc_buf| {
                                     odbc_buf.ensure_max_element_length(text.data().len(), index)?;
@@ -587,7 +594,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     }
                 }
                 ConvertedType::NONE | ConvertedType::BSON => (
-                    BufferKind::Binary { length: 1 },
+                    BufferDesc::Binary { length: 1 },
                     ByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| {
                             odbc_buf.ensure_max_element_length(bytes.as_bytes().len(), index)?;
@@ -612,7 +619,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     // + 1 for Sign
                     let max_str_len = precision + decimal_point_len + 1;
                     (
-                        BufferKind::Text { max_str_len },
+                        BufferDesc::Text { max_str_len },
                         ByteArrayType::map_to_text(
                             move |bytes, index, odbc_buf| {
                                 let n = i128_from_be_slice(bytes.as_bytes());
@@ -631,7 +638,7 @@ fn parquet_type_to_odbc_buffer_desc(
             let length = col_desc.type_length().try_into().unwrap();
             match lt {
                 ConvertedType::NONE => (
-                    BufferKind::Binary { length },
+                    BufferDesc::Binary { length },
                     FixedLenByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| {
                             odbc_buf.set_cell(index, Some(bytes.as_bytes()));
@@ -655,7 +662,7 @@ fn parquet_type_to_odbc_buffer_desc(
                     // + 1 for Sign
                     let max_str_len = precision + decimal_point_len + 1;
                     (
-                        BufferKind::Text { max_str_len },
+                        BufferDesc::Text { max_str_len },
                         FixedLenByteArrayType::map_to_text(
                             move |bytes, index, odbc_buf| {
                                 let n = i128_from_be_slice(bytes.as_bytes());
@@ -679,7 +686,7 @@ fn parquet_type_to_odbc_buffer_desc(
         }
     };
 
-    Ok((BufferDescription { nullable, kind }.into(), parquet_to_odbc))
+    Ok((desc, parquet_to_odbc))
 }
 
 trait OdbcDataType<'a> {
