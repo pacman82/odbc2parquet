@@ -13,7 +13,7 @@ use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
         AnySliceMut, BinColumnSliceMut, BufferDescription, BufferKind, NullableSliceMut,
-        TextColumnSliceMut,
+        TextColumnSliceMut, BufferDesc,
     },
     sys::{Date, Timestamp},
     Bit, Environment, U16String,
@@ -74,7 +74,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
 
     // Start with a small initial batch size and reallocate as we encounter larger row groups.
     let mut batch_size = 1;
-    let mut odbc_buffer = statement.into_any_column_inserter(
+    let mut odbc_buffer = statement.into_column_inserter(
         batch_size,
         column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
     )?;
@@ -100,7 +100,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
             // statetement again, in case we need to allocate more row groups.
             odbc_buffer = odbc_conn
                 .prepare(&insert_statement)?
-                .into_any_column_inserter(batch_size, descs)?;
+                .into_column_inserter(batch_size, descs)?;
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
@@ -366,7 +366,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
 fn parquet_type_to_odbc_buffer_desc(
     col_desc: &ColumnDescriptor,
     use_utf16: bool,
-) -> Result<(BufferDescription, Box<FnParquetToOdbcCol>), Error> {
+) -> Result<(BufferDesc, Box<FnParquetToOdbcCol>), Error> {
     // Column name. Used in error messages.
     let name = col_desc.self_type().name();
     if !col_desc.self_type().is_primitive() {
@@ -679,7 +679,7 @@ fn parquet_type_to_odbc_buffer_desc(
         }
     };
 
-    Ok((BufferDescription { nullable, kind }, parquet_to_odbc))
+    Ok((BufferDescription { nullable, kind }.into(), parquet_to_odbc))
 }
 
 trait OdbcDataType<'a> {
