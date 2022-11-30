@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.1
+
+* Updated dependencies
+
 ## 0.14.0
 
 * Time(p) is mapped to Timestamp Nanoseconds for Microsoft SQL Server
