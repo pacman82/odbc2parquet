@@ -40,11 +40,15 @@ jobs:
 
       - name: Install PostgreSQL Driver
         run: |
+          sudo apt-get update
           sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
           # Fix PostgreSQL driver paths
           sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
           sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
         shell: sudo bash {0}
+
+      - name: Print odbcinst.ini
+        run: cat /etc/odbcinst.ini
 
       - name: Test
         run: |
