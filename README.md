@@ -84,7 +84,13 @@ You can install `cargo` from here <https://rustup.rs/>.
 
 ## Usage
 
-### Query using connection string
+Use `odbc2parquet --help` to see all commands.
+
+### Query
+
+Use `odbc2parquet help query` to see all options related to fetching data.
+
+#### Query using connection string
 
 ```bash
 odbc2parquet query \
@@ -93,7 +99,7 @@ out.par  \
 "SELECT * FROM Birthdays"
 ```
 
-### Query using data source name
+#### Query using data source name
 
 ```bash
 odbc2parquet query \
@@ -102,6 +108,16 @@ odbc2parquet query \
 --user "SA" \
 out.par1 \
 "SELECT * FROM Birthdays"
+```
+
+#### Use parameters in query
+
+```shell
+odbc2parquet query \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+out.par  \
+"SELECT * FROM Birthdays WHERE year > ? and year < ?" \
+1990 2010
 ```
 
 ### List available ODBC drivers
@@ -116,16 +132,6 @@ odbc2parquet list-drivers
 odbc2parquet list-data-sources
 ```
 
-### Use parameters in query
-
-```shell
-odbc2parquet query \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
-out.par  \
-"SELECT * FROM Birthdays WHERE year > ? and year < ?" \
-1990 2010
-```
-
 ### Inserting data into a database
 
 ```shell
@@ -135,7 +141,7 @@ input.par \
 MyTable
 ```
 
-Use `odbc2parquet --help` to see all option.
+Use `odbc2parquet help insert` to see all options related to inserting data.
 
 ## Links
 
