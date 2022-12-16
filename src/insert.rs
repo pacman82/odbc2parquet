@@ -1,5 +1,6 @@
 use core::panic;
 use std::{
+    cmp::min,
     fs::File,
     io::Write,
     marker::PhantomData,
@@ -76,7 +77,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
     )?;
 
-    let mut pb = ParquetBuffer::new(batch_size as usize);
+    let mut pb = ParquetBuffer::new(batch_size);
 
     for row_group_index in 0..num_row_groups {
         info!(
@@ -90,7 +91,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
             .try_into()
             .expect("Number of rows in row group of parquet file must be non negative");
         // Ensure that num rows is less than batch size of originally created buffers.
-        if num_rows > batch_size as usize {
+        if num_rows > batch_size {
             batch_size = num_rows;
             let descs = column_buf_desc.iter().map(|(desc, _)| *desc);
             // An inefficiency here: Currently `odbc-api`s interface forces us to prepare the
@@ -615,7 +616,7 @@ fn parquet_type_to_odbc_buffer_desc(
                         )
                     }
                     let scale: usize = col_desc.type_scale().try_into().unwrap();
-                    let decimal_point_len: usize = if scale == 0 { 0 } else { 1 };
+                    let decimal_point_len: usize = min(scale, 1);
                     // + 1 for Sign
                     let max_str_len = precision + decimal_point_len + 1;
                     (
@@ -658,7 +659,7 @@ fn parquet_type_to_odbc_buffer_desc(
                         )
                     }
                     let scale: usize = col_desc.type_scale().try_into().unwrap();
-                    let decimal_point_len: usize = if scale == 0 { 0 } else { 1 };
+                    let decimal_point_len: usize = min(scale, 1);
                     // + 1 for Sign
                     let max_str_len = precision + decimal_point_len + 1;
                     (

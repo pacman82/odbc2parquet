@@ -3568,7 +3568,7 @@ fn query_4097_bits() {
         .unwrap()
         .into_column_inserter(num_bits, [desc])
         .unwrap();
-    parameter_buffer.set_num_rows(num_bits as usize);
+    parameter_buffer.set_num_rows(num_bits);
     parameter_buffer.execute().unwrap();
 
     // A temporary directory, to be removed at the end of the test.

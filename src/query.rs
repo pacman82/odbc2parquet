@@ -151,7 +151,7 @@ fn cursor_to_parquet(
 
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
 
-    let mut pb = ParquetBuffer::new(batch_size_row as usize);
+    let mut pb = ParquetBuffer::new(batch_size_row);
     let mut num_batch = 0;
 
     let mut writer = ParquetWriter::new(

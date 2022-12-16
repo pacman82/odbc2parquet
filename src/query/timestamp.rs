@@ -99,7 +99,7 @@ fn timestamp_to_i64(ts: &Timestamp, precision: u8) -> i64 {
             ts.hour as u32,
             ts.minute as u32,
             ts.second as u32,
-            ts.fraction as u32,
+            ts.fraction,
         )
         .unwrap();
     if precision <= 3 {
