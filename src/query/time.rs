@@ -6,7 +6,7 @@ use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
-    format::{NanoSeconds, TimeUnit},
+    format::{NanoSeconds, TimeUnit, MicroSeconds},
     schema::types::Type,
 };
 
@@ -35,10 +35,16 @@ impl TimeFromText {
 
 impl FetchStrategy for TimeFromText {
     fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, PhysicalType::INT64)
+
+        let (unit, pt) = match self.precision {
+            0..=6 => (TimeUnit::MICROS(MicroSeconds{}), PhysicalType::INT64),
+            _ => (TimeUnit::NANOS(NanoSeconds{}), PhysicalType::INT64),
+        };
+
+        Type::primitive_type_builder(name, pt)
             .with_logical_type(Some(LogicalType::Time {
                 is_adjusted_to_u_t_c: false,
-                unit: TimeUnit::NANOS(NanoSeconds {}),
+                unit,
             }))
             .with_repetition(self.repetition)
             .build()
@@ -62,7 +68,10 @@ impl FetchStrategy for TimeFromText {
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        write_time_ns(parquet_buffer, column_writer, column_view)
+        match self.precision {
+            0..=6 => write_time_us(parquet_buffer, column_writer, column_view),
+            _ => write_time_ns(parquet_buffer, column_writer, column_view),
+        }
     }
 }
 
@@ -79,6 +88,25 @@ fn write_time_ns(
             field.map(|text| {
                 let time = parse_time(text);
                 time.num_seconds_from_midnight() as i64 * 1_000_000_000 + time.nanosecond() as i64
+            })
+        }),
+    )?;
+    Ok(())
+}
+
+fn write_time_us(
+    pb: &mut ParquetBuffer,
+    column_writer: &mut ColumnWriter,
+    column_reader: AnySlice,
+) -> Result<(), Error> {
+    let from = column_reader.as_text_view().unwrap();
+    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
+    pb.write_optional(
+        into,
+        from.iter().map(|field| {
+            field.map(|text| {
+                let time = parse_time(text);
+                time.num_seconds_from_midnight() as i64 * 1_000_000 + time.nanosecond()  as i64 / 1_000
             })
         }),
     )?;
