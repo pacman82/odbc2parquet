@@ -804,7 +804,7 @@ fn query_time_0_mssql() {
     // let expected_values = "{a: 57852000000000}\n";
     // parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIME(MICROS,false));"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT32 a (TIME(MILLIS,false));"));
 }
 
 #[test]
