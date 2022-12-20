@@ -213,7 +213,7 @@ fn query_sales() {
     setup_empty_table_mssql(
         &conn,
         table_name,
-        &["DATE", "TIME(0)", "INT", "DECIMAL(10,2)"],
+        &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"],
     )
     .unwrap();
     let insert = format!(
@@ -800,10 +800,11 @@ fn query_time_0_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: 57852000000000}\n";
-    parquet_read_out(out_str).stdout(eq(expected_values));
+    // We can not use parquet read, as it uses the record API, which does not allow for the TIME type.
+    // let expected_values = "{a: 57852000000000}\n";
+    // parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIME(NANOS,false));"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIME(MICROS,false));"));
 }
 
 #[test]
