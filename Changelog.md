@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0
+
+* Time(p: 7..) is mapped to Timestamp Nanoseconds for Microsoft SQL Server
+* Time(p: 4..=6) is mapped to Timestamp Microseconds for Microsoft SQL Server
+* Time(p: 0..=3) is mapped to Timestamp Milliseconds for Microsoft SQL Server
+
 ## 0.14.1
 
 * Updated dependencies

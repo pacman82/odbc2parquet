@@ -27,7 +27,9 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Integer                    | Int32                        |
 | Big Int                    | Int64                        |
 | Date                       | Date                         |
-| Time*                      | Time Nanoseconds             |
+| Time(p: 0..3)*             | Time Milliseconds            |
+| Time(p: 4..6)*             | Time Microseconds            |
+| Time(p: 7..9)*             | Time Nanoseconds             |
 | Timestamp(p: 0..3)         | Timestamp Milliseconds       |
 | Timestamp(p >= 4)          | Timestamp Microseconds       |
 | Datetimeoffset(p: 0..3)    | Timestamp Milliseconds (UTC) |
