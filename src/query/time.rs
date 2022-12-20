@@ -1,3 +1,5 @@
+use std::ops::{Add, Div, Mul};
+
 use anyhow::Error;
 use atoi::FromRadix10;
 use chrono::{NaiveTime, Timelike};
@@ -5,12 +7,12 @@ use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::{DataType, Int64Type},
-    format::{NanoSeconds, TimeUnit, MicroSeconds},
+    data_type::{DataType, Int64Type, Int32Type},
+    format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit},
     schema::types::Type,
 };
 
-use crate::parquet_buffer::ParquetBuffer;
+use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
 use super::strategy::FetchStrategy;
 
@@ -35,10 +37,10 @@ impl TimeFromText {
 
 impl FetchStrategy for TimeFromText {
     fn parquet_type(&self, name: &str) -> Type {
-
         let (unit, pt) = match self.precision {
-            0..=6 => (TimeUnit::MICROS(MicroSeconds{}), PhysicalType::INT64),
-            _ => (TimeUnit::NANOS(NanoSeconds{}), PhysicalType::INT64),
+            0..=3 => (TimeUnit::MILLIS(MilliSeconds {}), PhysicalType::INT32),
+            4..=6 => (TimeUnit::MICROS(MicroSeconds {}), PhysicalType::INT64),
+            _ => (TimeUnit::NANOS(NanoSeconds {}), PhysicalType::INT64),
         };
 
         Type::primitive_type_builder(name, pt)
@@ -69,7 +71,8 @@ impl FetchStrategy for TimeFromText {
         column_view: AnySlice,
     ) -> Result<(), Error> {
         match self.precision {
-            0..=6 => write_time_us(parquet_buffer, column_writer, column_view),
+            0..=3 => write_time_ms(parquet_buffer, column_writer, column_view),
+            4..=6 => write_time_us(parquet_buffer, column_writer, column_view),
             _ => write_time_ns(parquet_buffer, column_writer, column_view),
         }
     }
@@ -80,18 +83,7 @@ fn write_time_ns(
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
-    let from = column_reader.as_text_view().unwrap();
-    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
-    pb.write_optional(
-        into,
-        from.iter().map(|field| {
-            field.map(|text| {
-                let time = parse_time(text);
-                time.num_seconds_from_midnight() as i64 * 1_000_000_000 + time.nanosecond() as i64
-            })
-        }),
-    )?;
-    Ok(())
+    write_time_with::<Int64Type>(pb, column_writer, column_reader, 1_000_000_000, 1)
 }
 
 fn write_time_us(
@@ -99,14 +91,46 @@ fn write_time_us(
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
+    write_time_with::<Int64Type>(pb, column_writer, column_reader, 1_000_000, 1_000)
+}
+
+fn write_time_ms(
+    pb: &mut ParquetBuffer,
+    column_writer: &mut ColumnWriter,
+    column_reader: AnySlice,
+) -> Result<(), Error> {
+    write_time_with::<Int32Type>(pb, column_writer, column_reader, 1_000, 1_000_000)
+}
+
+fn write_time_with<Pdt>(
+    pb: &mut ParquetBuffer,
+    column_writer: &mut ColumnWriter,
+    column_reader: AnySlice,
+    s_factor: Pdt::T,
+    ns_divisor: Pdt::T,
+) -> Result<(), Error>
+where
+    Pdt: DataType,
+    Pdt::T: BufferedDataType
+        + TryFrom<u32>
+        + Mul<Output = Pdt::T>
+        + Div<Output = Pdt::T>
+        + Add<Output = Pdt::T>
+        + Copy,
+    <Pdt::T as TryFrom<u32>>::Error: std::fmt::Debug,
+{
     let from = column_reader.as_text_view().unwrap();
-    let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
+    let into = Pdt::get_column_writer_mut(column_writer).unwrap();
     pb.write_optional(
         into,
         from.iter().map(|field| {
             field.map(|text| {
                 let time = parse_time(text);
-                time.num_seconds_from_midnight() as i64 * 1_000_000 + time.nanosecond()  as i64 / 1_000
+                let seconds = time.num_seconds_from_midnight();
+                let nanoseconds = time.nanosecond();
+                let seconds: Pdt::T = seconds.try_into().unwrap();
+                let nanoseconds: Pdt::T = nanoseconds.try_into().unwrap();
+                seconds * s_factor + nanoseconds as Pdt::T / ns_divisor
             })
         }),
     )?;
