@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.1
+
+* Introduced new flag for `query` subcommand `--no-empty-file` which prevents creation of an output file in case the query comes back with `0` rows.
+
 ## 0.15.0
 
 * Time(p: 7..) is mapped to Timestamp Nanoseconds for Microsoft SQL Server
