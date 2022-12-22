@@ -13,7 +13,7 @@ mod timestamp_tz;
 
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
-    parquet_writer::ParquetFormatOptions,
+    parquet_writer::ParquetWriterOptions,
     parquet_writer::ParquetWriter,
     strategy::{strategy_from_column_description, FetchStrategy, MappingOptions},
 };
@@ -49,6 +49,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         avoid_decimal,
         driver_does_not_support_64bit_integers,
         suffix_length,
+        no_empty_file,
     } = opt;
 
     let batch_size = BatchSizeLimit::new(batch_size_row, batch_size_memory);
@@ -65,9 +66,12 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     let db_name = odbc_conn.database_management_system_name()?;
     info!("Database Managment System Name: {db_name}");
 
-    let parquet_format_options = ParquetFormatOptions {
+    let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default.as_compression(),
         column_encodings: parquet_column_encoding,
+        file_size,
+        suffix_length,
+        no_empty_file,
     };
 
     let mapping_options = MappingOptions {
@@ -83,10 +87,8 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
             cursor,
             output,
             batch_size,
-            file_size,
             mapping_options,
             parquet_format_options,
-            suffix_length,
         )?;
     } else {
         eprintln!(
@@ -113,10 +115,8 @@ fn cursor_to_parquet(
     mut cursor: impl Cursor,
     path: IoArg,
     batch_size: BatchSizeLimit,
-    file_size: FileSizeLimit,
     mapping_options: MappingOptions,
-    parquet_format_options: ParquetFormatOptions,
-    suffix_length: usize,
+    parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
     let strategies = make_schema(&mut cursor, mapping_options)?;
 
@@ -157,9 +157,7 @@ fn cursor_to_parquet(
     let mut writer = ParquetWriter::new(
         path,
         parquet_schema.clone(),
-        file_size,
         parquet_format_options,
-        suffix_length,
     )?;
 
     while let Some(buffer) = row_set_cursor

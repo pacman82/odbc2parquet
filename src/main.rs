@@ -199,8 +199,13 @@ pub struct QueryOpt {
     /// lexical sorting.
     #[clap(long, default_value = "2")]
     suffix_length: usize,
+    /// In case the query comes back with a result set, but now rows, by default a file with only
+    /// schema information is still created. If you do not want to create any file in case the
+    /// result set is empty you can set this flag.
+    #[clap(long)]
+    no_empty_file: bool,
     /// Name of the output parquet file. Use `-` to indicate that the output should be written to
-    /// standard out instead.
+    /// standard out instead. This option does nothing if the output is written to standard out.
     output: IoArg,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters. E.g. "SELECT Name FROM Employees WHERE salary > ?;".

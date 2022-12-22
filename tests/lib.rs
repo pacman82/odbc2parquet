@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write, path::Path, sync::Arc};
+use std::{fs::File, io::{Write, ErrorKind}, path::Path, sync::Arc};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
@@ -1063,6 +1063,41 @@ fn query_doubles() {
 
     // Also verify schema to ensure f64 is choosen and not f32
     parquet_schema_out(out_str).stdout(contains(expected_schema));
+}
+
+/// Should not create a file if the query comes back empty `--no-empty-file` is set.
+#[test]
+fn query_comes_back_with_no_rows() {
+    // Setup table for test
+    let table_name = "QueryComesBackWithNoRows";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {};", table_name);
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "--no-empty-file",
+            out_str,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    assert_eq!(ErrorKind::NotFound, File::open(out_str).err().unwrap().kind());
 }
 
 /// Should read query from standard input if "-" is provided as query text.

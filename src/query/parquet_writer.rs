@@ -1,5 +1,5 @@
 use std::{
-    fs::File,
+    fs::{File, remove_file},
     io::Write,
     mem::swap,
     path::{Path, PathBuf},
@@ -21,10 +21,19 @@ use parquet::{
 
 use super::batch_size_limit::FileSizeLimit;
 
-/// Options influencing the output parquet format.
-pub struct ParquetFormatOptions {
+/// Options influencing the output parquet file independent of schema or row content.
+pub struct ParquetWriterOptions {
+    /// Directly correlated to the `--column-compression-default` command line option
     pub column_compression_default: Compression,
+    /// Tuples of column name and encoding which control the encoding for the associated columns.
     pub column_encodings: Vec<(String, Encoding)>,
+    /// Number of digits in the suffix, appended to the end of a file in case they are numbered.
+    pub suffix_length: usize,
+    /// A fuzzy limit for file size, causing the rest of the query to be written into new files if
+    /// a threshold is passed.
+    pub file_size: FileSizeLimit,
+    /// Do not create a file if no row was in the result set.
+    pub no_empty_file: bool,
 }
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
@@ -40,22 +49,21 @@ pub struct ParquetWriter {
     current_file_size: ByteSize,
     /// Length of the suffix, appended to the end of a file in case they are numbered.
     suffix_length: usize,
+    no_empty_file: bool,
 }
 
 impl ParquetWriter {
     pub fn new(
         output: IoArg,
         schema: Arc<Type>,
-        file_size: FileSizeLimit,
-        format_options: ParquetFormatOptions,
-        suffix_length: usize,
+        options: ParquetWriterOptions,
     ) -> Result<Self, Error> {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
         let mut wpb =
-            WriterProperties::builder().set_compression(format_options.column_compression_default);
-        for (column_name, encoding) in format_options.column_encodings {
+            WriterProperties::builder().set_compression(options.column_compression_default);
+        for (column_name, encoding) in options.column_encodings {
             let col = ColumnPath::new(vec![column_name]);
             wpb = wpb.set_column_encoding(col, encoding)
         }
@@ -67,8 +75,8 @@ impl ParquetWriter {
                 (output, None)
             }
             IoArg::File(path) => {
-                let file = if file_size.output_is_splitted() {
-                    File::create(Self::path_with_suffix(&path, 1, suffix_length)?)?
+                let file = if options.file_size.output_is_splitted() {
+                    File::create(Self::path_with_suffix(&path, 1, options.suffix_length)?)?
                 } else {
                     File::create(&path)?
                 };
@@ -83,10 +91,11 @@ impl ParquetWriter {
             schema,
             properties,
             writer,
-            file_size,
+            file_size: options.file_size,
             num_file: 1,
             current_file_size: ByteSize::b(0),
-            suffix_length,
+            suffix_length: options.suffix_length,
+            no_empty_file: options.no_empty_file,
         })
     }
 
@@ -131,6 +140,12 @@ impl ParquetWriter {
 
     pub fn close(self) -> Result<(), ParquetError> {
         self.writer.close()?;
+        if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
+            .then_some(self.path)
+            .flatten()
+        {
+            remove_file(path)?;
+        }
         Ok(())
     }
 
