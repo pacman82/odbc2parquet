@@ -35,7 +35,7 @@ bytesize = "1.1.0"
 io-arg = "0.2.0"
 
 [dependencies.clap]
-version = "4.1.0"
+version = "4.1.1"
 features = ["derive", "env"]
 
 [dependencies.parquet]
