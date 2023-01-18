@@ -39,7 +39,7 @@ version = "4.1.1"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "30.0.1"
+version = "31.0.0"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 
@@ -56,7 +56,7 @@ odbc-api = "0.54.0"
 # importantly, UTF-8 is likely to be more battled tested on these platforms, while UTF-16 is "only"
 # required by the standard.
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-odbc-api = { version = "0.53.0", features = ["narrow"] }
+odbc-api = { version = "0.54.0", features = ["narrow"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.7"
