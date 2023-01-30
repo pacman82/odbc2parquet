@@ -1,4 +1,9 @@
-use std::{fs::File, io::{Write, ErrorKind}, path::Path, sync::Arc};
+use std::{
+    fs::File,
+    io::{ErrorKind, Write},
+    path::Path,
+    sync::Arc,
+};
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
@@ -63,7 +68,7 @@ fn append_user_and_password_to_connection_string() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -99,10 +104,7 @@ fn nullable_parquet_buffers() {
     let table_name = "NullableParquetBuffers";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {} (A) VALUES('Hello'),(NULL),('World'),(NULL)",
-        table_name
-    );
+    let insert = format!("INSERT INTO {table_name} (A) VALUES('Hello'),(NULL),('World'),(NULL)");
     conn.execute(&insert, ()).unwrap();
 
     let expected = "\
@@ -120,7 +122,7 @@ fn nullable_parquet_buffers() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -168,10 +170,7 @@ fn parameters_in_query() {
     let table_name = "ParamtersInQuery";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)", "INTEGER"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {} (A,B) VALUES('Wrong', 5),('Right', 42)",
-        table_name
-    );
+    let insert = format!("INSERT INTO {table_name} (A,B) VALUES('Wrong', 5),('Right', 42)");
     conn.execute(&insert, ()).unwrap();
 
     let expected = "\
@@ -186,7 +185,7 @@ fn parameters_in_query() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b FROM {} WHERE b=?", table_name);
+    let query = format!("SELECT a,b FROM {table_name} WHERE b=?");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -217,14 +216,13 @@ fn query_sales() {
     )
     .unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a,b,c,d)
         VALUES
         ('2020-09-09', '00:05:34', 54, 9.99),
         ('2020-09-10', '12:05:32', 54, 9.99),
         ('2020-09-10', '14:05:32', 34, 2.00),
-        ('2020-09-11', '06:05:12', 12, -1.50);",
-        table_name
+        ('2020-09-11', '06:05:12', 12, -1.50);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -235,7 +233,7 @@ fn query_sales() {
         {a: 2020-09-11, b: 21912000000000, c: 12, d: -1.50}\n\
     ";
 
-    let query = format!("SELECT a,b,c,d FROM {} ORDER BY id", table_name);
+    let query = format!("SELECT a,b,c,d FROM {table_name} ORDER BY id");
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -287,7 +285,7 @@ fn query_decimals() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b,c,d FROM {};", table_name);
+    let query = format!("SELECT a,b,c,d FROM {table_name};");
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
@@ -341,7 +339,7 @@ fn query_decimals_avoid_decimal() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b,c,d FROM {};", table_name);
+    let query = format!("SELECT a,b,c,d FROM {table_name};");
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
@@ -387,7 +385,7 @@ fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
@@ -425,13 +423,12 @@ fn query_decimals_optional() {
     )
     .unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a,b,c)
         VALUES
         (1.23, 1.23, 123),
         (NULL, NULL, NULL),
-        (4.56, 4.56, 456);",
-        table_name
+        (4.56, 4.56, 456);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -472,11 +469,10 @@ fn query_large_numeric_as_text() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["NUMERIC(10,0) NOT NULL"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (1234567890);",
-        table_name
+        (1234567890);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -488,7 +484,7 @@ fn query_large_numeric_as_text() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -515,11 +511,10 @@ fn query_numeric_13_3() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (-1234567890.123);",
-        table_name
+        (-1234567890.123);"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -557,11 +552,10 @@ fn query_numeric_33_3() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["NUMERIC(33,3) NOT NULL"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (-123456789012345678901234567890.123);",
-        table_name
+        (-123456789012345678901234567890.123);"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -602,11 +596,10 @@ fn query_timestamp_with_timezone_mssql() {
     // ODBC data type: SqlDataType(-155), column_size: 34, decimal_digits: 7
     setup_empty_table_mssql(&conn, table_name, &["DATETIMEOFFSET"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12 +02:00');",
-        table_name
+        ('2022-09-07 16:04:12 +02:00');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -644,11 +637,10 @@ fn query_timestamp_mssql() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12');",
-        table_name
+        ('2022-09-07 16:04:12');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -687,11 +679,10 @@ fn query_timestamp_ms_with_timezone_mssql() {
     // ODBC data type: SqlDataType(-155), decimal_digits: 3
     setup_empty_table_mssql(&conn, table_name, &["DATETIMEOFFSET(3)"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12 +02:00');",
-        table_name
+        ('2022-09-07 16:04:12 +02:00');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -729,11 +720,10 @@ fn query_time_mssql() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('16:04:12');",
-        table_name
+        ('16:04:12');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -771,11 +761,10 @@ fn query_time_0_mssql() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME(0)"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('16:04:12');",
-        table_name
+        ('16:04:12');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -814,11 +803,10 @@ fn query_timestamp_with_timezone_postgres() {
     let conn = ENV.connect_with_connection_string(POSTGRES).unwrap();
     setup_empty_table_pg(&conn, table_name, &["TIMESTAMPTZ"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12 +02:00');",
-        table_name
+        ('2022-09-07 16:04:12 +02:00');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -856,11 +844,10 @@ fn query_timestamp_postgres() {
     let conn = ENV.connect_with_connection_string(POSTGRES).unwrap();
     setup_empty_table_pg(&conn, table_name, &["TIMESTAMP"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12');",
-        table_name
+        ('2022-09-07 16:04:12');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -916,11 +903,10 @@ fn query_all_the_types() {
     )
     .unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a,b,c,d,e,f,g,h,i,j,k,l)
         VALUES
-        ('abcde', 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, 'Hello, World!', '2020-09-16', '03:54:12', '2020-09-16 03:54:12');",
-        table_name
+        ('abcde', 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, 'Hello, World!', '2020-09-16', '03:54:12', '2020-09-16 03:54:12');"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -947,7 +933,7 @@ fn query_all_the_types() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a,b,c,d,e,f,g,h,i,j,k,l FROM {};", table_name);
+    let query = format!("SELECT a,b,c,d,e,f,g,h,i,j,k,l FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -972,11 +958,10 @@ fn query_bits() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (0), (1), (NULL), (1), (0);",
-        table_name
+        (0), (1), (NULL), (1), (0);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -996,7 +981,7 @@ fn query_bits() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1021,11 +1006,10 @@ fn query_doubles() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (0.1), (2.3);",
-        table_name
+        (0.1), (2.3);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -1044,7 +1028,7 @@ fn query_doubles() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1081,7 +1065,7 @@ fn query_comes_back_with_no_rows() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1097,7 +1081,10 @@ fn query_comes_back_with_no_rows() {
         .assert()
         .success();
 
-    assert_eq!(ErrorKind::NotFound, File::open(out_str).err().unwrap().kind());
+    assert_eq!(
+        ErrorKind::NotFound,
+        File::open(out_str).err().unwrap().kind()
+    );
 }
 
 /// Should read query from standard input if "-" is provided as query text.
@@ -1108,14 +1095,13 @@ fn read_query_from_stdin() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
         (54),
         (54),
         (34),
-        (12);",
-        table_name
+        (12);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -1125,7 +1111,7 @@ fn read_query_from_stdin() {
         {a: 34}\n\
         {a: 12}\n\
     ";
-    let query = format!("SELECT a FROM {} ORDER BY id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY id");
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1150,7 +1136,7 @@ fn split_files_on_num_row_groups() {
     let table_name = "SplitFilesOnNumRowGroups";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
-    let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
+    let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
     conn.execute(&insert, ()).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
@@ -1161,7 +1147,7 @@ fn split_files_on_num_row_groups() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1193,7 +1179,7 @@ fn split_files_on_size_limit() {
     let table_name = "SplitFilesOnSizeLimit";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
-    let insert = format!("INSERT INTO {} (A) VALUES(1),(2),(3)", table_name);
+    let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
     conn.execute(&insert, ()).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
@@ -1204,7 +1190,7 @@ fn split_files_on_size_limit() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1236,7 +1222,7 @@ fn configurable_suffix_length() {
     let table_name = "ConfigurableSuffixLength";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
-    let insert = format!("INSERT INTO {} (A) VALUES(1)", table_name);
+    let insert = format!("INSERT INTO {table_name} (A) VALUES(1)");
     conn.execute(&insert, ()).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
@@ -1247,7 +1233,7 @@ fn configurable_suffix_length() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1322,10 +1308,7 @@ fn query_varchar_max() {
 
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
-        &format!(
-            "INSERT INTO {} (a) Values ('Hello'), ('World');",
-            table_name
-        ),
+        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
         (),
     )
     .unwrap();
@@ -1338,7 +1321,7 @@ fn query_varchar_max() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
     Command::cargo_bin("odbc2parquet")
@@ -1363,10 +1346,7 @@ fn query_varchar_max_utf16() {
 
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
-        &format!(
-            "INSERT INTO {} (a) Values ('Hello'), ('World');",
-            table_name
-        ),
+        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
         (),
     )
     .unwrap();
@@ -1379,7 +1359,7 @@ fn query_varchar_max_utf16() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
     Command::cargo_bin("odbc2parquet")
@@ -1450,11 +1430,10 @@ fn prefer_varbinary() {
     setup_empty_table_mssql(&conn, table_name, &["BINARY(5)"]).unwrap();
     conn.execute(
         &format!(
-            "INSERT INTO {} (a) Values \
+            "INSERT INTO {table_name} (a) Values \
         (CONVERT(Binary(5), 'Hello')),\
         (CONVERT(Binary(5), 'World')),\
-        (NULL)",
-            table_name
+        (NULL)"
         ),
         (),
     )
@@ -1468,7 +1447,7 @@ fn prefer_varbinary() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1626,7 +1605,7 @@ fn utf_16_encoding() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?);"),
         &"Ü".into_parameter(),
     )
     .unwrap();
@@ -1639,7 +1618,7 @@ fn utf_16_encoding() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = &format!("SELECT a FROM {};", table_name);
+    let query = &format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1669,7 +1648,7 @@ fn auto_encoding() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?);"),
         &"Ü".into_parameter(),
     )
     .unwrap();
@@ -1682,7 +1661,7 @@ fn auto_encoding() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = &format!("SELECT a FROM {};", table_name);
+    let query = &format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -1742,7 +1721,7 @@ pub fn insert_32_bit_integer() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1787,7 +1766,7 @@ pub fn insert_optional_32_bit_integer() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1832,7 +1811,7 @@ pub fn insert_64_bit_integer() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1877,7 +1856,7 @@ pub fn insert_optional_64_bit_integer() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1928,7 +1907,7 @@ pub fn insert_utf8() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1979,7 +1958,7 @@ pub fn insert_optional_utf8() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2032,7 +2011,7 @@ pub fn insert_utf16() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2085,7 +2064,7 @@ pub fn insert_optional_utf16() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2130,7 +2109,7 @@ pub fn insert_bool() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2175,7 +2154,7 @@ pub fn insert_optional_bool() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2220,7 +2199,7 @@ pub fn insert_f32() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2268,7 +2247,7 @@ pub fn insert_optional_f32() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2313,7 +2292,7 @@ pub fn insert_f64() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2358,7 +2337,7 @@ pub fn insert_optional_f64() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2403,7 +2382,7 @@ pub fn insert_date() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2448,7 +2427,7 @@ pub fn insert_optional_date() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2499,7 +2478,7 @@ pub fn insert_time_ms() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2550,7 +2529,7 @@ pub fn insert_optional_time_ms() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2601,7 +2580,7 @@ pub fn insert_time_us() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2652,7 +2631,7 @@ pub fn insert_optional_time_us() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2698,7 +2677,7 @@ pub fn insert_decimal_from_i32() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2744,7 +2723,7 @@ pub fn insert_decimal_from_i32_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2790,7 +2769,7 @@ pub fn insert_decimal_from_i64() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2836,7 +2815,7 @@ pub fn insert_decimal_from_i64_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2882,7 +2861,7 @@ pub fn insert_timestamp_ms() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2936,7 +2915,7 @@ pub fn insert_timestamp_ms_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -2990,7 +2969,7 @@ pub fn insert_timestamp_us() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3044,7 +3023,7 @@ pub fn insert_timestamp_us_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3098,7 +3077,7 @@ pub fn insert_binary() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3152,7 +3131,7 @@ pub fn insert_binary_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3215,7 +3194,7 @@ pub fn insert_fixed_len_binary() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3274,7 +3253,7 @@ pub fn insert_fixed_len_binary_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3334,7 +3313,7 @@ pub fn insert_decimal_from_binary() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3385,7 +3364,7 @@ pub fn insert_decimal_from_binary_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3446,7 +3425,7 @@ pub fn insert_decimal_from_fixed_binary() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3504,7 +3483,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
         .success();
 
     // Query table and check for expected result
-    let query = format!("SELECT a FROM {} ORDER BY Id", table_name);
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -3592,11 +3571,10 @@ fn query_4097_bits() {
 
     // Insert 4097 bits "false" (default constructed) into the table
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a)
         VALUES
-        (?);",
-        table_name
+        (?);"
     );
     let desc = BufferDesc::Bit { nullable: false };
     let mut parameter_buffer = conn
@@ -3615,7 +3593,7 @@ fn query_4097_bits() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let query = format!("SELECT a FROM {};", table_name);
+    let query = format!("SELECT a FROM {table_name};");
 
     Command::cargo_bin("odbc2parquet")
         .unwrap()
@@ -3668,12 +3646,12 @@ fn setup_empty_table(
     conn: &Connection,
     identity: &str,
 ) -> Result<(), odbc_api::Error> {
-    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+    let drop_table = &format!("DROP TABLE IF EXISTS {table_name}");
     let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
     let cols = column_types
         .iter()
         .zip(column_names)
-        .map(|(ty, name)| format!("{} {}", name, ty))
+        .map(|(ty, name)| format!("{name} {ty}"))
         .collect::<Vec<_>>()
         .join(", ");
     let create_table = format!("CREATE TABLE {table_name} (id {identity},{cols});");
@@ -3702,13 +3680,10 @@ pub fn setup_empty_table_pg(
 fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     // Setup table for test. We use the table name only in this test.
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
         .unwrap();
     conn.execute(
-        &format!(
-            "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
-            table_name
-        ),
+        &format!("CREATE TABLE {table_name} (country VARCHAR(255), population BIGINT);"),
         (),
     )
     .unwrap();
@@ -3721,7 +3696,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
-    let in_path = format!("tests/{}", file);
+    let in_path = format!("tests/{file}");
 
     // Insert parquet
     Command::cargo_bin("odbc2parquet")
@@ -3746,10 +3721,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
             "--connection-string",
             MSSQL,
             out_str,
-            &format!(
-                "SELECT country, population FROM {} ORDER BY population;",
-                table_name
-            ),
+            &format!("SELECT country, population FROM {table_name} ORDER BY population;"),
         ])
         .assert();
 

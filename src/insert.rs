@@ -127,7 +127,7 @@ fn insert_statement_text(table: &str, column_names: &[&str]) -> String {
         .map(|_| "?")
         .collect::<Vec<_>>()
         .join(", ");
-    let statement_text = format!("INSERT INTO {} ({}) VALUES ({});", table, columns, values);
+    let statement_text = format!("INSERT INTO {table} ({columns}) VALUES ({values});");
     info!("Insert statement Text: {}", statement_text);
     statement_text
 }
@@ -727,8 +727,7 @@ fn write_as_time_ms(mut milliseconds_since_midnight: i32, mut text: &mut [u8]) {
     milliseconds_since_midnight -= seconds * 1_000;
     write!(
         text,
-        "{:02}:{:02}:{:02}.{:03}",
-        hours, minutes, seconds, milliseconds_since_midnight
+        "{hours:02}:{minutes:02}:{seconds:02}.{milliseconds_since_midnight:03}"
     )
     .unwrap()
 }
@@ -742,8 +741,7 @@ fn write_as_time_us(mut microseconds_since_midnight: i64, mut text: &mut [u8]) {
     microseconds_since_midnight -= seconds * 1_000_000;
     write!(
         text,
-        "{:02}:{:02}:{:02}.{:06}",
-        hours, minutes, seconds, microseconds_since_midnight
+        "{hours:02}:{minutes:02}:{seconds:02}.{microseconds_since_midnight:06}"
     )
     .unwrap()
 }

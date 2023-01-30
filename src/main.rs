@@ -306,7 +306,7 @@ fn main() -> Result<(), Error> {
             for driver_info in odbc_env.drivers()? {
                 println!("{}", driver_info.description);
                 for (key, value) in &driver_info.attributes {
-                    println!("\t{}={}", key, value);
+                    println!("\t{key}={value}");
                 }
                 println!()
             }

@@ -219,7 +219,7 @@ fn make_schema(
         let name = cd.name_to_string()?;
         // Give a generated name, should we fail to retrieve one from the ODBC data source.
         let name = if name.is_empty() {
-            format!("Column{}", index)
+            format!("Column{index}")
         } else {
             name
         };
