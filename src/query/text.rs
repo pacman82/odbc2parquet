@@ -2,7 +2,10 @@ use std::borrow::Cow;
 
 use anyhow::Error;
 use log::warn;
-use odbc_api::buffers::{AnySlice, BufferDesc};
+use odbc_api::{
+    buffers::{AnySlice, BufferDesc},
+    DataType,
+};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -14,7 +17,19 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::strategy::FetchStrategy;
 
-pub struct Utf16ToUtf8 {
+pub fn text_strategy(
+    use_utf16: bool,
+    repetition: Repetition,
+    dt: DataType,
+) -> Box<dyn FetchStrategy> {
+    if use_utf16 {
+        Box::new(Utf16ToUtf8::new(repetition, dt.utf16_len().unwrap()))
+    } else {
+        Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
+    }
+}
+
+struct Utf16ToUtf8 {
     repetition: Repetition,
     /// Length of the column elements in `u16` (as opposed to code points).
     length: usize,

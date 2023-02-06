@@ -24,7 +24,7 @@ use crate::{
         date::Date,
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_logical_type},
-        text::{Utf16ToUtf8, Utf8},
+        text::{Utf8, text_strategy},
         time::time_from_text,
         timestamp::timestamp_without_tz,
         timestamp_tz::timestamp_tz,
@@ -144,11 +144,7 @@ pub fn strategy_from_column_description(
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
         | DataType::WChar { length: _ }) => {
-            if use_utf16 {
-                Box::new(Utf16ToUtf8::new(repetition, dt.utf16_len().unwrap()))
-            } else {
-                Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
-            }
+            text_strategy(use_utf16, repetition, dt)
         }
         DataType::Other {
             data_type: SqlDataType(-154),
