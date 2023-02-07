@@ -1305,7 +1305,6 @@ fn varbinary_column() {
 /// columns. Yet odbc2parquet should detect this and give the user an error instead.
 #[test]
 fn query_varchar_max() {
-
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let table_name = "QueryVarcharMax";
 
@@ -1342,7 +1341,7 @@ fn query_varchar_max() {
 }
 
 /// Introduced after discovering a bug, that columns were not ignored on windows.
-/// 
+///
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
 /// columns. Yet odbc2parquet should detect this and give the user an error instead.
 #[test]

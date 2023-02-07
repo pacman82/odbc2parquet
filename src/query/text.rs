@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, cmp::max};
 
 use anyhow::Error;
 use log::warn;
@@ -21,11 +21,19 @@ pub fn text_strategy(
     use_utf16: bool,
     repetition: Repetition,
     dt: DataType,
+    column_length_limit: Option<usize>,
 ) -> Box<dyn FetchStrategy> {
+    let apply_length_limit = |length| {
+        column_length_limit
+            .map(|limit| max(limit, length))
+            .unwrap_or(length)
+    };
     if use_utf16 {
-        Box::new(Utf16ToUtf8::new(repetition, dt.utf16_len().unwrap()))
+        let length = apply_length_limit(dt.utf16_len().unwrap());
+        Box::new(Utf16ToUtf8::new(repetition, length))
     } else {
-        Box::new(Utf8::with_bytes_length(repetition, dt.utf8_len().unwrap()))
+        let length = apply_length_limit(dt.utf8_len().unwrap());
+        Box::new(Utf8::with_bytes_length(repetition, length))
     }
 }
 

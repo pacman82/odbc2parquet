@@ -7,7 +7,7 @@ use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
-    data_type::{DataType, Int64Type, Int32Type},
+    data_type::{DataType, Int32Type, Int64Type},
     format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit},
     schema::types::Type,
 };

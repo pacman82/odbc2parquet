@@ -13,8 +13,8 @@ mod timestamp_tz;
 
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
-    parquet_writer::ParquetWriterOptions,
     parquet_writer::ParquetWriter,
+    parquet_writer::ParquetWriterOptions,
     strategy::{strategy_from_column_description, FetchStrategy, MappingOptions},
 };
 
@@ -154,11 +154,7 @@ fn cursor_to_parquet(
     let mut pb = ParquetBuffer::new(batch_size_row);
     let mut num_batch = 0;
 
-    let mut writer = ParquetWriter::new(
-        path,
-        parquet_schema.clone(),
-        parquet_format_options,
-    )?;
+    let mut writer = ParquetWriter::new(path, parquet_schema.clone(), parquet_format_options)?;
 
     while let Some(buffer) = row_set_cursor
         .fetch()

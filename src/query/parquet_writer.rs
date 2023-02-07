@@ -1,5 +1,5 @@
 use std::{
-    fs::{File, remove_file},
+    fs::{remove_file, File},
     io::Write,
     mem::swap,
     path::{Path, PathBuf},

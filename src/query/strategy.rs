@@ -24,7 +24,7 @@ use crate::{
         date::Date,
         decimal::decmial_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_logical_type},
-        text::{Utf8, text_strategy},
+        text::text_strategy,
         time::time_from_text,
         timestamp::timestamp_without_tz,
         timestamp_tz::timestamp_tz,
@@ -143,9 +143,7 @@ pub fn strategy_from_column_description(
         | DataType::Varchar { length: _ }
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
-        | DataType::WChar { length: _ }) => {
-            text_strategy(use_utf16, repetition, dt)
-        }
+        | DataType::WChar { length: _ }) => text_strategy(use_utf16, repetition, dt, None),
         DataType::Other {
             data_type: SqlDataType(-154),
             column_size: _,
@@ -205,11 +203,17 @@ fn unknown_non_char_type(
     cursor: &mut impl Cursor,
     index: i16,
     repetition: Repetition,
-) -> Result<Box<Utf8>, Error> {
+) -> Result<Box<dyn FetchStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
         len
     } else {
         cursor.col_display_size(index.try_into().unwrap())? as usize
     };
-    Ok(Box::new(Utf8::with_bytes_length(repetition, length)))
+    let use_utf16 = false;
+    Ok(text_strategy(
+        use_utf16,
+        repetition,
+        DataType::Varchar { length },
+        None,
+    ))
 }
