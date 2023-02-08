@@ -56,6 +56,7 @@ pub struct MappingOptions<'a> {
     pub prefer_varbinary: bool,
     pub avoid_decimal: bool,
     pub driver_does_support_i64: bool,
+    pub column_length_limit: Option<usize>
 }
 
 pub fn strategy_from_column_description(
@@ -71,6 +72,7 @@ pub fn strategy_from_column_description(
         prefer_varbinary,
         avoid_decimal,
         driver_does_support_i64,
+        column_length_limit,
     } = mapping_options;
 
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
@@ -81,8 +83,6 @@ pub fn strategy_from_column_description(
     };
 
     let is_optional = cd.could_be_nullable();
-
-    let column_length_limit = None;
 
     let apply_length_limit = |length| {
         column_length_limit
@@ -134,6 +134,7 @@ pub fn strategy_from_column_description(
             },
         ),
         DataType::Binary { length } => {
+            let length = apply_length_limit(length);
             if prefer_varbinary {
                 Box::new(Binary::<ByteArrayType>::new(repetition, length))
             } else {
@@ -141,6 +142,7 @@ pub fn strategy_from_column_description(
             }
         }
         DataType::Varbinary { length } | DataType::LongVarbinary { length } => {
+            let length = apply_length_limit(length);
             Box::new(Binary::<ByteArrayType>::new(repetition, length))
         }
         // For character data we consider binding to wide (16-Bit) buffers in order to avoid
@@ -168,7 +170,7 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 time_from_text(repetition, precision.try_into().unwrap())
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition)?
+                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
             }
         }
         DataType::Other {
@@ -179,14 +181,18 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexographically.
-                info!("Detected Timestamp type with time zone. Appyling instant semantics for column {}.", cd.name_to_string()?);
+                info!(
+                    "Detected Timestamp type with time zone. Appyling instant semantics for \
+                    column {}.",
+                    cd.name_to_string()?
+                );
                 timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition)?
+                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
             }
         }
         DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-            unknown_non_char_type(cd, cursor, index, repetition)?
+            unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
         }
     };
 
@@ -219,12 +225,14 @@ fn unknown_non_char_type(
     cursor: &mut impl Cursor,
     index: i16,
     repetition: Repetition,
+    apply_length_limit: impl Fn(usize) -> usize,
 ) -> Result<Box<dyn FetchStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
         len
     } else {
         cursor.col_display_size(index.try_into().unwrap())? as usize
     };
+    let length = apply_length_limit(length);
     let use_utf16 = false;
     Ok(text_strategy(use_utf16, repetition, length))
 }

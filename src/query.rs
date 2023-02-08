@@ -50,6 +50,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         driver_does_not_support_64bit_integers,
         suffix_length,
         no_empty_file,
+        column_length_limit,
     } = opt;
 
     let batch_size = BatchSizeLimit::new(batch_size_row, batch_size_memory);
@@ -80,6 +81,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         prefer_varbinary,
         avoid_decimal,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
+        column_length_limit,
     };
 
     if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {

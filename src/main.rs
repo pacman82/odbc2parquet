@@ -216,6 +216,15 @@ pub struct QueryOpt {
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
     parameters: Vec<String>,
+    /// You can use this to limit the transfer buffer size which is used for an individual variadic
+    /// sized column. For binary columns this is a maximum element length in bytes. For text columns
+    /// it depends wether UTF-8 or UTF-16 encoding is used. See documentation of the `encondig`
+    /// option. In case of UTF-8 this is the maximum length in bytes for an element. In case of
+    /// UTF-16 the binary length is multiplied by two. This allows domain experts to configure
+    /// limits (roughly) in the domain of how many letters do I expect in this column, rather than
+    /// to care about wether the command is executed on Linux or Windows. The encoding of the column
+    /// on the Database does not matter for this setting or determining buffer sizes.
+    column_length_limit: Option<usize>,
 }
 
 #[derive(Args)]
