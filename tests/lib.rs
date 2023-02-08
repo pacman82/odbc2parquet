@@ -1340,6 +1340,47 @@ fn query_varchar_max() {
         .failure();
 }
 
+/// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
+/// columns. Yet odbc2parquet should detect this and give the user an error instead.
+#[test]
+fn query_varchar_max_with_column_length_limit() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let table_name = "QueryVarcharMaxWithColumnLengthLimit";
+
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
+        (),
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name};");
+
+    // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "--column-length-limit",
+            "4096",
+            out_str,
+            &query,
+        ])
+        .assert()
+        .success();
+}
+
 /// Introduced after discovering a bug, that columns were not ignored on windows.
 ///
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
