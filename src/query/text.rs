@@ -1,11 +1,8 @@
-use std::{borrow::Cow, cmp::max};
+use std::borrow::Cow;
 
 use anyhow::Error;
 use log::warn;
-use odbc_api::{
-    buffers::{AnySlice, BufferDesc},
-    DataType,
-};
+use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -20,19 +17,11 @@ use super::strategy::FetchStrategy;
 pub fn text_strategy(
     use_utf16: bool,
     repetition: Repetition,
-    dt: DataType,
-    column_length_limit: Option<usize>,
+    length: usize,
 ) -> Box<dyn FetchStrategy> {
-    let apply_length_limit = |length| {
-        column_length_limit
-            .map(|limit| max(limit, length))
-            .unwrap_or(length)
-    };
     if use_utf16 {
-        let length = apply_length_limit(dt.utf16_len().unwrap());
         Box::new(Utf16ToUtf8::new(repetition, length))
     } else {
-        let length = apply_length_limit(dt.utf8_len().unwrap());
         Box::new(Utf8::with_bytes_length(repetition, length))
     }
 }

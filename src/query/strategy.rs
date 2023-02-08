@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::{cmp::max, convert::TryInto};
 
 use anyhow::Error;
 use log::{debug, info, warn};
@@ -82,6 +82,14 @@ pub fn strategy_from_column_description(
 
     let is_optional = cd.could_be_nullable();
 
+    let column_length_limit = None;
+
+    let apply_length_limit = |length| {
+        column_length_limit
+            .map(|limit| max(limit, length))
+            .unwrap_or(length)
+    };
+
     let strategy: Box<dyn FetchStrategy> = match cd.data_type {
         DataType::Float { precision: 0..=24 } | DataType::Real => {
             fetch_identical::<FloatType>(is_optional)
@@ -143,7 +151,15 @@ pub fn strategy_from_column_description(
         | DataType::Varchar { length: _ }
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
-        | DataType::WChar { length: _ }) => text_strategy(use_utf16, repetition, dt, None),
+        | DataType::WChar { length: _ }) => {
+            if use_utf16 {
+                let length = apply_length_limit(dt.utf16_len().unwrap());
+                text_strategy(use_utf16, repetition, length)
+            } else {
+                let length = apply_length_limit(dt.utf8_len().unwrap());
+                text_strategy(use_utf16, repetition, length)
+            }
+        }
         DataType::Other {
             data_type: SqlDataType(-154),
             column_size: _,
@@ -210,10 +226,5 @@ fn unknown_non_char_type(
         cursor.col_display_size(index.try_into().unwrap())? as usize
     };
     let use_utf16 = false;
-    Ok(text_strategy(
-        use_utf16,
-        repetition,
-        DataType::Varchar { length },
-        None,
-    ))
+    Ok(text_strategy(use_utf16, repetition, length))
 }
