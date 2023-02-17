@@ -30,7 +30,7 @@ log = "0.4.17"
 chrono = "0.4.23"
 atoi = "2.0.0"
 num-traits = "0.2.15"
-clap_complete = "4.1.1"
+clap_complete = "4.1.2"
 bytesize = "1.1.0"
 io-arg = "0.2.0"
 
