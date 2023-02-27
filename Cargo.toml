@@ -62,7 +62,7 @@ odbc-api = { version = "0.54.2", features = ["narrow"] }
 assert_cmd = "2.0.7"
 lazy_static = "1.4.0"
 predicates = "2.1.5"
-tempfile = "3.3.0"
+tempfile = "3.4.0"
 
 [profile.release]
 # Panics should only be caused by logic errors and are considered bugs
