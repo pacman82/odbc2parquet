@@ -1341,7 +1341,7 @@ fn query_varchar_max() {
 }
 
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
-/// columns. Yet odbc2parquet should detect this and give the user an error instead.
+/// columns. Yet by setting a size limit we can make it work.
 #[test]
 fn query_varchar_max_with_column_length_limit() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
