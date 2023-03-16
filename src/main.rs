@@ -149,7 +149,7 @@ pub struct QueryOpt {
     file_size_threshold: Option<ByteSize>,
     /// You can use this to limit the transfer buffer size which is used for an individual variadic
     /// sized column.
-    /// 
+    ///
     /// This is useful in situations there ODBC would require us to allocate a ridiculous amount of
     /// memory for a single element of a row. Usually this is the case because the Database schema
     /// has been ill defined (like choosing `TEXT` for a user name, although a users name is

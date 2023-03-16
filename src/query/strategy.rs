@@ -56,7 +56,7 @@ pub struct MappingOptions<'a> {
     pub prefer_varbinary: bool,
     pub avoid_decimal: bool,
     pub driver_does_support_i64: bool,
-    pub column_length_limit: Option<usize>
+    pub column_length_limit: Option<usize>,
 }
 
 pub fn strategy_from_column_description(

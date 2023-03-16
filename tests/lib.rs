@@ -40,13 +40,13 @@ lazy_static! {
 // Use the parquet-read tool to verify values. It can be installed with `cargo install parquet`.
 fn parquet_read_out(file: &str) -> Assert {
     let mut cmd = Command::new("parquet-read");
-    cmd.args(["--file-name", file]).assert().success()
+    cmd.args([file]).assert().success()
 }
 
 /// Assertions on the output of parquet_schema.
 fn parquet_schema_out(file: &str) -> Assert {
     let mut cmd = Command::new("parquet-schema");
-    cmd.args(["--file-path", file]).assert().success()
+    cmd.args([file]).assert().success()
 }
 
 /// Query MSSQL database, yet do not specify username and password in the connection string, but
@@ -3773,7 +3773,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
 
     let expectation = String::from_utf8(
         std::process::Command::new("parquet-read")
-            .args(&["--file-name", &in_path][..])
+            .args(&[&in_path][..])
             .output()
             .unwrap()
             .stdout,
