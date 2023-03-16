@@ -61,7 +61,7 @@ odbc-api = { version = "0.54.2", features = ["narrow"] }
 [dev-dependencies]
 assert_cmd = "2.0.10"
 lazy_static = "1.4.0"
-predicates = "2.1.5"
+predicates = "3.0.1"
 tempfile = "3.4.0"
 
 [profile.release]
