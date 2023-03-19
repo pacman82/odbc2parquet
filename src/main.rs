@@ -10,7 +10,7 @@ use enum_args::CompressionVariants;
 use io_arg::IoArg;
 use odbc_api::{
     escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
-    Environment,
+    Environment, ConnectionOptions,
 };
 use parquet::basic::Encoding;
 use std::{fs::File, path::PathBuf};
@@ -363,6 +363,7 @@ fn open_connection<'e>(
             dsn,
             opt.user.as_deref().unwrap_or(""),
             opt.password.as_deref().unwrap_or(""),
+            ConnectionOptions::default(),
         )?;
         return Ok(conn);
     }
