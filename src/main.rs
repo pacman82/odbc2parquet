@@ -169,6 +169,11 @@ pub struct QueryOpt {
     /// Default compression used by the parquet file writer.
     #[arg(long, value_enum, default_value = "gzip")]
     column_compression_default: CompressionVariants,
+    /// The `gzip`, `zstd` and `brotli` compression variants allow for specifying an explicit
+    /// compression level. If the selected compression variant does not support an explicit
+    /// compression level this option is ignored.
+    #[arg(long)]
+    column_compression_level_default: Option<u32>,
     /// Encoding used for character data requested from the data source.
     ///
     /// `Utf16`: The tool will use 16Bit characters for requesting text from the data source,

@@ -45,6 +45,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         encoding,
         prefer_varbinary,
         column_compression_default,
+        column_compression_level_default,
         parquet_column_encoding,
         avoid_decimal,
         driver_does_not_support_64bit_integers,
@@ -68,7 +69,8 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     info!("Database Managment System Name: {db_name}");
 
     let parquet_format_options = ParquetWriterOptions {
-        column_compression_default: column_compression_default.as_compression(),
+        column_compression_default: column_compression_default
+            .to_compression(column_compression_level_default)?,
         column_encodings: parquet_column_encoding,
         file_size,
         suffix_length,

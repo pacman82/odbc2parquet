@@ -211,6 +211,45 @@ fn parameters_in_query() {
 }
 
 #[test]
+fn should_allow_specifying_explicit_compression_level() {
+    // Setup table for test
+    let table_name = "ShouldAllowSpecifyingExplicitCompressionLevel";
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    let insert = format!("INSERT INTO {table_name} (A) VALUES('Hello'),('World')");
+    conn.execute(&insert, ()).unwrap();
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name}");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "--column-compression-default",
+            "gzip",
+            "--column-compression-level-default",
+            "10",
+            out_str,
+            &query,
+            "42",
+        ])
+        .assert()
+        .success();
+}
+
+#[test]
 fn query_sales() {
     // Setup table for test
     let table_name = "QuerySales";

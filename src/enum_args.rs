@@ -1,6 +1,9 @@
 use anyhow::{anyhow, bail, Error};
 use clap::ValueEnum;
-use parquet::basic::{BrotliLevel, Compression, Encoding, GzipLevel, ZstdLevel};
+use parquet::{
+    basic::{BrotliLevel, Compression, Encoding, GzipLevel, ZstdLevel},
+    errors::ParquetError,
+};
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum EncodingArgument {
@@ -39,16 +42,32 @@ pub enum CompressionVariants {
 }
 
 impl CompressionVariants {
-    pub fn as_compression(self) -> Compression {
-        match self {
+    pub fn to_compression(self, level: Option<u32>) -> Result<Compression, ParquetError> {
+        let compression = match self {
             CompressionVariants::Uncompressed => Compression::UNCOMPRESSED,
-            CompressionVariants::Gzip => Compression::GZIP(GzipLevel::default()),
+            CompressionVariants::Gzip => Compression::GZIP(
+                level
+                    .map(GzipLevel::try_new)
+                    .transpose()?
+                    .unwrap_or_default(),
+            ),
             CompressionVariants::Lz4 => Compression::LZ4,
             CompressionVariants::Lz0 => Compression::LZO,
-            CompressionVariants::Zstd => Compression::ZSTD(ZstdLevel::default()),
+            CompressionVariants::Zstd => Compression::ZSTD(
+                level
+                    .map(|l| ZstdLevel::try_new(l.try_into().unwrap()))
+                    .transpose()?
+                    .unwrap_or_default(),
+            ),
             CompressionVariants::Snappy => Compression::SNAPPY,
-            CompressionVariants::Brotli => Compression::BROTLI(BrotliLevel::default()),
-        }
+            CompressionVariants::Brotli => Compression::BROTLI(
+                level
+                    .map(BrotliLevel::try_new)
+                    .transpose()?
+                    .unwrap_or_default(),
+            ),
+        };
+        Ok(compression)
     }
 }
 
