@@ -9,8 +9,8 @@ use bytesize::ByteSize;
 use enum_args::CompressionVariants;
 use io_arg::IoArg;
 use odbc_api::{
-    escape_attribute_value, handles::OutputStringBuffer, Connection, DriverCompleteOption,
-    Environment, ConnectionOptions,
+    escape_attribute_value, handles::OutputStringBuffer, Connection, ConnectionOptions,
+    DriverCompleteOption, Environment,
 };
 use parquet::basic::Encoding;
 use std::{fs::File, path::PathBuf};

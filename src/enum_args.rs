@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Error};
 use clap::ValueEnum;
-use parquet::basic::{Compression, Encoding};
+use parquet::basic::{BrotliLevel, Compression, Encoding, GzipLevel, ZstdLevel};
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum EncodingArgument {
@@ -42,12 +42,12 @@ impl CompressionVariants {
     pub fn as_compression(self) -> Compression {
         match self {
             CompressionVariants::Uncompressed => Compression::UNCOMPRESSED,
-            CompressionVariants::Gzip => Compression::GZIP,
+            CompressionVariants::Gzip => Compression::GZIP(GzipLevel::default()),
             CompressionVariants::Lz4 => Compression::LZ4,
             CompressionVariants::Lz0 => Compression::LZO,
-            CompressionVariants::Zstd => Compression::ZSTD,
+            CompressionVariants::Zstd => Compression::ZSTD(ZstdLevel::default()),
             CompressionVariants::Snappy => Compression::SNAPPY,
-            CompressionVariants::Brotli => Compression::BROTLI,
+            CompressionVariants::Brotli => Compression::BROTLI(BrotliLevel::default()),
         }
     }
 }
