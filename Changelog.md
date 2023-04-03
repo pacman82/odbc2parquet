@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.3
+
+* adds option `--column-compression-level-default` to specify compression level explicitly.
+
 ## 0.15.2
 
 * Introduced now option for `query` subcommand `--column-length-limit` to limit the memory allocated for an indivual variadic column of the result set.
