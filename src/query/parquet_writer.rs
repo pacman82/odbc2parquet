@@ -1,6 +1,6 @@
 use std::{
     fs::{remove_file, File},
-    io::Write,
+    io::{stdout, Write},
     mem::swap,
     path::{Path, PathBuf},
     sync::Arc,
@@ -69,25 +69,29 @@ impl ParquetWriter {
         }
         let properties = Arc::new(wpb.build());
 
-        let (output, path): (Box<dyn Write>, _) = match output {
-            IoArg::StdStream => {
-                let output = output.open_as_output()?.into_write();
-                (output, None)
-            }
+        let (file_path, base_path) = match output {
+            IoArg::StdStream => (None, None),
             IoArg::File(path) => {
-                let file = if options.file_size.output_is_splitted() {
-                    File::create(Self::path_with_suffix(&path, 1, options.suffix_length)?)?
+                if options.file_size.output_is_splitted() {
+                    let file_path = Self::path_with_suffix(&path, 1, options.suffix_length)?;
+                    (Some(file_path), Some(path))
                 } else {
-                    File::create(&path)?
-                };
-                (Box::new(file), Some(path))
+                    let file_path = path.clone();
+                    (Some(file_path), Some(path))
+                }
             }
+        };
+
+        let output: Box<dyn Write> = if let Some(path) = &file_path {
+            Box::new(create_output_file(path)?)
+        } else {
+            Box::new(stdout().lock())
         };
 
         let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
 
         Ok(Self {
-            path,
+            path: base_path,
             schema,
             properties,
             writer,
@@ -125,7 +129,7 @@ impl ParquetWriter {
                 self.num_file,
                 self.suffix_length,
             )?;
-            let file: Box<dyn Write> = Box::new(File::create(path)?);
+            let file: Box<dyn Write> = Box::new(create_output_file(&path)?);
 
             // Create new writer as tmp writer
             let mut tmp_writer =
@@ -164,6 +168,15 @@ impl ParquetWriter {
         path_with_suffix = path_with_suffix.with_extension("par");
         Ok(path_with_suffix)
     }
+}
+
+fn create_output_file(path: &Path) -> Result<File, Error> {
+    File::create(path).map_err(|io_err| {
+        Error::from(io_err).context(format!(
+            "Could not create output file '{}'",
+            path.to_string_lossy()
+        ))
+    })
 }
 
 fn pad_number(num_file: u32, suffix_length: usize) -> String {

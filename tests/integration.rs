@@ -169,6 +169,23 @@ fn foobar_connection_string() {
 }
 
 #[test]
+fn should_give_good_error_if_specifying_directory_for_output() {
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // This SHOULD be a path to a file to create, but in this test, we specify a directory.
+    let out_path = out_dir.path();
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
+    cmd.args(["query", "-c", MSSQL, out_str, "SELECT 42 AS A"])
+        .assert()
+        .stderr(contains("Could not create output file '"))
+        .failure()
+        .code(1);
+}
+
+#[test]
 fn parameters_in_query() {
     // Setup table for test
     let table_name = "ParamtersInQuery";
