@@ -1,8 +1,16 @@
 # Changelog
 
+## 0.15.5
+
+* Improves error message in case creating an output file fails.
+
+## 0.15.4
+
+* Accidential release from branch.
+
 ## 0.15.3
 
-* adds option `--column-compression-level-default` to specify compression level explicitly.
+* Adds option `--column-compression-level-default` to specify compression level explicitly.
 
 ## 0.15.2
 
