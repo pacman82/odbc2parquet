@@ -69,21 +69,19 @@ impl ParquetWriter {
         }
         let properties = Arc::new(wpb.build());
 
-        let (file_path, base_path) = match output {
+        let (suffix, base_path) = match output {
             IoArg::StdStream => (None, None),
             IoArg::File(path) => {
                 if options.file_size.output_is_splitted() {
-                    let file_path = Self::path_with_suffix(&path, 1, options.suffix_length)?;
-                    (Some(file_path), Some(path))
+                    (Some((1, options.suffix_length)), Some(path))
                 } else {
-                    let file_path = path.clone();
-                    (Some(file_path), Some(path))
+                    (None, Some(path))
                 }
             }
         };
 
-        let output: Box<dyn Write> = if let Some(path) = &file_path {
-            Box::new(create_output_file(path)?)
+        let output: Box<dyn Write> = if let Some(path) = &base_path {
+            Box::new(create_output_file(path, suffix)?)
         } else {
             Box::new(stdout().lock())
         };
@@ -123,13 +121,10 @@ impl ParquetWriter {
             .should_start_new_file(num_batch, self.current_file_size)
         {
             self.num_file += 1;
-            self.current_file_size = ByteSize::b(0);
-            let path = Self::path_with_suffix(
+            let file: Box<dyn Write> = Box::new(create_output_file(
                 self.path.as_deref().unwrap(),
-                self.num_file,
-                self.suffix_length,
-            )?;
-            let file: Box<dyn Write> = Box::new(create_output_file(&path)?);
+                Some((self.num_file, self.suffix_length)),
+            )?);
 
             // Create new writer as tmp writer
             let mut tmp_writer =
@@ -152,26 +147,15 @@ impl ParquetWriter {
         }
         Ok(())
     }
-
-    fn path_with_suffix(
-        path: &Path,
-        num_file: u32,
-        suffix_length: usize,
-    ) -> Result<PathBuf, Error> {
-        let suffix = pad_number(num_file, suffix_length);
-        let mut stem = path
-            .file_stem()
-            .ok_or_else(|| format_err!("Output needs To have a file stem."))?
-            .to_owned();
-        stem.push(suffix);
-        let mut path_with_suffix = path.with_file_name(stem);
-        path_with_suffix = path_with_suffix.with_extension("par");
-        Ok(path_with_suffix)
-    }
 }
 
-fn create_output_file(path: &Path) -> Result<File, Error> {
-    File::create(path).map_err(|io_err| {
+fn create_output_file(path: &Path, suffix: Option<(u32, usize)>) -> Result<File, Error> {
+    let path = if let Some((num_file, suffix_length)) = suffix {
+        path_with_suffix(path, num_file, suffix_length)?
+    } else {
+        path.to_owned()
+    };
+    File::create(&path).map_err(|io_err| {
         Error::from(io_err).context(format!(
             "Could not create output file '{}'",
             path.to_string_lossy()
@@ -190,4 +174,16 @@ fn pad_number(num_file: u32, suffix_length: usize) -> String {
     let padding = "0".repeat(num_leading_zeroes);
     let suffix = format!("_{padding}{num_file}");
     suffix
+}
+
+fn path_with_suffix(path: &Path, num_file: u32, suffix_length: usize) -> Result<PathBuf, Error> {
+    let suffix = pad_number(num_file, suffix_length);
+    let mut stem = path
+        .file_stem()
+        .ok_or_else(|| format_err!("Output needs To have a file stem."))?
+        .to_owned();
+    stem.push(suffix);
+    let mut path_with_suffix = path.with_file_name(stem);
+    path_with_suffix = path_with_suffix.with_extension("par");
+    Ok(path_with_suffix)
 }
