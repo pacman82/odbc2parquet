@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.6
+
+* Update dependencies
+
 ## 0.15.5
 
 * Improves error message in case creating an output file fails.
