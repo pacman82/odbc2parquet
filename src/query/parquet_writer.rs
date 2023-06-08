@@ -42,7 +42,7 @@ pub struct ParquetWriter {
     path: Option<PathBuf>,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
-    writer: SerializedFileWriter<Box<dyn Write>>,
+    writer: SerializedFileWriter<Box<dyn Write + Send>>,
     file_size: FileSizeLimit,
     num_file: u32,
     /// Keep track of curret file size so we can split it, should it get too large.
@@ -80,10 +80,10 @@ impl ParquetWriter {
             }
         };
 
-        let output: Box<dyn Write> = if let Some(path) = &base_path {
+        let output: Box<dyn Write + Send> = if let Some(path) = &base_path {
             Box::new(create_output_file(path, suffix)?)
         } else {
-            Box::new(stdout().lock())
+            Box::new(stdout())
         };
 
         let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
@@ -114,14 +114,14 @@ impl ParquetWriter {
     pub fn next_row_group(
         &mut self,
         num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write>>, Error> {
+    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
         // Check if we need to write the next batch into a new file
         if self
             .file_size
             .should_start_new_file(num_batch, self.current_file_size)
         {
             self.num_file += 1;
-            let file: Box<dyn Write> = Box::new(create_output_file(
+            let file: Box<dyn Write + Send> = Box::new(create_output_file(
                 self.path.as_deref().unwrap(),
                 Some((self.num_file, self.suffix_length)),
             )?);
