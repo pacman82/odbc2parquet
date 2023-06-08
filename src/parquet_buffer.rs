@@ -129,11 +129,11 @@ impl ParquetBuffer {
     ///
     /// Be careful with calling this method on required columns as the bound definition buffer will
     /// always be filled with zeros, which will make all elements `None`.
-    pub fn read_optional<'a, T>(
-        &'a mut self,
+    pub fn read_optional<T>(
+        &mut self,
         cr: &mut ColumnReaderImpl<T>,
         batch_size: usize,
-    ) -> Result<impl Iterator<Item = Option<&T::T>> + 'a, Error>
+    ) -> Result<impl Iterator<Item = Option<&T::T>> + '_, Error>
     where
         T: DataType,
         T::T: BufferedDataType,
@@ -157,11 +157,11 @@ impl ParquetBuffer {
     }
 
     /// Iterate over the elements of a column reader over a required column.
-    pub fn read_required<'a, T>(
-        &'a mut self,
+    pub fn read_required<T>(
+        &mut self,
         cr: &mut ColumnReaderImpl<T>,
         batch_size: usize,
-    ) -> Result<impl Iterator<Item = &T::T> + 'a, Error>
+    ) -> Result<impl Iterator<Item = &T::T> + '_, Error>
     where
         T: DataType,
         T::T: BufferedDataType,
