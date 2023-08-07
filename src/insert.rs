@@ -294,7 +294,8 @@ trait InserterBuilderStart: DataType + Sized {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let values = Self::unwrap_writer_required(column_writer);
                     // Do not utilize parquet buffer. just pass the values through.
-                    cr.read_batch(num_rows, None, None, values)?;
+                    let (_complete_rec, _num_val, _num_lvl) =
+                        cr.read_records(num_rows, None, None, values)?;
                     Ok(())
                 },
             )
