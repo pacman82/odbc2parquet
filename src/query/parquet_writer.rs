@@ -13,7 +13,7 @@ use parquet::{
     basic::{Compression, Encoding},
     errors::ParquetError,
     file::{
-        properties::WriterProperties,
+        properties::{WriterProperties, WriterVersion},
         writer::{SerializedFileWriter, SerializedRowGroupWriter},
     },
     schema::types::{ColumnPath, Type},
@@ -61,8 +61,9 @@ impl ParquetWriter {
         // Write properties
         // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
         // be on the safe side.
-        let mut wpb =
-            WriterProperties::builder().set_compression(options.column_compression_default);
+        let mut wpb = WriterProperties::builder()
+            .set_writer_version(WriterVersion::PARQUET_2_0)
+            .set_compression(options.column_compression_default);
         for (column_name, encoding) in options.column_encodings {
             let col = ColumnPath::new(vec![column_name]);
             wpb = wpb.set_column_encoding(col, encoding)
