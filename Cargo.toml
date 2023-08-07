@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "0.15.6"
+version = "1.0.0"
 authors = ["Markus Klein"]
 edition = "2021"
 repository = "https://github.com/pacman82/odbc2parquet"
@@ -32,14 +32,14 @@ atoi = "2.0.0"
 num-traits = "0.2.16"
 clap_complete = "4.3.2"
 bytesize = "1.2.0"
-io-arg = "0.2.0"
+io-arg = "0.2.1"
 
 [dependencies.clap]
 version = "4.3.19"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "44.0.0"
+version = "45.0.0"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 

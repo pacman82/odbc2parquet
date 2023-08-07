@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+* Write Parquet Version 2.0
+* Establish semantic versioning
+* Update dependencies
+
 ## 0.15.6
 
 * Update dependencies
