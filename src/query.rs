@@ -9,6 +9,7 @@ mod strategy;
 mod text;
 mod time;
 mod timestamp;
+mod timestamp_precision;
 mod timestamp_tz;
 
 use self::{

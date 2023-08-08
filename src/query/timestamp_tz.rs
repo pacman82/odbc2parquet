@@ -10,7 +10,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{strategy::FetchStrategy, timestamp::precision_to_time_unit};
+use super::{strategy::FetchStrategy, timestamp_precision::TimestampPrecision};
 
 pub fn timestamp_tz(precision: u8, repetition: Repetition) -> Result<Box<TimestampTz>, Error> {
     Ok(Box::new(TimestampTz::with_bytes_length(
@@ -20,7 +20,8 @@ pub fn timestamp_tz(precision: u8, repetition: Repetition) -> Result<Box<Timesta
 
 pub struct TimestampTz {
     repetition: Repetition,
-    // Precision
+    // We store digit precision, rather than TimestampPrecision, in order to be able to adequatly
+    // calculate ODBC text buffer length.
     precision: u8,
 }
 
@@ -38,7 +39,7 @@ impl FetchStrategy for TimestampTz {
         Type::primitive_type_builder(name, PhysicalType::INT64)
             .with_logical_type(Some(LogicalType::Timestamp {
                 is_adjusted_to_u_t_c: true,
-                unit: precision_to_time_unit(self.precision),
+                unit: TimestampPrecision::new(self.precision).as_time_unit(),
             }))
             .with_repetition(self.repetition)
             .build()
@@ -96,10 +97,11 @@ fn to_utc_epoch(bytes: &[u8], precision: u8) -> Result<i64, Error> {
     let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")?;
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
-    let integer = if precision <= 3 {
-        utc.timestamp_millis()
-    } else {
-        utc.timestamp_micros()
-    };
+    let integer = TimestampPrecision::new(precision).datetime_to_i64(&utc);
+    // let integer = if precision <= 3 {
+    //     utc.timestamp_millis()
+    // } else {
+    //     utc.timestamp_micros()
+    // };
     Ok(integer)
 }

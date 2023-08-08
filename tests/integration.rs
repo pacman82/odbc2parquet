@@ -694,7 +694,7 @@ fn query_timestamp_with_timezone_mssql() {
         "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12 +02:00');"
+        ('2022-09-07 16:04:12.1234567 +02:00');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -719,10 +719,10 @@ fn query_timestamp_with_timezone_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
+    let expected_values = "{a: 1662559452123456700}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,true));"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(NANOS,true));"));
 }
 
 #[test]
