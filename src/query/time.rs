@@ -21,7 +21,7 @@ pub fn time_from_text(repetition: Repetition, precision: u8) -> Box<dyn FetchStr
     Box::new(TimeFromText::new(repetition, precision))
 }
 
-pub struct TimeFromText {
+struct TimeFromText {
     repetition: Repetition,
     precision: u8,
 }

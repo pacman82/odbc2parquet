@@ -726,18 +726,18 @@ fn query_timestamp_with_timezone_mssql() {
 }
 
 #[test]
-fn query_timestamp_mssql() {
+fn query_timestamp_mssql_precision_7() {
     // Setup table for test
     let table_name = "QueryTimestamp";
     let conn = ENV
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DATETIME2(7)"]).unwrap();
     let insert = format!(
         "INSERT INTO {table_name}
         (a)
         VALUES
-        ('2022-09-07 16:04:12');"
+        ('2022-09-07 16:04:12.1234567');"
     );
     conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
@@ -762,10 +762,10 @@ fn query_timestamp_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: 2022-09-07 16:04:12 +00:00}\n";
+    let expected_values = "{a: 1662566652123456700}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,false));"));
+    parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(NANOS,false));"));
 }
 
 #[test]
