@@ -37,6 +37,13 @@ const POSTGRES: &str = "Driver={PostgreSQL UNICODE};\
 lazy_static! {
     static ref ENV: Environment = {
         // Enable connection pools for faster test execution.
+        //
+        // # Safety
+        //
+        // This is safe because it is called once in the entire process. Therfore no race to this
+        // setting can occurr. It is also called before intializing the environment, making it
+        // certain that the newly created environment knows it is supposed to initialize the
+        // connection pools.
         unsafe {
             Environment::set_connection_pooling(AttrConnectionPooling::OnePerDriver)
                 .expect("ODBC manager must be able to initialize connection pools");
