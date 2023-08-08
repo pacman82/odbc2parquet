@@ -29,8 +29,8 @@ pub struct ParquetWriterOptions {
     pub column_encodings: Vec<(String, Encoding)>,
     /// Number of digits in the suffix, appended to the end of a file in case they are numbered.
     pub suffix_length: usize,
-    /// A fuzzy limit for file size, causing the rest of the query to be written into new files if
-    /// a threshold is passed.
+    /// A fuzzy limit for file size, causing the rest of the query to be written into new files if a
+    /// threshold is passed.
     pub file_size: FileSizeLimit,
     /// Do not create a file if no row was in the result set.
     pub no_empty_file: bool,

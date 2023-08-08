@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0
+
+* Write timestamps with precision greater than seven as nanoseconds
+
 ## 1.0.0
 
 * Write Parquet Version 2.0

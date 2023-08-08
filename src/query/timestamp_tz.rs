@@ -98,10 +98,5 @@ fn to_utc_epoch(bytes: &[u8], precision: u8) -> Result<i64, Error> {
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
     let integer = TimestampPrecision::new(precision).datetime_to_i64(&utc);
-    // let integer = if precision <= 3 {
-    //     utc.timestamp_millis()
-    // } else {
-    //     utc.timestamp_micros()
-    // };
     Ok(integer)
 }
