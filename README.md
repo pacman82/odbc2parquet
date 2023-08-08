@@ -31,7 +31,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Time(p: 4..6)*             | Time Microseconds            |
 | Time(p: 7..9)*             | Time Nanoseconds             |
 | Timestamp(p: 0..3)         | Timestamp Milliseconds       |
-| Timestamp(p >= 4)          | Timestamp Microseconds       |
+| Timestamp(p: 4..6)         | Timestamp Microseconds       |
+| Timestamp(p >= 7)          | Timestamp Nanoseconds        |
 | Datetimeoffset(p: 0..3)    | Timestamp Milliseconds (UTC) |
 | Datetimeoffset(p >= 4)     | Timestamp Microseconds (UTC) |
 | Varbinary                  | Byte Array                   |
