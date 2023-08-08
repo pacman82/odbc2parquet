@@ -9,6 +9,7 @@ use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{BufferDesc, TextRowSet},
+    sys::AttrConnectionPooling,
     Connection, ConnectionOptions, Cursor, Environment, IntoParameter,
 };
 use parquet::{
@@ -34,7 +35,14 @@ const POSTGRES: &str = "Driver={PostgreSQL UNICODE};\
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
-    static ref ENV: Environment = Environment::new().unwrap();
+    static ref ENV: Environment = {
+        // Enable connection pools for faster test execution.
+        unsafe {
+            Environment::set_connection_pooling(AttrConnectionPooling::OnePerDriver)
+                .expect("ODBC manager must be able to initialize connection pools");
+        }
+        Environment::new().unwrap()
+    };
 }
 
 // Use the parquet-read tool to verify values. It can be installed with `cargo install parquet`.
