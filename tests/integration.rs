@@ -3927,7 +3927,7 @@ impl<'a> TableMssql<'a> {
             .into_text_inserter(capacity, [max_str_len])
             .unwrap();
 
-        for (row_index, &element) in content_a.into_iter().enumerate() {
+        for (row_index, &element) in content_a.iter().enumerate() {
             let element = element.map(|s| s.as_bytes());
             inserter.column_mut(0).set_cell(row_index, element);
         }
