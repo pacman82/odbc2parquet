@@ -70,10 +70,7 @@ fn parquet_schema_out(file: &str) -> Assert {
 fn append_user_and_password_to_connection_string() {
     // Setup table for test
     let table_name = "AppendUserAndPasswordToConnectionString";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
+    TableMssql::new(table_name, &["VARCHAR(10)"]);
 
     // Connection string without user name and password.
     let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
@@ -119,19 +116,8 @@ fn insert_empty_document() {
 fn nullable_parquet_buffers() {
     // Setup table for test
     let table_name = "NullableParquetBuffers";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
-    let insert = format!("INSERT INTO {table_name} (A) VALUES('Hello'),(NULL),('World'),(NULL)");
-    conn.execute(&insert, ()).unwrap();
-
-    let expected = "\
-        {a: \"Hello\"}\n\
-        {a: null}\n\
-        {a: \"World\"}\n\
-        {a: null}\n\
-    ";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_a_as_text(&[Some("Hello"), None, Some("World"), None]);
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -156,6 +142,12 @@ fn nullable_parquet_buffers() {
         .assert()
         .success();
 
+    let expected = "\
+        {a: \"Hello\"}\n\
+        {a: null}\n\
+        {a: \"World\"}\n\
+        {a: null}\n\
+    ";
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
@@ -728,7 +720,7 @@ fn query_timestamp_with_timezone_mssql() {
 #[test]
 fn query_timestamp_mssql_precision_7() {
     // Setup table for test
-    let table_name = "QueryTimestamp";
+    let table_name = "QueryTimestampMssqlPrecision7";
     let conn = ENV
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
@@ -3895,6 +3887,54 @@ fn write_values_to_file<T>(
     col_writer.close().unwrap();
     row_group_writer.close().unwrap();
     writer.close().unwrap();
+}
+
+/// Sets up a table in the mssql database and allows us to fill it with data. Column names are given
+/// automatically a,b,c, etc.
+pub struct TableMssql<'a> {
+    pub name: &'a str,
+    pub conn: Connection<'a>,
+}
+
+impl<'a> TableMssql<'a> {
+    pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
+        let conn = ENV
+            .connect_with_connection_string(
+                MSSQL,
+                ConnectionOptions {
+                    login_timeout_sec: Some(5),
+                },
+            )
+            .expect("Must be able to connect to MSSQL database.");
+        setup_empty_table_mssql(&conn, name, column_types)
+            .expect("Must be able to setup empty table.");
+        TableMssql { name, conn }
+    }
+
+    pub fn insert_a_as_text(&mut self, content_a: &[Option<&str>]) {
+        let statement = format!("INSERT INTO {} (A) VALUES (?)", self.name);
+        // Insert everything in one go => capacity == length of array
+        let capacity = content_a.len();
+        let max_str_len = content_a
+            .iter()
+            .map(|e| e.map(|s| s.len()).unwrap_or(0))
+            .max()
+            .unwrap_or(0);
+        let mut inserter = self
+            .conn
+            .prepare(&statement)
+            .unwrap()
+            .into_text_inserter(capacity, [max_str_len])
+            .unwrap();
+
+        for (row_index, &element) in content_a.into_iter().enumerate() {
+            let element = element.map(|s| s.as_bytes());
+            inserter.column_mut(0).set_cell(row_index, element);
+        }
+
+        inserter.set_num_rows(content_a.len());
+        inserter.execute().unwrap();
+    }
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
