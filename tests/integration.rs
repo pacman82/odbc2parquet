@@ -117,7 +117,7 @@ fn nullable_parquet_buffers() {
     // Setup table for test
     let table_name = "NullableParquetBuffers";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
-    table.insert_a_as_text(&[Some("Hello"), None, Some("World"), None]);
+    table.insert_rows_as_text(&[[Some("Hello")], [None], [Some("World")], [None]]);
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -196,16 +196,8 @@ fn should_give_good_error_if_specifying_directory_for_output() {
 fn parameters_in_query() {
     // Setup table for test
     let table_name = "ParamtersInQuery";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)", "INTEGER"]).unwrap();
-    let insert = format!("INSERT INTO {table_name} (A,B) VALUES('Wrong', 5),('Right', 42)");
-    conn.execute(&insert, ()).unwrap();
-
-    let expected = "\
-        {a: \"Right\", b: 42}\n\
-    ";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)", "INTEGER"]);
+    table.insert_rows_as_text(&[[Some("Wrong"), Some("5")], [Some("Right"), Some("42")]]);
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -231,6 +223,9 @@ fn parameters_in_query() {
         .assert()
         .success();
 
+    let expected = "\
+        {a: \"Right\", b: 42}\n\
+    ";
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
@@ -238,12 +233,8 @@ fn parameters_in_query() {
 fn should_allow_specifying_explicit_compression_level() {
     // Setup table for test
     let table_name = "ShouldAllowSpecifyingExplicitCompressionLevel";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(10)"]).unwrap();
-    let insert = format!("INSERT INTO {table_name} (A) VALUES('Hello'),('World')");
-    conn.execute(&insert, ()).unwrap();
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_rows_as_text(&[[Some("Hello")], [Some("World")]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -3897,6 +3888,9 @@ pub struct TableMssql<'a> {
 }
 
 impl<'a> TableMssql<'a> {
+    const COLUMN_NAMES: &'static [&'static str] =
+        &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
+
     pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
         let conn = ENV
             .connect_with_connection_string(
@@ -3911,29 +3905,50 @@ impl<'a> TableMssql<'a> {
         TableMssql { name, conn }
     }
 
-    pub fn insert_a_as_text(&mut self, content_a: &[Option<&str>]) {
-        let statement = format!("INSERT INTO {} (A) VALUES (?)", self.name);
+    pub fn insert_rows_as_text<const NUM_COLUMNS: usize>(
+        &mut self,
+        content: &[[Option<&str>; NUM_COLUMNS]],
+    ) {
+        let statement = self.insert_statement(NUM_COLUMNS);
         // Insert everything in one go => capacity == length of array
-        let capacity = content_a.len();
-        let max_str_len = content_a
+        let capacity = content.len();
+        let max_str_len = content
             .iter()
-            .map(|e| e.map(|s| s.len()).unwrap_or(0))
-            .max()
-            .unwrap_or(0);
+            .map(|row| {
+                row.iter()
+                    .map(|e| e.map(|s| s.len()).unwrap_or(0))
+                    .max()
+                    .unwrap_or(0)
+            })
+            .collect::<Vec<_>>();
         let mut inserter = self
             .conn
             .prepare(&statement)
             .unwrap()
-            .into_text_inserter(capacity, [max_str_len])
+            .into_text_inserter(capacity, max_str_len)
             .unwrap();
 
-        for (row_index, &element) in content_a.iter().enumerate() {
-            let element = element.map(|s| s.as_bytes());
-            inserter.column_mut(0).set_cell(row_index, element);
+        for (row_index, row) in content.iter().enumerate() {
+            for (column_index, element) in row.iter().enumerate() {
+                let element = element.map(|s| s.as_bytes());
+                inserter
+                    .column_mut(column_index)
+                    .set_cell(row_index, element);
+            }
         }
 
-        inserter.set_num_rows(content_a.len());
+        inserter.set_num_rows(content.len());
         inserter.execute().unwrap();
+    }
+
+    fn insert_statement(&self, number_of_columns: usize) -> String {
+        // A string like e.g. "a,b,c"
+        let columns = Self::COLUMN_NAMES[..number_of_columns].join(",");
+        let placeholders = vec!["?"; number_of_columns].join(",");
+        format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            self.name, columns, placeholders
+        )
     }
 }
 
@@ -3954,10 +3969,9 @@ fn setup_empty_table(
     identity: &str,
 ) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {table_name}");
-    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
     let cols = column_types
         .iter()
-        .zip(column_names)
+        .zip(TableMssql::COLUMN_NAMES)
         .map(|(ty, name)| format!("{name} {ty}"))
         .collect::<Vec<_>>()
         .join(", ");
