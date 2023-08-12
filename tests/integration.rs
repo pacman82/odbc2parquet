@@ -310,11 +310,7 @@ fn query_sales() {
 fn query_decimals() {
     // Setup table for test
     let table_name = "QueryDecimals";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(
-        &conn,
+    let mut table = TableMssql::new(
         table_name,
         &[
             "NUMERIC(3,2) NOT NULL",
@@ -322,10 +318,24 @@ fn query_decimals() {
             "DECIMAL(3,0) NOT NULL",
             "DECIMAL(10,0) NOT NULL",
         ],
-    )
-    .unwrap();
-    let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
-    conn.execute(&insert, ()).unwrap();
+    );
+    table.insert_rows_as_text(&[["1.23", "1.23", "3", "1234567890"]]);
+    // let conn = ENV
+    //     .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+    //     .unwrap();
+    // setup_empty_table_mssql(
+    //     &conn,
+    //     table_name,
+    //     &[
+    //         "NUMERIC(3,2) NOT NULL",
+    //         "DECIMAL(3,2) NOT NULL",
+    //         "DECIMAL(3,0) NOT NULL",
+    //         "DECIMAL(10,0) NOT NULL",
+    //     ],
+    // )
+    // .unwrap();
+    // let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
+    // conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -3896,13 +3906,12 @@ impl<'a, const NUM_COLUMNS: usize> TableMssql<'a, NUM_COLUMNS> {
         let statement = self.insert_statement(NUM_COLUMNS);
         // Insert everything in one go => capacity == length of array
         let capacity = content.len();
-        let max_str_len = content
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|e| {
-                        let e: Option<&str> = (*e).into();
-                        e.map(|s| s.len()).unwrap_or(0)
+        let max_str_len = (0..NUM_COLUMNS)
+            .map(|col_index| {
+                (0..content.len())
+                    .map(|row_index| {
+                        let opt: Option<&str> = content[row_index][col_index].into();
+                        opt.map(|s| s.len()).unwrap_or(0)
                     })
                     .max()
                     .unwrap_or(0)
