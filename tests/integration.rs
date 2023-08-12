@@ -320,22 +320,6 @@ fn query_decimals() {
         ],
     );
     table.insert_rows_as_text(&[["1.23", "1.23", "3", "1234567890"]]);
-    // let conn = ENV
-    //     .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-    //     .unwrap();
-    // setup_empty_table_mssql(
-    //     &conn,
-    //     table_name,
-    //     &[
-    //         "NUMERIC(3,2) NOT NULL",
-    //         "DECIMAL(3,2) NOT NULL",
-    //         "DECIMAL(3,0) NOT NULL",
-    //         "DECIMAL(10,0) NOT NULL",
-    //     ],
-    // )
-    // .unwrap();
-    // let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
-    // conn.execute(&insert, ()).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -376,11 +360,7 @@ fn query_decimals() {
 fn query_decimals_avoid_decimal() {
     // Setup table for test
     let table_name = "QueryDecimalsAvoidDecimal";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(
-        &conn,
+    let mut table = TableMssql::new(
         table_name,
         &[
             "NUMERIC(3,2) NOT NULL",
@@ -388,10 +368,8 @@ fn query_decimals_avoid_decimal() {
             "DECIMAL(3,0) NOT NULL",
             "DECIMAL(10,0) NOT NULL",
         ],
-    )
-    .unwrap();
-    let insert = format!("INSERT INTO {table_name} (a,b,c,d) VALUES (1.23, 1.23, 3, 1234567890);");
-    conn.execute(&insert, ()).unwrap();
+    );
+    table.insert_rows_as_text(&[["1.23", "1.23", "3", "1234567890"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -434,12 +412,8 @@ fn query_decimals_avoid_decimal() {
 fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
     // Setup table for test
     let table_name = "QueryDecimalsAvoidDecimalInt64NotSupportedByDriver";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["DECIMAL(10,0) NOT NULL"]).unwrap();
-    let insert = format!("INSERT INTO {table_name} (a) VALUES (1234567890);");
-    conn.execute(&insert, ()).unwrap();
+    let mut table = TableMssql::new(table_name, &["DECIMAL(10,0) NOT NULL"]);
+    table.insert_rows_as_text(&[["1234567890"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -478,25 +452,15 @@ fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
 fn query_decimals_optional() {
     // Setup table for test
     let table_name = "QueryDecimalsOptional";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(
-        &conn,
+    let mut table = TableMssql::new(
         table_name,
         &["NUMERIC(3,2)", "DECIMAL(3,2)", "DECIMAL(3,0)"],
-    )
-    .unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a,b,c)
-        VALUES
-        (1.23, 1.23, 123),
-        (NULL, NULL, NULL),
-        (4.56, 4.56, 456);"
     );
-    conn.execute(&insert, ()).unwrap();
-
+    table.insert_rows_as_text(&[
+        [Some("1.23"), Some("1.23"), Some("123")],
+        [None, None, None],
+        [Some("4.56"), Some("4.56"), Some("456")],
+    ]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -531,18 +495,8 @@ fn query_decimals_optional() {
 fn query_large_numeric_as_text() {
     // Setup table for test
     let table_name = "QueryLargeNumericAsText";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(10,0) NOT NULL"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a)
-        VALUES
-        (1234567890);"
-    );
-    conn.execute(&insert, ()).unwrap();
-
+    let mut table = TableMssql::new(table_name, &["NUMERIC(10,0) NOT NULL"]);
+    table.insert_rows_as_text(&[["1234567890"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -552,7 +506,6 @@ fn query_large_numeric_as_text() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a FROM {table_name};");
-
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
