@@ -528,17 +528,8 @@ fn query_large_numeric_as_text() {
 fn query_numeric_13_3() {
     // Setup table for test
     let table_name = "QueryNumeric13_3";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(13,3) NOT NULL"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a)
-        VALUES
-        (-1234567890.123);"
-    );
-    conn.execute(&insert, ()).unwrap();
+    let mut table = TableMssql::new(table_name, &["NUMERIC(13,3) NOT NULL"]);
+    table.insert_rows_as_text(&[["-1234567890.123"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -571,17 +562,8 @@ fn query_numeric_13_3() {
 fn query_numeric_33_3() {
     // Setup table for test
     let table_name = "QueryNumeric33_3";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["NUMERIC(33,3) NOT NULL"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a)
-        VALUES
-        (-123456789012345678901234567890.123);"
-    );
-    conn.execute(&insert, ()).unwrap();
+    let mut table = TableMssql::new(table_name, &["NUMERIC(33,3) NOT NULL"]);
+    table.insert_rows_as_text(&[["-123456789012345678901234567890.123"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
