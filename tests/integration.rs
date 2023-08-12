@@ -197,7 +197,7 @@ fn parameters_in_query() {
     // Setup table for test
     let table_name = "ParamtersInQuery";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)", "INTEGER"]);
-    table.insert_rows_as_text(&[[Some("Wrong"), Some("5")], [Some("Right"), Some("42")]]);
+    table.insert_rows_as_text(&[["Wrong","5"], ["Right", "42"]]);
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -234,7 +234,7 @@ fn should_allow_specifying_explicit_compression_level() {
     // Setup table for test
     let table_name = "ShouldAllowSpecifyingExplicitCompressionLevel";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
-    table.insert_rows_as_text(&[[Some("Hello")], [Some("World")]]);
+    table.insert_rows_as_text(&[["Hello"], ["World"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -271,28 +271,28 @@ fn query_sales() {
     let mut table = TableMssql::new(table_name, &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"]);
     table.insert_rows_as_text(&[
         [
-            Some("2020-09-09"),
-            Some("00:05:34"),
-            Some("54"),
-            Some("9.99"),
+            "2020-09-09",
+            "00:05:34",
+            "54",
+            "9.99",
         ],
         [
-            Some("2020-09-10"),
-            Some("12:05:32"),
-            Some("54"),
-            Some("9.99"),
+            "2020-09-10",
+            "12:05:32",
+            "54",
+            "9.99",
         ],
         [
-            Some("2020-09-10"),
-            Some("14:05:32"),
-            Some("34"),
-            Some("2.00"),
+            "2020-09-10",
+            "14:05:32",
+            "34",
+            "2.00",
         ],
         [
-            Some("2020-09-11"),
-            Some("06:05:12"),
-            Some("12"),
-            Some("-1.50"),
+            "2020-09-11",
+            "06:05:12",
+            "12",
+            "-1.50",
         ],
     ]);
     let expected_values = "\
@@ -3910,10 +3910,10 @@ impl<'a> TableMssql<'a> {
         TableMssql { name, conn }
     }
 
-    pub fn insert_rows_as_text<const NUM_COLUMNS: usize>(
+    pub fn insert_rows_as_text<'b, C, const NUM_COLUMNS: usize>(
         &mut self,
-        content: &[[Option<&str>; NUM_COLUMNS]],
-    ) {
+        content: &[[C; NUM_COLUMNS]],
+    ) where C: Into<Option<&'b str>> + Copy {
         let statement = self.insert_statement(NUM_COLUMNS);
         // Insert everything in one go => capacity == length of array
         let capacity = content.len();
@@ -3921,7 +3921,10 @@ impl<'a> TableMssql<'a> {
             .iter()
             .map(|row| {
                 row.iter()
-                    .map(|e| e.map(|s| s.len()).unwrap_or(0))
+                    .map(|e| {
+                        let e: Option<&str> = (*e).into();
+                        e.map(|s| s.len()).unwrap_or(0)
+                    })
                     .max()
                     .unwrap_or(0)
             })
@@ -3935,6 +3938,7 @@ impl<'a> TableMssql<'a> {
 
         for (row_index, row) in content.iter().enumerate() {
             for (column_index, element) in row.iter().enumerate() {
+                let element: Option<&str> = (*element).into();
                 let element = element.map(|s| s.as_bytes());
                 inserter
                     .column_mut(column_index)

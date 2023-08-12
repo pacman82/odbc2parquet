@@ -1,6 +1,6 @@
-use chrono::{NaiveDate, DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use odbc_api::sys::Timestamp;
-use parquet::format::{TimeUnit, MilliSeconds, MicroSeconds, NanoSeconds};
+use parquet::format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit};
 
 /// Relational types communicate the precision of timestamps in number of fraction digits, while
 /// parquet uses time units (milli, micro, nano). This enumartion stores the the decision which time
