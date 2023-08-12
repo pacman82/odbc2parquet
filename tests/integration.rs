@@ -268,35 +268,40 @@ fn should_allow_specifying_explicit_compression_level() {
 fn query_sales() {
     // Setup table for test
     let table_name = "QuerySales";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(
-        &conn,
-        table_name,
-        &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"],
-    )
-    .unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a,b,c,d)
-        VALUES
-        ('2020-09-09', '00:05:34', 54, 9.99),
-        ('2020-09-10', '12:05:32', 54, 9.99),
-        ('2020-09-10', '14:05:32', 34, 2.00),
-        ('2020-09-11', '06:05:12', 12, -1.50);"
-    );
-    conn.execute(&insert, ()).unwrap();
-
+    let mut table = TableMssql::new(table_name, &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"]);
+    table.insert_rows_as_text(&[
+        [
+            Some("2020-09-09"),
+            Some("00:05:34"),
+            Some("54"),
+            Some("9.99"),
+        ],
+        [
+            Some("2020-09-10"),
+            Some("12:05:32"),
+            Some("54"),
+            Some("9.99"),
+        ],
+        [
+            Some("2020-09-10"),
+            Some("14:05:32"),
+            Some("34"),
+            Some("2.00"),
+        ],
+        [
+            Some("2020-09-11"),
+            Some("06:05:12"),
+            Some("12"),
+            Some("-1.50"),
+        ],
+    ]);
     let expected_values = "\
         {a: 2020-09-09, b: 334000000000, c: 54, d: 9.99}\n\
         {a: 2020-09-10, b: 43532000000000, c: 54, d: 9.99}\n\
         {a: 2020-09-10, b: 50732000000000, c: 34, d: 2.00}\n\
         {a: 2020-09-11, b: 21912000000000, c: 12, d: -1.50}\n\
     ";
-
     let query = format!("SELECT a,b,c,d FROM {table_name} ORDER BY id");
-
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -3940,7 +3945,7 @@ impl<'a> TableMssql<'a> {
         inserter.set_num_rows(content.len());
         inserter.execute().unwrap();
     }
-
+    
     fn insert_statement(&self, number_of_columns: usize) -> String {
         // A string like e.g. "a,b,c"
         let columns = Self::COLUMN_NAMES[..number_of_columns].join(",");
