@@ -3865,18 +3865,17 @@ fn write_values_to_file<T>(
     writer.close().unwrap();
 }
 
+const COLUMN_NAMES: &[&str] = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
+
 /// Sets up a table in the mssql database and allows us to fill it with data. Column names are given
 /// automatically a,b,c, etc.
-pub struct TableMssql<'a> {
+pub struct TableMssql<'a, const NUM_COLUMNS: usize> {
     pub name: &'a str,
     pub conn: Connection<'a>,
 }
 
-impl<'a> TableMssql<'a> {
-    const COLUMN_NAMES: &'static [&'static str] =
-        &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
-
-    pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
+impl<'a, const NUM_COLUMNS: usize> TableMssql<'a, NUM_COLUMNS> {
+    pub fn new(name: &'a str, column_types: &'a [&'a str; NUM_COLUMNS]) -> Self {
         let conn = ENV
             .connect_with_connection_string(
                 MSSQL,
@@ -3890,10 +3889,8 @@ impl<'a> TableMssql<'a> {
         TableMssql { name, conn }
     }
 
-    pub fn insert_rows_as_text<'b, C, const NUM_COLUMNS: usize>(
-        &mut self,
-        content: &[[C; NUM_COLUMNS]],
-    ) where
+    pub fn insert_rows_as_text<'b, C>(&mut self, content: &[[C; NUM_COLUMNS]])
+    where
         C: Into<Option<&'b str>> + Copy,
     {
         let statement = self.insert_statement(NUM_COLUMNS);
@@ -3934,7 +3931,7 @@ impl<'a> TableMssql<'a> {
 
     fn insert_statement(&self, number_of_columns: usize) -> String {
         // A string like e.g. "a,b,c"
-        let columns = Self::COLUMN_NAMES[..number_of_columns].join(",");
+        let columns = COLUMN_NAMES[..number_of_columns].join(",");
         let placeholders = vec!["?"; number_of_columns].join(",");
         format!(
             "INSERT INTO {} ({}) VALUES ({})",
@@ -3962,7 +3959,7 @@ fn setup_empty_table(
     let drop_table = &format!("DROP TABLE IF EXISTS {table_name}");
     let cols = column_types
         .iter()
-        .zip(TableMssql::COLUMN_NAMES)
+        .zip(COLUMN_NAMES)
         .map(|(ty, name)| format!("{name} {ty}"))
         .collect::<Vec<_>>()
         .join(", ");
