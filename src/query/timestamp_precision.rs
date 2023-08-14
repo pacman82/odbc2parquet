@@ -42,21 +42,35 @@ impl TimestampPrecision {
             )
             .unwrap();
 
-        let ret = match self {
-            TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
-            TimestampPrecision::Microseconds => datetime.timestamp_micros(),
-            TimestampPrecision::Nanoseconds => {
-                let secs = i64::MAX / 1_000_000_000;
-                let nsecs = (i64::MAX % 1_000_000_000) as u32;
-                let max = NaiveDateTime::from_timestamp_opt(secs, nsecs).unwrap();
+        let ret =
+            match self {
+                TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
+                TimestampPrecision::Microseconds => datetime.timestamp_micros(),
+                TimestampPrecision::Nanoseconds => {
+                    let max = NaiveDateTime::from_timestamp_opt(
+                        i64::MAX / 1_000_000_000,
+                        (i64::MAX % 1_000_000_000) as u32,
+                    )
+                    .unwrap();
+                    let min = NaiveDateTime::from_timestamp_opt(
+                        i64::MIN / 1_000_000_000 - 1,
+                        (i64::MIN % 1_000_000_000) as u32,
+                    )
+                    .unwrap();
 
-                if datetime > max {
-                    return Err(anyhow!("Timestamp exceeds maximum valid range for timestamp with nanoseconds precision."));
+                    if min > datetime || datetime > max {
+                        return Err(anyhow!(
+                        "Invalid timestamp: {}. The valid range for timestamps with nano seconds \n
+                        precision is between {} and {}. Other timestamps can not be represented in
+                        parquet. To mitigate this you could downcast the precision in the query, or
+                        convert the column to text.",
+                        datetime, min, max
+                    ));
+                    }
+
+                    datetime.timestamp_nanos()
                 }
-
-                datetime.timestamp_nanos()
-            }
-        };
+            };
 
         Ok(ret)
     }
