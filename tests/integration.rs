@@ -642,17 +642,8 @@ fn query_timestamp_with_timezone_mssql() {
 fn query_timestamp_mssql_precision_7() {
     // Setup table for test
     let table_name = "QueryTimestampMssqlPrecision7";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["DATETIME2(7)"]).unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name}
-        (a)
-        VALUES
-        ('2022-09-07 16:04:12.1234567');"
-    );
-    conn.execute(&insert, ()).unwrap();
+    let mut table = TableMssql::new(table_name, &["DATETIME2(7)"]);
+    table.insert_rows_as_text(&[["2022-09-07 16:04:12.1234567"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -679,6 +670,35 @@ fn query_timestamp_mssql_precision_7() {
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(NANOS,false));"));
+}
+
+#[test]
+fn should_error_if_timestamp_is_out_of_range() {
+    // Setup table for test
+    let table_name = "ShouldErrorIfTimestampIsOutOfRange";
+    let mut table = TableMssql::new(table_name, &["DATETIME2(7)"]);
+    table.insert_rows_as_text(&[["2700-01-01 00:00:00"]]);
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .failure();
 }
 
 #[test]

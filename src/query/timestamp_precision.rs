@@ -1,4 +1,5 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use anyhow::{anyhow, Error};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use odbc_api::sys::Timestamp;
 use parquet::format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit};
 
@@ -30,7 +31,7 @@ impl TimestampPrecision {
     }
 
     /// Convert an ODBC timestamp struct into nano, milli or microseconds based on precision.
-    pub fn timestamp_to_i64(self, ts: &Timestamp) -> i64 {
+    pub fn timestamp_to_i64(self, ts: &Timestamp) -> Result<i64, Error> {
         let datetime = NaiveDate::from_ymd_opt(ts.year as i32, ts.month as u32, ts.day as u32)
             .unwrap()
             .and_hms_nano_opt(
@@ -41,11 +42,23 @@ impl TimestampPrecision {
             )
             .unwrap();
 
-        match self {
+        let ret = match self {
             TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
             TimestampPrecision::Microseconds => datetime.timestamp_micros(),
-            TimestampPrecision::Nanoseconds => datetime.timestamp_nanos(),
-        }
+            TimestampPrecision::Nanoseconds => {
+                let secs = i64::MAX / 1_000_000_000;
+                let nsecs = (i64::MAX % 1_000_000_000) as u32;
+                let max = NaiveDateTime::from_timestamp_opt(secs, nsecs).unwrap();
+
+                if datetime > max {
+                    return Err(anyhow!("Timestamp exceeds maximum valid range for timestamp with nanoseconds precision."));
+                }
+
+                datetime.timestamp_nanos()
+            }
+        };
+
+        Ok(ret)
     }
 
     pub fn datetime_to_i64(self, datetime: &DateTime<Utc>) -> i64 {

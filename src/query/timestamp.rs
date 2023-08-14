@@ -60,7 +60,7 @@ fn write_timestamp_col(
 ) -> Result<(), Error> {
     let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();
     let into = Int64Type::get_column_writer_mut(column_writer).unwrap();
-    let from = from.map(|option| option.map(|ts| precision.timestamp_to_i64(ts)));
-    pb.write_optional(into, from)?;
+    let from = from.map(|option| option.map(|ts| precision.timestamp_to_i64(ts)).transpose());
+    pb.write_optional_falliable(into, from)?;
     Ok(())
 }
