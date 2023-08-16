@@ -698,7 +698,11 @@ fn should_error_if_timestamp_is_out_of_range() {
             &query,
         ])
         .assert()
-        .failure();
+        .failure().stderr(contains(
+            "Invalid timestamp: 2700-01-01 00:00:00. The valid range for timestamps with \
+            nano seconds precision is between 1677-09-21 00:12:43 and 2262-04-11 \
+            23:47:16.854775807. Other timestamps can not be represented in parquet. To mitigate \
+            this you could downcast the precision in the query or convert the column to text."));
 }
 
 #[test]
