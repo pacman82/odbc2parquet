@@ -701,7 +701,7 @@ fn should_error_if_timestamp_is_out_of_range() {
         .failure()
         .stderr(contains(
             "Invalid timestamp: 2700-01-01 00:00:00. The valid range for timestamps with \
-            nano seconds precision is between 1677-09-21 00:12:44.854775808 and 2262-04-11 \
+            nano seconds precision is between 1677-09-21 00:12:44 and 2262-04-11 \
             23:47:16.854775807. Other timestamps can not be represented in parquet. To mitigate \
             this you could downcast the precision in the query or convert the column to text.",
         ));
@@ -748,7 +748,7 @@ fn should_correctly_fetch_lower_bound_timestamp() {
     let table_name = "ShouldCorrectlyFetchLowerBound";
     let mut table = TableMssql::new(table_name, &["DATETIME2(7)"]);
     // Due to precision the last 7 nanoseconds are excluded from the lower bound, so we round up
-    table.insert_rows_as_text(&[["1677-09-21 00:12:44.854775900"]]);
+    table.insert_rows_as_text(&[["1677-09-21 00:12:44"]]);
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -773,7 +773,7 @@ fn should_correctly_fetch_lower_bound_timestamp() {
 
     // Binary of the expectation is all `1`, execpt for the first (sign) and the last three digits
     // (precision of MsSQL is not nano seconds, but 7 digits).
-    let expected_values = "{a: -9223372035145224100}\n";
+    let expected_values = "{a: -9223372036000000000}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 }
 

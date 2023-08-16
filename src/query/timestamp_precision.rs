@@ -47,18 +47,17 @@ impl TimestampPrecision {
                 TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
                 TimestampPrecision::Microseconds => datetime.timestamp_micros(),
                 TimestampPrecision::Nanoseconds => {
-                    // 2262-04-11 23:47:16.854775807
+                    // 2262-04-11 23:47:16.854775807 is the highest timestamp representable.
                     let max = NaiveDateTime::from_timestamp_opt(
                         i64::MAX / 1_000_000_000,
                         (i64::MAX % 1_000_000_000) as u32,
                     )
                     .unwrap();
-                    // 1677-09-21 00:12:44.854775808
+                    // 1677-09-21 00:12:44
                     let min_without_fraction = NaiveDateTime::from_timestamp_opt(i64::MIN/ 1_000_000_000, 0).unwrap().timestamp_nanos();
-                    let min_fraction = (min_without_fraction - i64::MIN) as u32;
                     let min = NaiveDateTime::from_timestamp_opt(
                         min_without_fraction / 1_000_000_000,
-                        min_fraction,
+                        0,
                     )
                     .unwrap();
 
