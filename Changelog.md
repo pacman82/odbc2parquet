@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+* Explicitly check for lower and upper bound if writing timestamps with nanoseconds precision into a parquet file. Timestamps have to be between `1677-09-21 00:12:44` and `2262-04-11 23:47:16.854775807`. Emit an error and abort if bound checks fails.
+
 ## 2.0.0
 
 * Write timestamps with precision greater than seven as nanoseconds
