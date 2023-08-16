@@ -54,12 +54,13 @@ impl TimestampPrecision {
                     )
                     .unwrap();
                     // 1677-09-21 00:12:44
-                    let min_without_fraction = NaiveDateTime::from_timestamp_opt(i64::MIN/ 1_000_000_000, 0).unwrap().timestamp_nanos();
-                    let min = NaiveDateTime::from_timestamp_opt(
-                        min_without_fraction / 1_000_000_000,
-                        0,
-                    )
-                    .unwrap();
+                    let min_without_fraction =
+                        NaiveDateTime::from_timestamp_opt(i64::MIN / 1_000_000_000, 0)
+                            .unwrap()
+                            .timestamp_nanos();
+                    let min =
+                        NaiveDateTime::from_timestamp_opt(min_without_fraction / 1_000_000_000, 0)
+                            .unwrap();
 
                     if min > datetime || datetime > max {
                         return Err(anyhow!(
