@@ -236,13 +236,13 @@ fn make_schema(
 }
 
 fn parquet_schema_from_strategies(strategies: &[(u16, String, Box<dyn FetchStrategy>)]) -> TypePtr {
-    let mut fields = strategies
+    let fields = strategies
         .iter()
         .map(|(_index, name, s)| Arc::new(s.parquet_type(name)))
         .collect();
     Arc::new(
         Type::group_type_builder("schema")
-            .with_fields(&mut fields)
+            .with_fields(fields)
             .build()
             .unwrap(),
     )
