@@ -194,8 +194,8 @@ pub struct QueryOpt {
     #[clap(long)]
     prefer_varbinary: bool,
     /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
-    /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `bit-packed`,
-    /// `delta-binary-packed`, `delta-byte-array`, `delta-length-byte-array` or `rle`.
+    /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `delta-binary-packed`,
+    /// `delta-byte-array`, `delta-length-byte-array` or `rle`.
     #[arg(
         long,
         value_parser=column_encoding_from_str,
