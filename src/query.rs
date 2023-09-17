@@ -27,7 +27,7 @@ use std::{
 use anyhow::{bail, Error};
 use io_arg::IoArg;
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter};
+use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter, ResultSetMetadata};
 use parquet::schema::types::{Type, TypePtr};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
@@ -202,7 +202,7 @@ fn cursor_to_parquet(
 type ColumnInfo = (u16, String, Box<dyn FetchStrategy>);
 
 fn make_fetch_strategies(
-    cursor: &mut impl Cursor,
+    cursor: &mut impl ResultSetMetadata,
     mapping_options: MappingOptions,
 ) -> Result<Vec<ColumnInfo>, Error> {
     let num_cols = cursor.num_result_cols()?;

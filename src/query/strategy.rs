@@ -5,7 +5,7 @@ use log::{debug, info, warn};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, Nullability,
+    ColumnDescription, DataType, Nullability, ResultSetMetadata,
 };
 use parquet::{
     basic::{LogicalType, Repetition},
@@ -60,7 +60,7 @@ pub struct MappingOptions<'a> {
 }
 
 /// Fetch strategies based on column description and enviroment arguments `MappingOptions`.
-/// 
+///
 /// * `cd`: Description of the column for which we need to pick a fetch strategy
 /// * `name`: Name of the column which we fetch
 /// * `mapping_options`: Options describing the environment and desired outcome which are also
@@ -75,7 +75,7 @@ pub fn strategy_from_column_description(
     cd: &ColumnDescription,
     name: &str,
     mapping_options: MappingOptions,
-    cursor: &mut impl Cursor,
+    cursor: &mut impl ResultSetMetadata,
     index: i16,
 ) -> Result<Option<Box<dyn FetchStrategy>>, Error> {
     let MappingOptions {
@@ -237,7 +237,7 @@ pub fn strategy_from_column_description(
 
 fn unknown_non_char_type(
     cd: &ColumnDescription,
-    cursor: &mut impl Cursor,
+    cursor: &mut impl ResultSetMetadata,
     index: i16,
     repetition: Repetition,
     apply_length_limit: impl Fn(usize) -> usize,
