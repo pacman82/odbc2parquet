@@ -97,6 +97,6 @@ fn to_utc_epoch(bytes: &[u8], precision: u8) -> Result<i64, Error> {
     let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")?;
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
-    let integer = TimestampPrecision::new(precision).datetime_to_i64(&utc);
+    let integer = TimestampPrecision::new(precision).datetime_to_i64(&utc)?;
     Ok(integer)
 }

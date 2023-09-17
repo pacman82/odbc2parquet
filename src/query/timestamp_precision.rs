@@ -42,48 +42,41 @@ impl TimestampPrecision {
             )
             .unwrap();
 
-        let ret =
-            match self {
-                TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
-                TimestampPrecision::Microseconds => datetime.timestamp_micros(),
-                TimestampPrecision::Nanoseconds => {
-                    // 2262-04-11 23:47:16.854775807 is the highest timestamp representable.
-                    let max = NaiveDateTime::from_timestamp_opt(
-                        i64::MAX / 1_000_000_000,
-                        (i64::MAX % 1_000_000_000) as u32,
-                    )
-                    .unwrap();
-                    // 1677-09-21 00:12:44
-                    let min_without_fraction =
-                        NaiveDateTime::from_timestamp_opt(i64::MIN / 1_000_000_000, 0)
-                            .unwrap()
-                            .timestamp_nanos();
-                    let min =
-                        NaiveDateTime::from_timestamp_opt(min_without_fraction / 1_000_000_000, 0)
-                            .unwrap();
-
-                    if min > datetime || datetime > max {
-                        return Err(anyhow!(
-                        "Invalid timestamp: {}. The valid range for timestamps with nano seconds \
-                        precision is between {} and {}. Other timestamps can not be represented in \
-                        parquet. To mitigate this you could downcast the precision in the query or \
-                        convert the column to text.",
-                        datetime, min, max
-                    ));
-                    }
-
-                    datetime.timestamp_nanos()
-                }
-            };
+        let ret = match self {
+            TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
+            TimestampPrecision::Microseconds => datetime.timestamp_micros(),
+            TimestampPrecision::Nanoseconds => {
+                datetime
+                    .timestamp_nanos_opt()
+                    .ok_or_else(|| nanoseconds_precision_error(&datetime))?
+            }
+        };
 
         Ok(ret)
     }
 
-    pub fn datetime_to_i64(self, datetime: &DateTime<Utc>) -> i64 {
-        match self {
+    pub fn datetime_to_i64(self, datetime: &DateTime<Utc>) -> Result<i64, Error> {
+        let ret = match self {
             TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
             TimestampPrecision::Microseconds => datetime.timestamp_micros(),
-            TimestampPrecision::Nanoseconds => datetime.timestamp_nanos(),
-        }
+            TimestampPrecision::Nanoseconds => datetime
+                .timestamp_nanos_opt()
+                .ok_or_else(|| nanoseconds_precision_error(&datetime.naive_utc()))?,
+        };
+        Ok(ret)
     }
+}
+
+fn nanoseconds_precision_error(value: &NaiveDateTime) -> Error {
+    // The valid time ranges for parquet and datetime align. Normally this could be considered
+    // incidential and should not be relied upon. However both interfaces are shaped by what is
+    // mathematically possible with a 64Bit integer. So the manual bounds checking in this code base
+    // has been removed in favour of the one provided by `chrono`.
+    anyhow!(
+        "Invalid timestamp: {}. The valid range for timestamps with nano seconds precision is \
+        between 1677-09-21 00:12:44 and 2262-04-11 23:47:16.854775807. Other timestamps can not be \
+        represented in parquet. To mitigate this you could downcast the precision in the query or \
+        convert the column to text.",
+        value
+    )
 }
