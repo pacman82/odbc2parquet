@@ -59,6 +59,18 @@ pub struct MappingOptions<'a> {
     pub column_length_limit: Option<usize>,
 }
 
+/// Fetch strategies based on column description and enviroment arguments `MappingOptions`.
+/// 
+/// * `cd`: Description of the column for which we need to pick a fetch strategy
+/// * `name`: Name of the column which we fetch
+/// * `mapping_options`: Options describing the environment and desired outcome which are also
+///   influencing the decision of what to pick.
+/// * `cursor`: Used to query additional inforamtion about the columns, not contained in the initial
+///   column description. Passing them here, allows us to query these only lazily then needed. ODBC
+///   calls can be quite costly, although an argument could be made, that these times do not matter
+///   within the runtime of the odbc2parquet command line tool.
+/// * `index`: One based column index. Usefull if additional metainformation needs to be acquired
+///   using `cursor`
 pub fn strategy_from_column_description(
     cd: &ColumnDescription,
     name: &str,
@@ -126,13 +138,16 @@ pub fn strategy_from_column_description(
         }
         DataType::BigInt => fetch_identical::<Int64Type>(is_optional),
         DataType::Bit => Box::new(Boolean::new(repetition)),
-        DataType::TinyInt => fetch_identical_with_logical_type::<Int32Type>(
-            is_optional,
-            LogicalType::Integer {
-                bit_width: 8,
-                is_signed: true,
-            },
-        ),
+        DataType::TinyInt => {
+            let is_signed = !cursor.column_is_unsigned(index.try_into().unwrap())?;
+            fetch_identical_with_logical_type::<Int32Type>(
+                is_optional,
+                LogicalType::Integer {
+                    bit_width: 8,
+                    is_signed,
+                },
+            )
+        }
         DataType::Binary { length } => {
             let length = apply_length_limit(length);
             if prefer_varbinary {
