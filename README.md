@@ -22,7 +22,8 @@ The tool queries the ODBC Data source for type information and maps it to parque
 | Real                       | Float                        |
 | Float(p: 0..24)            | Float                        |
 | Float(p >= 25)             | Double                       |
-| Tiny Integer               | Int8                         |
+| Tiny Integer Signed        | Int8 Signed                  |
+| Tiny Integer Unsigned      | Int8 Unsigned                |
 | Small Integer              | Int16                        |
 | Integer                    | Int32                        |
 | Big Int                    | Int64                        |

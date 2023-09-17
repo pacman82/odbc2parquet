@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+
+* Fix: Then fetching relational type `TINYINT`, the driver is queried for the signess of the column. The result is now reflected in the logical type written into parquet. In the past the `TINYINT` has always been assumed to be signed, even if the ODBC driver would have described the column as unsigned.
+
 ## 2.0.2
 
 * Fix: The `--help` subcommand for query wrongly listed `bit-packed` as supported.
