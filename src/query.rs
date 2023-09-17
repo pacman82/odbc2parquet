@@ -123,7 +123,7 @@ fn cursor_to_parquet(
     mapping_options: MappingOptions,
     parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
-    let strategies = make_schema(&mut cursor, mapping_options)?;
+    let strategies = make_fetch_strategies(&mut cursor, mapping_options)?;
 
     let parquet_schema = parquet_schema_from_strategies(&strategies);
 
@@ -201,7 +201,7 @@ fn cursor_to_parquet(
 
 type ColumnInfo = (u16, String, Box<dyn FetchStrategy>);
 
-fn make_schema(
+fn make_fetch_strategies(
     cursor: &mut impl Cursor,
     mapping_options: MappingOptions,
 ) -> Result<Vec<ColumnInfo>, Error> {
