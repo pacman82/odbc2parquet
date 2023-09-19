@@ -1,4 +1,4 @@
-use std::{cmp::max, convert::TryInto};
+use std::{cmp::min, convert::TryInto};
 
 use anyhow::Error;
 use log::{debug, info, warn};
@@ -96,10 +96,20 @@ pub fn strategy_from_column_description(
 
     let is_optional = cd.could_be_nullable();
 
-    let apply_length_limit = |length| {
+    let apply_length_limit = |reported_length| {
         column_length_limit
-            .map(|limit| max(limit, length))
-            .unwrap_or(length)
+            .map(|limit| {
+                // Some drivers report an upper bound of `0` to express that the upper bound in
+                // actuallity is really large. So in this case we apply the limit, despite the fact
+                // that the reported length is actually smaller and we would want to take the
+                // minimum. `0` is the largest number imaginable in this case.
+                if reported_length == 0 {
+                    limit
+                } else {
+                    min(limit, reported_length)
+                }
+            })
+            .unwrap_or(reported_length)
     };
 
     let strategy: Box<dyn FetchStrategy> = match cd.data_type {

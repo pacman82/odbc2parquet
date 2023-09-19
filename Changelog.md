@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.4
+
+* Fix: `--column-length-limit` not only caused large variadic columns to have a sensible upper bound, but also caused columns with known smaller bound to allocate just as much memory, effectivly wasting a lot of memory in some scenarios. In this version the limit will only be applied if the column length actually exceeds the length limit specified.
+* Fix: Some typos in the `--help` text have been fixed.
+
 ## 2.0.3
 
 * Fix: Then fetching relational type `TINYINT`, the driver is queried for the signess of the column. The result is now reflected in the logical type written into parquet. In the past the `TINYINT` has always been assumed to be signed, even if the ODBC driver would have described the column as unsigned.
