@@ -112,11 +112,11 @@ pub struct QueryOpt {
     batch_size_row: Option<usize>,
     /// Limits the size of a single batch. It does so by calculating the amount of memory each row
     /// requires in the allocated buffers and then limits the maximum number of rows so that the
-    /// maximum buffer size comes as close as possbile, but does not exceed the specified amount.
+    /// maximum buffer size comes as close as possible, but does not exceed the specified amount.
     /// Default is 2GiB on 64 Bit platforms and 1GiB on 32 Bit Platforms if `--batch-size-row` is
     /// not specified. If `--batch-size-row` is not specified no memory limit is applied by default.
     /// If both option are specified the batch size is the largest possible which satisfies both
-    /// constraints. This option controls the size of the buffers of data in transit, and therfore
+    /// constraints. This option controls the size of the buffers of data in transit, and therefore
     /// the memory usage of this tool. It indirectly controls the size of the row groups written to
     /// parquet (since each batch is written as one row group). It is hard to make a generic
     /// statement about how much smaller the average row group will be.
