@@ -1469,8 +1469,8 @@ fn varbinary_column() {
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
-/// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
-/// columns. Yet odbc2parquet should detect this and give the user an error instead.
+/// Since VARCHARMAX reports a size of 0. odbc2parquet should detect this and give the user an error
+/// instead.
 #[test]
 fn query_varchar_max() {
     let conn = ENV
@@ -1507,7 +1507,10 @@ fn query_varchar_max() {
             &query,
         ])
         .assert()
-        .failure();
+        .failure().stderr(contains(
+            "Column 'a' with index 1. Driver reported a display length of 0. This can happen for \
+        variadic types without a fixed upper bound. You can manually specify an upper bound for \
+        variadic columns using the `--column-length-limit` command line argument."));
 }
 
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no

@@ -27,7 +27,10 @@ use std::{
 use anyhow::{bail, Error};
 use io_arg::IoArg;
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter, ResultSetMetadata};
+use odbc_api::{
+    buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter,
+    ResultSetMetadata,
+};
 use parquet::schema::types::{Type, TypePtr};
 
 use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
@@ -225,11 +228,9 @@ fn make_fetch_strategies(
             name
         };
 
-        if let Some(column_fetch_strategy) =
-            strategy_from_column_description(&cd, &name, mapping_options, cursor, index)?
-        {
-            odbc_buffer_desc.push((index as u16, name, column_fetch_strategy));
-        }
+        let column_fetch_strategy =
+            strategy_from_column_description(&cd, &name, mapping_options, cursor, index)?;
+        odbc_buffer_desc.push((index as u16, name, column_fetch_strategy));
     }
 
     Ok(odbc_buffer_desc)
