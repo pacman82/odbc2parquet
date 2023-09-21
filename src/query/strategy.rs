@@ -1,7 +1,7 @@
 use std::{cmp::min, convert::TryInto};
 
-use anyhow::Error;
-use log::{debug, info, warn};
+use anyhow::{Error, bail};
+use log::{debug, info};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
@@ -77,7 +77,7 @@ pub fn strategy_from_column_description(
     mapping_options: MappingOptions,
     cursor: &mut impl ResultSetMetadata,
     index: i16,
-) -> Result<Option<Box<dyn FetchStrategy>>, Error> {
+) -> Result<Box<dyn FetchStrategy>, Error> {
     let MappingOptions {
         db_name,
         use_utf16,
@@ -231,17 +231,14 @@ pub fn strategy_from_column_description(
         strategy.buffer_desc(),
         BufferDesc::Text { max_str_len: 0 } | BufferDesc::WText { max_str_len: 0 }
     ) {
-        warn!(
-            "Ignoring column '{}' with index {}. Driver reported a display length of 0. \
-              This can happen for types without a fixed size limit. If you feel this should be \
-              supported open an issue (or PR) at \
-              <https://github.com/pacman82/odbc2parquet/issues>.",
+        bail!(
+            "Column '{}' with index {}. Driver reported a display length of 0. This can happen for \
+            variadic types without a fixed upper bound. You can manually specify an upper bound \
+            for variadic columns using the `--column-length-limit` command line argument.",
             name, index
         );
-
-        Ok(None)
     } else {
-        Ok(Some(strategy))
+        Ok(strategy)
     }
 }
 
