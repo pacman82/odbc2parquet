@@ -47,7 +47,7 @@ features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 # features implying the use of UTF-16 for queries, connection strings and error messages. This
 # should work on any system
 [target.'cfg(target_os = "windows")'.dependencies]
-odbc-api = "1.0.2"
+odbc-api = "2.0.0"
 
 # On linux we assume use of a UTF-8 locale. So we set the narrow features implying that for queries,
 # connection strings and error messages the driver and driver manager supply utf8-strings. This
