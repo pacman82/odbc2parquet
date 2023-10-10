@@ -886,20 +886,6 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ff702b6a83acf8b7aea43970e8024bad321d51ef358784a003967f099c1d5f5"
-dependencies = [
- "force-send-sync",
- "log",
- "odbc-sys",
- "thiserror",
- "widestring",
- "winit",
-]
-
-[[package]]
-name = "odbc-api"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "014598b819cd8685e7a390505a268ebf581b1a327386fcbd257bfbe349188274"
@@ -933,8 +919,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api 1.0.2",
- "odbc-api 2.2.0",
+ "odbc-api",
  "parquet",
  "predicates",
  "stderrlog",
