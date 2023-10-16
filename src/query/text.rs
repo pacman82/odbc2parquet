@@ -5,8 +5,8 @@ use log::warn;
 use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
-    column::writer::ColumnWriter,
-    data_type::ByteArray,
+    column::writer::{get_typed_column_writer_mut, ColumnWriter},
+    data_type::{ByteArray, ByteArrayType},
     schema::types::Type,
 };
 
@@ -68,28 +68,22 @@ fn write_utf16_to_utf8(
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnySlice::WText(view)) =
-        (column_writer, column_reader)
-    {
-        pb.write_optional(
-            cw,
-            view.iter().map(|item| {
-                item.map(|ustr| {
-                    let byte_array: ByteArray = ustr
-                        .to_string()
-                        .expect("Data source must return valid UTF16 in wide character buffer")
-                        .into_bytes()
-                        .into();
-                    byte_array
-                })
-            }),
-        )?;
-    } else {
-        panic!(
-            "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
-            https://github.com/pacman82/odbc2parquet/issues."
-        )
-    }
+    let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
+    let view = column_reader.as_w_text_view().unwrap();
+
+    pb.write_optional(
+        cw,
+        view.iter().map(|item| {
+            item.map(|ustr| {
+                let byte_array: ByteArray = ustr
+                    .to_string()
+                    .expect("Data source must return valid UTF16 in wide character buffer")
+                    .into_bytes()
+                    .into();
+                byte_array
+            })
+        }),
+    )?;
     Ok(())
 }
 
@@ -135,19 +129,14 @@ fn write_to_utf8(
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
 ) -> Result<(), Error> {
-    if let (ColumnWriter::ByteArrayColumnWriter(cw), AnySlice::Text(view)) =
-        (column_writer, column_reader)
-    {
-        pb.write_optional(
-            cw,
-            view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
-        )?;
-    } else {
-        panic!(
-            "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
-            https://github.com/pacman82/odbc2parquet/issues."
-        )
-    }
+    let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
+    let view = column_reader.as_text_view().unwrap();
+
+    pb.write_optional(
+        cw,
+        view.iter().map(|item| item.map(utf8_bytes_to_byte_array)),
+    )?;
+
     Ok(())
 }
 
