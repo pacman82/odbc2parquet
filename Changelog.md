@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0 (next)
+
+* Zero sized columns are now treated as an error. Before `odbc2parquet` issued a warning and ignored them.
+
 ## 2.0.4
 
 * Fix: `--column-length-limit` not only caused large variadic columns to have a sensible upper bound, but also caused columns with known smaller bound to allocate just as much memory, effectivly wasting a lot of memory in some scenarios. In this version the limit will only be applied if the column length actually exceeds the length limit specified.
