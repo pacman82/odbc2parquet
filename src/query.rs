@@ -136,7 +136,7 @@ fn cursor_to_parquet(
 
     let mem_usage_odbc_buffer_per_row: usize = strategies
         .iter()
-        .map(|(_index, _name, strategy)| strategy.buffer_desc().bytes_per_row())
+        .map(|(_name, strategy)| strategy.buffer_desc().bytes_per_row())
         .sum();
     let total_mem_usage_per_row =
         mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
@@ -150,11 +150,11 @@ fn cursor_to_parquet(
 
     info!("Batch size set to {} rows.", batch_size_row);
 
-    let mut odbc_buffer = ColumnarAnyBuffer::from_descs_and_indices(
+    let mut odbc_buffer = ColumnarAnyBuffer::from_descs(
         batch_size_row,
         strategies
             .iter()
-            .map(|(index, _name, strategy)| (*index, strategy.buffer_desc())),
+            .map(|(_name, strategy)| (strategy.buffer_desc())),
     );
 
     let mut row_set_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
@@ -185,7 +185,7 @@ fn cursor_to_parquet(
 
             let odbc_column = buffer.column(col_index);
 
-            strategies[col_index].2.copy_odbc_to_parquet(
+            strategies[col_index].1.copy_odbc_to_parquet(
                 &mut pb,
                 column_writer.untyped(),
                 odbc_column,
@@ -202,7 +202,7 @@ fn cursor_to_parquet(
     Ok(())
 }
 
-type ColumnInfo = (u16, String, Box<dyn FetchStrategy>);
+type ColumnInfo = (String, Box<dyn FetchStrategy>);
 
 fn make_fetch_strategies(
     cursor: &mut impl ResultSetMetadata,
@@ -230,16 +230,16 @@ fn make_fetch_strategies(
 
         let column_fetch_strategy =
             strategy_from_column_description(&cd, &name, mapping_options, cursor, index)?;
-        odbc_buffer_desc.push((index as u16, name, column_fetch_strategy));
+        odbc_buffer_desc.push((name, column_fetch_strategy));
     }
 
     Ok(odbc_buffer_desc)
 }
 
-fn parquet_schema_from_strategies(strategies: &[(u16, String, Box<dyn FetchStrategy>)]) -> TypePtr {
+fn parquet_schema_from_strategies(strategies: &[(String, Box<dyn FetchStrategy>)]) -> TypePtr {
     let fields = strategies
         .iter()
-        .map(|(_index, name, s)| Arc::new(s.parquet_type(name)))
+        .map(|(name, s)| Arc::new(s.parquet_type(name)))
         .collect();
     Arc::new(
         Type::group_type_builder("schema")

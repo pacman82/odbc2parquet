@@ -1,6 +1,6 @@
 use std::{cmp::min, convert::TryInto};
 
-use anyhow::{Error, bail};
+use anyhow::{bail, Error};
 use log::{debug, info};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},

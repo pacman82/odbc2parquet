@@ -1507,10 +1507,12 @@ fn query_varchar_max() {
             &query,
         ])
         .assert()
-        .failure().stderr(contains(
+        .failure()
+        .stderr(contains(
             "Column 'a' with index 1. Driver reported a display length of 0. This can happen for \
         variadic types without a fixed upper bound. You can manually specify an upper bound for \
-        variadic columns using the `--column-length-limit` command line argument."));
+        variadic columns using the `--column-length-limit` command line argument.",
+        ));
 }
 
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
