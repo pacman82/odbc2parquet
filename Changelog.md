@@ -3,6 +3,7 @@
 ## 3.0.0 (next)
 
 * Zero sized columns are now treated as an error. Before `odbc2parquet` issued a warning and ignored them.
+* Fix: `--file-size-threshold` had an issue with not resetting the current file size after starting a new file. This caused only the first file to have the desired size. All subsequent files would contain only one row group each.
 
 ## 2.0.4
 

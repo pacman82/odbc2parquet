@@ -122,6 +122,8 @@ impl ParquetWriter {
             .should_start_new_file(num_batch, self.current_file_size)
         {
             self.num_file += 1;
+            // Reset current file size, so the next file will not be considered too large immediatly
+            self.current_file_size = ByteSize::b(0);
             let file: Box<dyn Write + Send> = Box::new(create_output_file(
                 self.path.as_deref().unwrap(),
                 Some((self.num_file, self.suffix_length)),
