@@ -33,7 +33,7 @@ use odbc_api::{
 };
 use parquet::schema::types::{Type, TypePtr};
 
-use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
+use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt, query::parquet_writer::ParquetOutput};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
