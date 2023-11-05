@@ -53,10 +53,9 @@ pub fn parquet_output(
     }
     let properties = Arc::new(wpb.build());
 
-    let writer: Box<dyn ParquetOutput> = if output.is_file() {
-        Box::new(ParquetWriter::new(output, schema, options, properties)?)
-    } else {
-        Box::new(StandardOut::new(schema, properties)?)
+    let writer: Box<dyn ParquetOutput> = match output {
+        IoArg::StdStream => Box::new(StandardOut::new(schema, properties)?),
+        IoArg::File(path) => Box::new(ParquetWriter::new(path, schema, options, properties)?),
     };
 
     Ok(writer)
@@ -103,7 +102,7 @@ impl ParquetOutput for ParquetWriter {
         {
             self.num_file += 1;
             let file: Box<dyn Write + Send> = Box::new(create_output_file(
-                self.path.as_deref().unwrap(),
+                &self.path,
                 Some((self.num_file, self.suffix_length)),
             )?);
 
@@ -122,7 +121,6 @@ impl ParquetOutput for ParquetWriter {
         self.writer.close()?;
         if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
             .then_some(self.path)
-            .flatten()
         {
             remove_file(path)?;
         }
@@ -137,7 +135,7 @@ impl ParquetOutput for ParquetWriter {
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
 struct ParquetWriter {
-    path: Option<PathBuf>,
+    path: PathBuf,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
     writer: SerializedFileWriter<Box<dyn Write + Send>>,
@@ -152,32 +150,25 @@ struct ParquetWriter {
 
 impl ParquetWriter {
     pub fn new(
-        output: IoArg,
+        path: PathBuf,
         schema: Arc<Type>,
         options: ParquetWriterOptions,
         properties: Arc<WriterProperties>,
     ) -> Result<Self, Error> {
-        let (suffix, base_path) = match output {
-            IoArg::StdStream => (None, None),
-            IoArg::File(path) => {
-                if options.file_size.output_is_splitted() {
-                    (Some((1, options.suffix_length)), Some(path))
-                } else {
-                    (None, Some(path))
-                }
+        let suffix = {
+            if options.file_size.output_is_splitted() {
+                Some((1, options.suffix_length))
+            } else {
+                None
             }
         };
 
-        let output: Box<dyn Write + Send> = if let Some(path) = &base_path {
-            Box::new(create_output_file(path, suffix)?)
-        } else {
-            Box::new(stdout())
-        };
+        let output: Box<dyn Write + Send> = Box::new(create_output_file(&path, suffix)?);
 
         let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
 
         Ok(Self {
-            path: base_path,
+            path,
             schema,
             properties,
             writer,
