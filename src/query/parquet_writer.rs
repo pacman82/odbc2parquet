@@ -1,5 +1,5 @@
 use std::{
-    fs::{remove_file, File},
+    fs::File,
     io::{stdout, Write},
     mem::swap,
     path::{Path, PathBuf},
@@ -11,13 +11,13 @@ use bytesize::ByteSize;
 use io_arg::IoArg;
 use parquet::{
     basic::{Compression, Encoding},
-    errors::ParquetError,
     file::{
         properties::{WriterProperties, WriterVersion},
         writer::{SerializedFileWriter, SerializedRowGroupWriter},
     },
     schema::types::{ColumnPath, Type},
 };
+use tempfile::TempPath;
 
 use super::batch_size_limit::FileSizeLimit;
 
@@ -81,15 +81,17 @@ pub trait ParquetOutput {
 
     /// Indicate that no further output is written. this triggers writing the parquet meta data and
     /// potentially persists a temporary file.
-    fn close(self) -> Result<(), ParquetError>;
+    fn close(self) -> Result<(), Error>;
 
-    fn close_box(self: Box<Self>) -> Result<(), ParquetError>;
+    fn close_box(self: Box<Self>) -> Result<(), Error>;
 }
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
 struct FileWriter {
-    path: PathBuf,
+    base_path: PathBuf,
+    /// Path to the file currently being written to.
+    current_path: TempPath,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
     writer: SerializedFileWriter<Box<dyn Write + Send>>,
@@ -117,12 +119,14 @@ impl FileWriter {
             }
         };
 
-        let output: Box<dyn Write + Send> = Box::new(create_output_file(&path, suffix)?);
+        let current_path = Self::current_path(&path, suffix)?;
+        let output: Box<dyn Write + Send> = Box::new(Self::create_output_file(&current_path)?);
 
         let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
 
         Ok(Self {
-            path,
+            base_path: path,
+            current_path,
             schema,
             properties,
             writer,
@@ -134,53 +138,22 @@ impl FileWriter {
         })
     }
 
-    pub fn update_current_file_size(&mut self, row_group_size: i64) {
-        self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
+    fn current_path(base_path: &Path, suffix: Option<(u32, usize)>) -> Result<TempPath, Error> {
+        let path = if let Some((num_file, suffix_length)) = suffix {
+            path_with_suffix(base_path, num_file, suffix_length)?
+        } else {
+            base_path.to_owned()
+        };
+        Ok(TempPath::from_path(path))
     }
 
-    /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
-    /// previous one is reached.
-    ///
-    /// # Parametersc
-    ///
-    /// * `num_batch`: Zero based num batch index
-    pub fn next_row_group(
-        &mut self,
-        num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
-        // Check if we need to write the next batch into a new file
-        if self
-            .file_size
-            .should_start_new_file(num_batch, self.current_file_size)
-        {
-            self.num_file += 1;
-            // Reset current file size, so the next file will not be considered too large immediatly
-            self.current_file_size = ByteSize::b(0);
-            let file: Box<dyn Write + Send> = Box::new(create_output_file(
-                self.path.as_deref().unwrap(),
-                Some((self.num_file, self.suffix_length)),
-            )?);
-
-            // Create new writer as tmp writer
-            let mut tmp_writer =
-                SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
-            // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
-            // Make the new writer self.writer, so we will use it to insert the new data.
-            swap(&mut self.writer, &mut tmp_writer);
-            tmp_writer.close()?;
-        }
-        Ok(self.writer.next_row_group()?)
-    }
-
-    pub fn close(self) -> Result<(), ParquetError> {
-        self.writer.close()?;
-        if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
-            .then_some(self.path)
-            .flatten()
-        {
-            remove_file(path)?;
-        }
-        Ok(())
+    fn create_output_file(path: &Path) -> Result<File, Error> {
+        File::create(path).map_err(|io_err| {
+            Error::from(io_err).context(format!(
+                "Could not create output file '{}'",
+                path.to_string_lossy()
+            ))
+        })
     }
 }
 
@@ -198,10 +171,16 @@ impl ParquetOutput for FileWriter {
             .file_size
             .should_start_new_file(num_batch, self.current_file_size)
         {
+            // Create next file path
             self.num_file += 1;
-            let file: Box<dyn Write + Send> = Box::new(create_output_file(
-                &self.path,
-                Some((self.num_file, self.suffix_length)),
+            // Reset current file size, so the next file will not be considered too large immediatly
+            self.current_file_size = ByteSize::b(0);
+            let mut tmp_current_path = Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
+            swap(&mut self.current_path, &mut tmp_current_path);
+            // Persist last file
+            tmp_current_path.keep()?;
+            let file: Box<dyn Write + Send> = Box::new(Self::create_output_file(
+                &self.current_path
             )?);
 
             // Create new writer as tmp writer
@@ -215,33 +194,18 @@ impl ParquetOutput for FileWriter {
         Ok(self.writer.next_row_group()?)
     }
 
-    fn close(self) -> Result<(), ParquetError> {
+    fn close(self) -> Result<(), Error> {
         self.writer.close()?;
-        if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
-            .then_some(self.path)
+        if self.current_file_size != ByteSize::b(0) || !self.no_empty_file
         {
-            remove_file(path)?;
+            self.current_path.keep()?;
         }
         Ok(())
     }
 
-    fn close_box(self: Box<Self>) -> Result<(), ParquetError> {
+    fn close_box(self: Box<Self>) -> Result<(), Error> {
         self.close()
     }
-}
-
-fn create_output_file(path: &Path, suffix: Option<(u32, usize)>) -> Result<File, Error> {
-    let path = if let Some((num_file, suffix_length)) = suffix {
-        path_with_suffix(path, num_file, suffix_length)?
-    } else {
-        path.to_owned()
-    };
-    File::create(&path).map_err(|io_err| {
-        Error::from(io_err).context(format!(
-            "Could not create output file '{}'",
-            path.to_string_lossy()
-        ))
-    })
 }
 
 /// Stream parquet directly to standard out
@@ -268,12 +232,12 @@ impl ParquetOutput for StandardOut {
         Ok(self.writer.next_row_group()?)
     }
 
-    fn close(self) -> Result<(), ParquetError> {
+    fn close(self) -> Result<(), Error> {
         self.writer.close()?;
         Ok(())
     }
 
-    fn close_box(self: Box<Self>) -> Result<(), ParquetError> {
+    fn close_box(self: Box<Self>) -> Result<(), Error> {
         self.close()
     }
 }
