@@ -175,13 +175,13 @@ impl ParquetOutput for FileWriter {
             self.num_file += 1;
             // Reset current file size, so the next file will not be considered too large immediatly
             self.current_file_size = ByteSize::b(0);
-            let mut tmp_current_path = Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
+            let mut tmp_current_path =
+                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
             swap(&mut self.current_path, &mut tmp_current_path);
             // Persist last file
             tmp_current_path.keep()?;
-            let file: Box<dyn Write + Send> = Box::new(Self::create_output_file(
-                &self.current_path
-            )?);
+            let file: Box<dyn Write + Send> =
+                Box::new(Self::create_output_file(&self.current_path)?);
 
             // Create new writer as tmp writer
             let mut tmp_writer =
@@ -196,8 +196,7 @@ impl ParquetOutput for FileWriter {
 
     fn close(self) -> Result<(), Error> {
         self.writer.close()?;
-        if self.current_file_size != ByteSize::b(0) || !self.no_empty_file
-        {
+        if self.current_file_size != ByteSize::b(0) || !self.no_empty_file {
             self.current_path.keep()?;
         }
         Ok(())
