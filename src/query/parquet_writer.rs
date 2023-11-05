@@ -55,7 +55,7 @@ pub fn parquet_output(
 
     let writer: Box<dyn ParquetOutput> = match output {
         IoArg::StdStream => Box::new(StandardOut::new(schema, properties)?),
-        IoArg::File(path) => Box::new(ParquetWriter::new(path, schema, options, properties)?),
+        IoArg::File(path) => Box::new(FileWriter::new(path, schema, options, properties)?),
     };
 
     Ok(writer)
@@ -86,7 +86,7 @@ pub trait ParquetOutput {
     fn close_box(self: Box<Self>) -> Result<(), ParquetError>;
 }
 
-impl ParquetOutput for ParquetWriter {
+impl ParquetOutput for FileWriter {
     fn update_current_file_size(&mut self, row_group_size: i64) {
         self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
     }
@@ -134,7 +134,7 @@ impl ParquetOutput for ParquetWriter {
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
-struct ParquetWriter {
+struct FileWriter {
     path: PathBuf,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
@@ -148,7 +148,7 @@ struct ParquetWriter {
     no_empty_file: bool,
 }
 
-impl ParquetWriter {
+impl FileWriter {
     pub fn new(
         path: PathBuf,
         schema: Arc<Type>,
