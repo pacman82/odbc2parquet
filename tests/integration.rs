@@ -1245,6 +1245,53 @@ fn query_comes_back_with_no_rows() {
     );
 }
 
+/// Should not create a file if the query comes back empty `--no-empty-file` is set. This should
+/// still work, even in the presence of (potential) file splitting.
+/// 
+/// This test has been created after a bug report. Original implementation of `--no-empty-file`
+/// deleted the file after the fact. Yet it tried to delete the base path without taking the suffix
+/// from file splitting into acconut.
+#[test]
+fn no_empty_file_works_with_split_files() {
+    // Setup table for test
+    let table_name = "NoEmptyFileWorksWithSplitFiles";
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["DOUBLE PRECISION NOT NULL"]).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name};");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "--row-groups-per-file",
+            "1",
+            "--no-empty-file",
+            out_str,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    assert_eq!(
+        ErrorKind::NotFound,
+        File::open(out_str).err().unwrap().kind()
+    );
+}
+
 /// Should read query from standard input if "-" is provided as query text.
 #[test]
 fn read_query_from_stdin() {
