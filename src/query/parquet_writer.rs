@@ -36,6 +36,78 @@ pub struct ParquetWriterOptions {
     pub no_empty_file: bool,
 }
 
+/// Writes row groups to the output, which could be either standard out, a single parquet file or
+/// multiple parquet files with incrementing number suffixes.
+pub trait ParquetOutput {
+    /// In case we have a size limit for individual files, we need to keep track of the individual
+    /// file size.
+    fn update_current_file_size(&mut self, row_group_size: i64);
+
+    /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
+    /// previous one is reached.
+    ///
+    /// # Parametersc
+    ///
+    /// * `num_batch`: Zero based num batch index
+    fn next_row_group(
+        &mut self,
+        num_batch: u32,
+    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error>;
+
+    /// Indicate that no further output is written. this triggers writing the parquet meta data and
+    /// potentially persists a temporary file.
+    fn close(self) -> Result<(), ParquetError>;
+}
+
+impl ParquetOutput for ParquetWriter {
+    fn update_current_file_size(&mut self, row_group_size: i64) {
+        self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
+    }
+
+    /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
+    /// previous one is reached.
+    ///
+    /// # Parametersc
+    ///
+    /// * `num_batch`: Zero based num batch index
+    fn next_row_group(
+        &mut self,
+        num_batch: u32,
+    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
+        // Check if we need to write the next batch into a new file
+        if self
+            .file_size
+            .should_start_new_file(num_batch, self.current_file_size)
+        {
+            self.num_file += 1;
+            let file: Box<dyn Write + Send> = Box::new(create_output_file(
+                self.path.as_deref().unwrap(),
+                Some((self.num_file, self.suffix_length)),
+            )?);
+
+            // Create new writer as tmp writer
+            let mut tmp_writer =
+                SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
+            // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
+            // Make the new writer self.writer, so we will use it to insert the new data.
+            swap(&mut self.writer, &mut tmp_writer);
+            tmp_writer.close()?;
+        }
+        Ok(self.writer.next_row_group()?)
+    }
+
+    fn close(self) -> Result<(), ParquetError> {
+        self.writer.close()?;
+        if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
+            .then_some(self.path)
+            .flatten()
+        {
+            remove_file(path)?;
+        }
+        Ok(())
+    }
+}
+
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
 pub struct ParquetWriter {
