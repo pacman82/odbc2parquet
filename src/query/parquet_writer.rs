@@ -36,6 +36,15 @@ pub struct ParquetWriterOptions {
     pub no_empty_file: bool,
 }
 
+pub fn parquet_output(
+    output: IoArg,
+    schema: Arc<Type>,
+    options: ParquetWriterOptions,
+) -> Result<Box<dyn ParquetOutput>, Error> {
+    let writer = ParquetWriter::new(output, schema, options)?;
+    Ok(Box::new(writer))
+}
+
 /// Writes row groups to the output, which could be either standard out, a single parquet file or
 /// multiple parquet files with incrementing number suffixes.
 pub trait ParquetOutput {
@@ -57,6 +66,8 @@ pub trait ParquetOutput {
     /// Indicate that no further output is written. this triggers writing the parquet meta data and
     /// potentially persists a temporary file.
     fn close(self) -> Result<(), ParquetError>;
+
+    fn close_box(self: Box<Self>) -> Result<(), ParquetError>;
 }
 
 impl ParquetOutput for ParquetWriter {
@@ -64,12 +75,6 @@ impl ParquetOutput for ParquetWriter {
         self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
     }
 
-    /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
-    /// previous one is reached.
-    ///
-    /// # Parametersc
-    ///
-    /// * `num_batch`: Zero based num batch index
     fn next_row_group(
         &mut self,
         num_batch: u32,
@@ -106,11 +111,15 @@ impl ParquetOutput for ParquetWriter {
         }
         Ok(())
     }
+
+    fn close_box(self: Box<Self>) -> Result<(), ParquetError> {
+        self.close()
+    }
 }
 
 /// Wraps parquet SerializedFileWriter. Handles splitting into new files after maximum amount of
 /// batches is reached.
-pub struct ParquetWriter {
+struct ParquetWriter {
     path: Option<PathBuf>,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
