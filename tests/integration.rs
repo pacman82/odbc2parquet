@@ -1247,7 +1247,7 @@ fn query_comes_back_with_no_rows() {
 
 /// Should not create a file if the query comes back empty `--no-empty-file` is set. This should
 /// still work, even in the presence of (potential) file splitting.
-/// 
+///
 /// This test has been created after a bug report. Original implementation of `--no-empty-file`
 /// deleted the file after the fact. Yet it tried to delete the base path without taking the suffix
 /// from file splitting into acconut.
