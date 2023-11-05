@@ -41,8 +41,25 @@ pub fn parquet_output(
     schema: Arc<Type>,
     options: ParquetWriterOptions,
 ) -> Result<Box<dyn ParquetOutput>, Error> {
-    let writer = ParquetWriter::new(output, schema, options)?;
-    Ok(Box::new(writer))
+    // Write properties
+    // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
+    // be on the safe side.
+    let mut wpb = WriterProperties::builder()
+        .set_writer_version(WriterVersion::PARQUET_2_0)
+        .set_compression(options.column_compression_default);
+    for (column_name, encoding) in options.column_encodings.clone() {
+        let col = ColumnPath::new(vec![column_name]);
+        wpb = wpb.set_column_encoding(col, encoding)
+    }
+    let properties = Arc::new(wpb.build());
+
+    let writer: Box<dyn ParquetOutput> = if output.is_file() {
+        Box::new(ParquetWriter::new(output, schema, options, properties)?)
+    } else {
+        Box::new(StandardOut::new(output, schema, options, properties)?)
+    };
+
+    Ok(writer)
 }
 
 /// Writes row groups to the output, which could be either standard out, a single parquet file or
@@ -138,19 +155,8 @@ impl ParquetWriter {
         output: IoArg,
         schema: Arc<Type>,
         options: ParquetWriterOptions,
+        properties: Arc<WriterProperties>,
     ) -> Result<Self, Error> {
-        // Write properties
-        // Seems to also work fine without setting the batch size explicitly, but what the heck. Just to
-        // be on the safe side.
-        let mut wpb = WriterProperties::builder()
-            .set_writer_version(WriterVersion::PARQUET_2_0)
-            .set_compression(options.column_compression_default);
-        for (column_name, encoding) in options.column_encodings {
-            let col = ColumnPath::new(vec![column_name]);
-            wpb = wpb.set_column_encoding(col, encoding)
-        }
-        let properties = Arc::new(wpb.build());
-
         let (suffix, base_path) = match output {
             IoArg::StdStream => (None, None),
             IoArg::File(path) => {
@@ -245,6 +251,108 @@ fn create_output_file(path: &Path, suffix: Option<(u32, usize)>) -> Result<File,
             path.to_string_lossy()
         ))
     })
+}
+
+/// Stream parquet directly to standard out
+struct StandardOut {
+    path: Option<PathBuf>,
+    schema: Arc<Type>,
+    properties: Arc<WriterProperties>,
+    writer: SerializedFileWriter<Box<dyn Write + Send>>,
+    file_size: FileSizeLimit,
+    num_file: u32,
+    /// Keep track of curret file size so we can split it, should it get too large.
+    current_file_size: ByteSize,
+    /// Length of the suffix, appended to the end of a file in case they are numbered.
+    suffix_length: usize,
+    no_empty_file: bool,
+}
+
+impl StandardOut {
+    pub fn new(
+        output: IoArg,
+        schema: Arc<Type>,
+        options: ParquetWriterOptions,
+        properties: Arc<WriterProperties>,
+    ) -> Result<Self, Error> {
+        let (suffix, base_path) = match output {
+            IoArg::StdStream => (None, None),
+            IoArg::File(path) => {
+                if options.file_size.output_is_splitted() {
+                    (Some((1, options.suffix_length)), Some(path))
+                } else {
+                    (None, Some(path))
+                }
+            }
+        };
+
+        let output: Box<dyn Write + Send> = if let Some(path) = &base_path {
+            Box::new(create_output_file(path, suffix)?)
+        } else {
+            Box::new(stdout())
+        };
+
+        let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
+
+        Ok(Self {
+            path: base_path,
+            schema,
+            properties,
+            writer,
+            file_size: options.file_size,
+            num_file: 1,
+            current_file_size: ByteSize::b(0),
+            suffix_length: options.suffix_length,
+            no_empty_file: options.no_empty_file,
+        })
+    }
+}
+
+impl ParquetOutput for StandardOut {
+    fn update_current_file_size(&mut self, row_group_size: i64) {
+        self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
+    }
+
+    fn next_row_group(
+        &mut self,
+        num_batch: u32,
+    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
+        // Check if we need to write the next batch into a new file
+        if self
+            .file_size
+            .should_start_new_file(num_batch, self.current_file_size)
+        {
+            self.num_file += 1;
+            let file: Box<dyn Write + Send> = Box::new(create_output_file(
+                self.path.as_deref().unwrap(),
+                Some((self.num_file, self.suffix_length)),
+            )?);
+
+            // Create new writer as tmp writer
+            let mut tmp_writer =
+                SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
+            // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
+            // Make the new writer self.writer, so we will use it to insert the new data.
+            swap(&mut self.writer, &mut tmp_writer);
+            tmp_writer.close()?;
+        }
+        Ok(self.writer.next_row_group()?)
+    }
+
+    fn close(self) -> Result<(), ParquetError> {
+        self.writer.close()?;
+        if let Some(path) = (self.current_file_size == ByteSize::b(0) && self.no_empty_file)
+            .then_some(self.path)
+            .flatten()
+        {
+            remove_file(path)?;
+        }
+        Ok(())
+    }
+
+    fn close_box(self: Box<Self>) -> Result<(), ParquetError> {
+        self.close()
+    }
 }
 
 fn pad_number(num_file: u32, suffix_length: usize) -> String {
