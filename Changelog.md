@@ -1,6 +1,10 @@
 # Changelog
 
-## 3.0.0 (next)
+## 3.0.1
+
+* Fix: `--no-empty-file` now works correctly with options causing files to be splitted like `--file-size-threshold` or `--row-groups-per-file`.
+
+## 3.0.0
 
 * Zero sized columns are now treated as an error. Before `odbc2parquet` issued a warning and ignored them.
 * Fix: `--file-size-threshold` had an issue with not resetting the current file size after starting a new file. This caused only the first file to have the desired size. All subsequent files would contain only one row group each.
