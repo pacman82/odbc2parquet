@@ -14,8 +14,7 @@ mod timestamp_tz;
 
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
-    parquet_writer::ParquetWriter,
-    parquet_writer::ParquetWriterOptions,
+    parquet_writer::{parquet_output, ParquetWriterOptions},
     strategy::{strategy_from_column_description, FetchStrategy, MappingOptions},
 };
 
@@ -33,7 +32,7 @@ use odbc_api::{
 };
 use parquet::schema::types::{Type, TypePtr};
 
-use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt, query::parquet_writer::ParquetOutput};
+use crate::{open_connection, parquet_buffer::ParquetBuffer, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
@@ -162,7 +161,7 @@ fn cursor_to_parquet(
     let mut pb = ParquetBuffer::new(batch_size_row);
     let mut num_batch = 0;
 
-    let mut writer = ParquetWriter::new(path, parquet_schema.clone(), parquet_format_options)?;
+    let mut writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
 
     while let Some(buffer) = row_set_cursor
         .fetch()
@@ -197,7 +196,7 @@ fn cursor_to_parquet(
         writer.update_current_file_size(metadata.compressed_size());
     }
 
-    writer.close()?;
+    writer.close_box()?;
 
     Ok(())
 }
