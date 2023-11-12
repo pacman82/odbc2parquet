@@ -160,6 +160,9 @@ fn cursor_to_parquet(
 
     let mut pb = ParquetBuffer::new(batch_size_row);
     let mut num_batch = 0;
+    // Count the number of total rows fetched so far for logging. This should be identical to
+    // `num_batch * batch_size_row + num_rows`.
+    let mut total_rows_fetched = 0;
 
     let mut writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
 
@@ -169,9 +172,11 @@ fn cursor_to_parquet(
     {
         let mut row_group_writer = writer.next_row_group(num_batch)?;
         let mut col_index = 0;
-        num_batch += 1;
         let num_rows = buffer.num_rows();
-        info!("Fetched batch {} with {} rows.", num_batch, num_rows);
+        total_rows_fetched += num_rows;
+        num_batch += 1;
+        info!("Fetched batch {num_batch} with {num_rows} rows.");
+        info!("Fetched {total_rows_fetched} rows in total.");
         pb.set_num_rows_fetched(num_rows);
         while let Some(mut column_writer) = row_group_writer.next_column()? {
             let col_name = parquet_schema.get_fields()[col_index]

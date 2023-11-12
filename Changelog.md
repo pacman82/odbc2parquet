@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0
+
+* Additional log message emitting the number of total rows fetched so far.
+
 ## 3.0.1
 
 * Fix: `--no-empty-file` now works correctly with options causing files to be splitted like `--file-size-threshold` or `--row-groups-per-file`.
