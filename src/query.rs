@@ -23,7 +23,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{bail, Error};
+use anyhow::{bail, Context, Error};
 use io_arg::IoArg;
 use log::{debug, info};
 use odbc_api::{
@@ -189,11 +189,14 @@ fn cursor_to_parquet(
 
             let odbc_column = buffer.column(col_index);
 
-            strategies[col_index].1.copy_odbc_to_parquet(
-                &mut pb,
-                column_writer.untyped(),
-                odbc_column,
-            )?;
+            strategies[col_index]
+                .1
+                .copy_odbc_to_parquet(&mut pb, column_writer.untyped(), odbc_column)
+                .with_context(|| {
+                    format!(
+                        "Failed to copy column '{col_name}' from ODBC representation into Parquet"
+                    )
+                })?;
             column_writer.close()?;
             col_index += 1;
         }
