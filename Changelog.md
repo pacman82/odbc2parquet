@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1
+
+* Fix: Invalid UTF-16 encoding emitted from the data source will now cause an error instead of a panic.
+
 ## 3.1.0
 
 * Additional log message emitting the number of total rows fetched so far.
