@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use log::warn;
 use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
@@ -71,17 +71,21 @@ fn write_utf16_to_utf8(
     let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
     let view = column_reader.as_w_text_view().unwrap();
 
-    pb.write_optional(
+    pb.write_optional_falliable(
         cw,
         view.iter().map(|item| {
-            item.map(|ustr| {
+            if let Some(ustr) = item {
                 let byte_array: ByteArray = ustr
                     .to_string()
-                    .expect("Data source must return valid UTF16 in wide character buffer")
+                    .map_err(|_utf_16_error| {
+                        anyhow!("Data source must return valid UTF16 in wide character buffer")
+                    })?
                     .into_bytes()
                     .into();
-                byte_array
-            })
+                Ok(Some(byte_array))
+            } else {
+                Ok(None)
+            }
         }),
     )?;
     Ok(())
