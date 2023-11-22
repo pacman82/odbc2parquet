@@ -1,4 +1,4 @@
-use std::{cmp::min, convert::TryInto};
+use std::{cmp::{min, max}, convert::TryInto};
 
 use anyhow::{bail, Error};
 use log::{debug, info};
@@ -252,7 +252,11 @@ fn unknown_non_char_type(
     let length = if let Some(len) = cd.data_type.utf8_len() {
         len
     } else {
-        cursor.col_display_size(index.try_into().unwrap())? as usize
+        // Display size can be negative. There is anecdotical evidence for MySQL returning -4
+        // (NO_TOTAL) for JSON types. Wether this is actually allowed in ODBC I can not tell.
+        //
+        // `apply_length_limit` handles zero values
+        max(0,cursor.col_display_size(index.try_into().unwrap())?) as usize
     };
     let length = apply_length_limit(length);
     let use_utf16 = false;
