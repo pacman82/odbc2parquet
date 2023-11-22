@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.2
+
+* Fix: If ODBC drivers report `-4` (`NO_TOTAL`) as display size, the size can now be controlled with `--column-length-limit`. The issue occurred for JSON columns with MySQL.
+
 ## 3.1.1
 
 * Fix: Invalid UTF-16 encoding emitted from the data source will now cause an error instead of a panic.
