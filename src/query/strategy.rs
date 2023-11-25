@@ -230,19 +230,7 @@ pub fn strategy_from_column_description(
         strategy.buffer_desc()
     );
 
-    if matches!(
-        strategy.buffer_desc(),
-        BufferDesc::Text { max_str_len: 0 } | BufferDesc::WText { max_str_len: 0 }
-    ) {
-        bail!(
-            "Column '{}' with index {}. Driver reported a display length of 0. This can happen for \
-            variadic types without a fixed upper bound. You can manually specify an upper bound \
-            for variadic columns using the `--column-length-limit` command line argument.",
-            name, index
-        );
-    } else {
-        Ok(strategy)
-    }
+    Ok(strategy)
 }
 
 fn unknown_non_char_type(
