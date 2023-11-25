@@ -1,4 +1,4 @@
-use std::{cmp::{min, max}, convert::TryInto};
+use std::{cmp::min, convert::TryInto, num::NonZeroUsize};
 
 use anyhow::{bail, Error};
 use log::{debug, info};
@@ -96,20 +96,23 @@ pub fn strategy_from_column_description(
 
     let is_optional = cd.could_be_nullable();
 
-    let apply_length_limit = |reported_length| {
-        column_length_limit
-            .map(|limit| {
-                // Some drivers report an upper bound of `0` to express that the upper bound in
-                // actuallity is really large. So in this case we apply the limit, despite the fact
-                // that the reported length is actually smaller and we would want to take the
-                // minimum. `0` is the largest number imaginable in this case.
-                if reported_length == 0 {
-                    limit
-                } else {
-                    min(limit, reported_length)
-                }
-            })
-            .unwrap_or(reported_length)
+    let apply_length_limit = |reported_length: Option<NonZeroUsize>| {
+        match (reported_length, column_length_limit) {
+            (None, None) => bail!(
+                "Column '{}' with index {}. Driver reported a display length of 0. This can happen for \
+                variadic types without a fixed upper bound. You can manually specify an upper bound \
+                for variadic columns using the `--column-length-limit` command line argument.",
+                name, index
+            ),
+            // No upper bound has been reported by the driver, so we use the one supplied by the
+            // user.
+            (None, Some(column_length_limit)) => Ok(column_length_limit),
+            // Driver provided us with a length and no upper bound has been specified by the user.
+            (Some(reported_length), None) => Ok(reported_length.get()),
+            (Some(reported_length), Some(column_length_limit)) => {
+                Ok(min(reported_length.get(), column_length_limit))
+            }
+        }
     };
 
     let strategy: Box<dyn FetchStrategy> = match cd.data_type {
@@ -159,7 +162,7 @@ pub fn strategy_from_column_description(
             )
         }
         DataType::Binary { length } => {
-            let length = apply_length_limit(length);
+            let length = apply_length_limit(length)?;
             if prefer_varbinary {
                 Box::new(Binary::<ByteArrayType>::new(repetition, length))
             } else {
@@ -167,7 +170,7 @@ pub fn strategy_from_column_description(
             }
         }
         DataType::Varbinary { length } | DataType::LongVarbinary { length } => {
-            let length = apply_length_limit(length);
+            let length = apply_length_limit(length)?;
             Box::new(Binary::<ByteArrayType>::new(repetition, length))
         }
         // For character data we consider binding to wide (16-Bit) buffers in order to avoid
@@ -180,10 +183,10 @@ pub fn strategy_from_column_description(
         | DataType::LongVarchar { length: _ }
         | DataType::WChar { length: _ }) => {
             if use_utf16 {
-                let length = apply_length_limit(dt.utf16_len().unwrap());
+                let length = apply_length_limit(dt.utf16_len())?;
                 text_strategy(use_utf16, repetition, length)
             } else {
-                let length = apply_length_limit(dt.utf8_len().unwrap());
+                let length = apply_length_limit(dt.utf8_len())?;
                 text_strategy(use_utf16, repetition, length)
             }
         }
@@ -247,18 +250,14 @@ fn unknown_non_char_type(
     cursor: &mut impl ResultSetMetadata,
     index: i16,
     repetition: Repetition,
-    apply_length_limit: impl Fn(usize) -> usize,
+    apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> Result<usize, Error>,
 ) -> Result<Box<dyn FetchStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
-        len
+        Some(len)
     } else {
-        // Display size can be negative. There is anecdotical evidence for MySQL returning -4
-        // (NO_TOTAL) for JSON types. Wether this is actually allowed in ODBC I can not tell.
-        //
-        // `apply_length_limit` handles zero values
-        max(0,cursor.col_display_size(index.try_into().unwrap())?) as usize
+        cursor.col_display_size(index.try_into().unwrap())?
     };
-    let length = apply_length_limit(length);
+    let length = apply_length_limit(length)?;
     let use_utf16 = false;
     Ok(text_strategy(use_utf16, repetition, length))
 }

@@ -127,7 +127,7 @@ pub fn decmial_fetch_strategy(
             }
             .display_size()
             .unwrap();
-            Box::new(Utf8::with_bytes_length(repetition, length))
+            Box::new(Utf8::with_bytes_length(repetition, length.get()))
         }
     }
 }
@@ -176,7 +176,8 @@ where
             scale: self.scale.try_into().unwrap(),
         }
         .display_size()
-        .unwrap();
+        .unwrap()
+        .get();
         BufferDesc::Text { max_str_len }
     }
 
@@ -255,7 +256,8 @@ impl FetchStrategy for DecimalAsBinary {
             scale: self.scale.try_into().unwrap(),
         }
         .display_size()
-        .unwrap();
+        .unwrap()
+        .get();
         BufferDesc::Text { max_str_len }
     }
 
