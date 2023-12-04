@@ -167,11 +167,13 @@ pub struct QueryOpt {
     #[arg(long)]
     column_length_limit: Option<usize>,
     /// Default compression used by the parquet file writer.
-    #[arg(long, value_enum, default_value = "gzip")]
+    #[arg(long, value_enum, default_value = "zstd")]
     column_compression_default: CompressionVariants,
     /// The `gzip`, `zstd` and `brotli` compression variants allow for specifying an explicit
     /// compression level. If the selected compression variant does not support an explicit
     /// compression level this option is ignored.
+    /// 
+    /// Default compression level for `zstd` is 3
     #[arg(long)]
     column_compression_level_default: Option<u32>,
     /// Encoding used for character data requested from the data source.

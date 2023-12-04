@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.0
+
+* Default compression is now `zstd` with level `3`.
+
 ## 3.1.2
 
 * Fix: If ODBC drivers report `-4` (`NO_TOTAL`) as display size, the size can now be controlled with `--column-length-limit`. The issue occurred for JSON columns with MySQL.

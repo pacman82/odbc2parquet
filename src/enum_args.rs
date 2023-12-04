@@ -53,12 +53,10 @@ impl CompressionVariants {
             ),
             CompressionVariants::Lz4 => Compression::LZ4,
             CompressionVariants::Lz0 => Compression::LZO,
-            CompressionVariants::Zstd => Compression::ZSTD(
-                level
-                    .map(|l| ZstdLevel::try_new(l.try_into().unwrap()))
-                    .transpose()?
-                    .unwrap_or_default(),
-            ),
+            CompressionVariants::Zstd => {
+                let level = level.unwrap_or(3).try_into().unwrap();
+                Compression::ZSTD(ZstdLevel::try_new(level)?)
+            }
             CompressionVariants::Snappy => Compression::SNAPPY,
             CompressionVariants::Brotli => Compression::BROTLI(
                 level
