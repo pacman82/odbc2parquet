@@ -5,7 +5,7 @@ use log::{debug, info};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
-    ColumnDescription, DataType, Nullability, ResultSetMetadata,
+    ColumnDescription, DataType, Nullability, Quirks, ResultSetMetadata,
 };
 use parquet::{
     basic::{LogicalType, Repetition},
@@ -57,6 +57,7 @@ pub struct MappingOptions<'a> {
     pub avoid_decimal: bool,
     pub driver_does_support_i64: bool,
     pub column_length_limit: Option<usize>,
+    pub quirks: &'a Quirks,
 }
 
 /// Fetch strategies based on column description and enviroment arguments `MappingOptions`.
@@ -85,6 +86,7 @@ pub fn strategy_from_column_description(
         avoid_decimal,
         driver_does_support_i64,
         column_length_limit,
+        quirks: _,
     } = mapping_options;
 
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
@@ -182,13 +184,13 @@ pub fn strategy_from_column_description(
         | DataType::WVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
         | DataType::WChar { length: _ }) => {
-            if use_utf16 {
-                let length = apply_length_limit(dt.utf16_len())?;
-                text_strategy(use_utf16, repetition, length)
+            let len_in_chars = if use_utf16 {
+                dt.utf16_len()
             } else {
-                let length = apply_length_limit(dt.utf8_len())?;
-                text_strategy(use_utf16, repetition, length)
-            }
+                dt.utf8_len()
+            };
+            let length = apply_length_limit(len_in_chars)?;
+            text_strategy(use_utf16, repetition, length)
         }
         DataType::Other {
             data_type: SqlDataType(-154),

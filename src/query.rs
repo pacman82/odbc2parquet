@@ -27,7 +27,7 @@ use anyhow::{bail, Context, Error};
 use io_arg::IoArg;
 use log::{debug, info};
 use odbc_api::{
-    buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter,
+    buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, Environment, IntoParameter, Quirks,
     ResultSetMetadata,
 };
 use parquet::schema::types::{Type, TypePtr};
@@ -71,6 +71,8 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     let db_name = odbc_conn.database_management_system_name()?;
     info!("Database Managment System Name: {db_name}");
 
+    let quirks = Quirks::from_dbms_name(&db_name);
+
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default
             .to_compression(column_compression_level_default)?,
@@ -87,6 +89,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         avoid_decimal,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
         column_length_limit,
+        quirks: &quirks,
     };
 
     if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {
