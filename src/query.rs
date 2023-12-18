@@ -52,6 +52,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         parquet_column_encoding,
         avoid_decimal,
         driver_does_not_support_64bit_integers,
+        indicators_returned_from_bulk_fetch_are_memory_garbage,
         suffix_length,
         no_empty_file,
         column_length_limit,
@@ -71,7 +72,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     let db_name = odbc_conn.database_management_system_name()?;
     info!("Database Managment System Name: {db_name}");
 
-    let quirks = Quirks::from_dbms_name(&db_name);
+    let mut quirks = Quirks::new();
 
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default
