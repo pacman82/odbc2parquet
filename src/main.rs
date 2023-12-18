@@ -172,7 +172,7 @@ pub struct QueryOpt {
     /// The `gzip`, `zstd` and `brotli` compression variants allow for specifying an explicit
     /// compression level. If the selected compression variant does not support an explicit
     /// compression level this option is ignored.
-    /// 
+    ///
     /// Default compression level for `zstd` is 3
     #[arg(long)]
     column_compression_level_default: Option<u32>,
@@ -211,6 +211,11 @@ pub struct QueryOpt {
     /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
+    /// The IBM DB2 Linux ODBC drivers have been reported to return memory garbage instead of
+    /// indicators for the string length. Setting this flag will cause `odbc2parquet` to rely on
+    /// terminating zeroes, instead of indicators.
+    #[clap(long)]
+    indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
     /// Use this flag if you want to avoid the logical type DECIMAL in the produced output. E.g.
     /// because you want to process it with polars which does not support DECIMAL. In case the scale
     /// of the relational Decimal type is 0, the output will be mapped to either 32Bit or 64Bit
@@ -414,4 +419,32 @@ fn open_connection<'e>(
 
     let conn = odbc_env.driver_connect(&cs, &mut completed_connection_string, driver_completion)?;
     Ok(conn)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Cli, Command, QueryOpt};
+    use clap::Parser;
+
+    #[test]
+    fn parse_flag_for_garbage_indicators() {
+        let opt = Cli::parse_from([
+            "query",
+            "--indicators-returned-from-bulk-fetch-are-memory-garbage",
+            "-c",
+            "dummy_connection_string",
+            "out.par",
+            "SELECT * FROM table",
+        ]);
+
+        assert!(matches!(
+            opt.command,
+            Command::Query {
+                query_opt: QueryOpt {
+                    indicators_returned_from_bulk_fetch_are_memory_garbage: true,
+                    ..
+                }
+            }
+        ))
+    }
 }
