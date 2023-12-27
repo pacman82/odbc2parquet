@@ -524,6 +524,56 @@ fn query_large_numeric_as_text() {
     parquet_schema_out(out_str).stdout(contains("{\n  REQUIRED INT64 a (DECIMAL(10,0));\n}"));
 }
 
+/// Query a text ignoring indicators. This is helpful with IBM DB2 Linux drivers which have been
+/// observed to return plain memory garbage in the indicator arrays.
+#[test]
+fn query_text_ignoring_indicators() {
+    // Setup table for test
+    let table_name = "QueryTextIgnoringIndicators";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(50) NOT NULL", "VARCHAR(50)"]);
+    table.insert_rows_as_text(&[
+        [Some("Hello, World!"), Some("Hello, World!")],
+        [Some(""), None],
+    ]);
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a, b FROM {table_name};");
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            // Workaround is only active for UTF-8 encodings. We want this test to expose the same
+            // behaviour on Windows as on Linux so we manually set the encoding to System.
+            "--encoding",
+            "System",
+            // This flag activates the workaround for IBM DB2 we intend to test
+            "--driver-returns-memory-garbage-for-indicators",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    parquet_schema_out(out_str).stdout(contains(
+        "{\n  \
+            OPTIONAL BYTE_ARRAY a (UTF8);\n  \
+            OPTIONAL BYTE_ARRAY b (UTF8);\n\
+        }",
+    ));
+    parquet_read_out(out_str).stdout(eq(
+        "{a: \"Hello, World!\", b: \"Hello, World!\"}\n{a: null, b: null}\n",
+    ));
+}
+
 #[test]
 fn query_numeric_13_3() {
     // Setup table for test
