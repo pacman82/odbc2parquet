@@ -215,7 +215,7 @@ pub struct QueryOpt {
     /// indicators for the string length. Setting this flag will cause `odbc2parquet` to rely on
     /// terminating zeroes, instead of indicators.
     #[clap(long)]
-    indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
+    driver_returns_memory_garbage_for_indicators: bool,
     /// Use this flag if you want to avoid the logical type DECIMAL in the produced output. E.g.
     /// because you want to process it with polars which does not support DECIMAL. In case the scale
     /// of the relational Decimal type is 0, the output will be mapped to either 32Bit or 64Bit
@@ -426,13 +426,16 @@ mod tests {
     use crate::{Cli, Command, QueryOpt};
     use clap::Parser;
 
+    /// Initially something more elaborate had been planned for parsing quirks. Letting this test
+    /// stand in order to document how to unit test CLI argument parsing.
     #[test]
     fn parse_flag_for_garbage_indicators() {
         let opt = Cli::parse_from([
+            "odbc2parquet",
             "query",
-            "--indicators-returned-from-bulk-fetch-are-memory-garbage",
             "-c",
             "dummy_connection_string",
+            "--driver-returns-memory-garbage-for-indicators",
             "out.par",
             "SELECT * FROM table",
         ]);
@@ -441,7 +444,7 @@ mod tests {
             opt.command,
             Command::Query {
                 query_opt: QueryOpt {
-                    indicators_returned_from_bulk_fetch_are_memory_garbage: true,
+                    driver_returns_memory_garbage_for_indicators: true,
                     ..
                 }
             }

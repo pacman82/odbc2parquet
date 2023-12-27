@@ -52,7 +52,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         parquet_column_encoding,
         avoid_decimal,
         driver_does_not_support_64bit_integers,
-        indicators_returned_from_bulk_fetch_are_memory_garbage,
+        driver_returns_memory_garbage_for_indicators,
         suffix_length,
         no_empty_file,
         column_length_limit,
