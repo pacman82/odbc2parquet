@@ -86,7 +86,7 @@ pub fn strategy_from_column_description(
         avoid_decimal,
         driver_does_support_i64,
         column_length_limit,
-        quirks: _,
+        quirks,
     } = mapping_options;
 
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
@@ -190,7 +190,12 @@ pub fn strategy_from_column_description(
                 dt.utf8_len()
             };
             let length = apply_length_limit(len_in_chars)?;
-            text_strategy(use_utf16, repetition, length)
+            text_strategy(
+                use_utf16,
+                repetition,
+                length,
+                quirks.indicators_returned_from_bulk_fetch_are_memory_garbage,
+            )
         }
         DataType::Other {
             data_type: SqlDataType(-154),
@@ -200,7 +205,14 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 time_from_text(repetition, precision.try_into().unwrap())
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+                unknown_non_char_type(
+                    cd,
+                    cursor,
+                    index,
+                    repetition,
+                    apply_length_limit,
+                    quirks.indicators_returned_from_bulk_fetch_are_memory_garbage,
+                )?
             }
         }
         DataType::Other {
@@ -218,11 +230,25 @@ pub fn strategy_from_column_description(
                 );
                 timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+                unknown_non_char_type(
+                    cd,
+                    cursor,
+                    index,
+                    repetition,
+                    apply_length_limit,
+                    quirks.indicators_returned_from_bulk_fetch_are_memory_garbage,
+                )?
             }
         }
         DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-            unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+            unknown_non_char_type(
+                cd,
+                cursor,
+                index,
+                repetition,
+                apply_length_limit,
+                quirks.indicators_returned_from_bulk_fetch_are_memory_garbage,
+            )?
         }
     };
 
@@ -241,6 +267,7 @@ fn unknown_non_char_type(
     index: i16,
     repetition: Repetition,
     apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> Result<usize, Error>,
+    indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
 ) -> Result<Box<dyn FetchStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
         Some(len)
@@ -249,5 +276,10 @@ fn unknown_non_char_type(
     };
     let length = apply_length_limit(length)?;
     let use_utf16 = false;
-    Ok(text_strategy(use_utf16, repetition, length))
+    Ok(text_strategy(
+        use_utf16,
+        repetition,
+        length,
+        indicators_returned_from_bulk_fetch_are_memory_garbage,
+    ))
 }

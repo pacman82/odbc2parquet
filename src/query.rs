@@ -74,6 +74,9 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
 
     let mut quirks = Quirks::new();
 
+    quirks.indicators_returned_from_bulk_fetch_are_memory_garbage =
+        driver_returns_memory_garbage_for_indicators;
+
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default
             .to_compression(column_compression_level_default)?,

@@ -213,7 +213,10 @@ pub struct QueryOpt {
     driver_does_not_support_64bit_integers: bool,
     /// The IBM DB2 Linux ODBC drivers have been reported to return memory garbage instead of
     /// indicators for the string length. Setting this flag will cause `odbc2parquet` to rely on
-    /// terminating zeroes, instead of indicators.
+    /// terminating zeroes, instead of indicators. This prevents `odbc2parquet` from disambiguating
+    /// between empty strings and `NULL``. As a side effect of this workaround empty might be mapped
+    /// to NULL. Currently this workaround is only active if UTF-8 is used. This should be the case
+    /// on non-window platforms by default, or if the `System` encoding is active.
     #[clap(long)]
     driver_returns_memory_garbage_for_indicators: bool,
     /// Use this flag if you want to avoid the logical type DECIMAL in the produced output. E.g.
