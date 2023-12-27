@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.0
+
+* Introduced flag `--driver-returns-memory-garbage-for-indicators`. This is a reaction to witnessing IBM DB2/Linux drivers filling the indicator arrays with memory garbage. Activating this flag will activate a workaround using terminating zeroes to determine string length. `odbc2parquet` will not be able to distinguish between empty strings and NULL anymore with this active and map everything to NULL. Currently the workaround is only active for UTF-8 encoded payloads.
+
 ## 4.0.0
 
 * Default compression is now `zstd` with level `3`.
