@@ -3,9 +3,11 @@ use std::{
     io::{ErrorKind, Write},
     path::Path,
     sync::Arc,
+    str,
 };
 
 use assert_cmd::{assert::Assert, Command};
+use bytes::Bytes;
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{BufferDesc, TextRowSet},
@@ -15,7 +17,7 @@ use odbc_api::{
 use parquet::{
     column::writer::ColumnWriter,
     data_type::{ByteArray, FixedLenByteArray},
-    file::{properties::WriterProperties, writer::SerializedFileWriter},
+    file::{properties::WriterProperties, writer::SerializedFileWriter, serialized_reader::SerializedFileReader, reader::FileReader},
     schema::parser::parse_message_type,
 };
 use predicates::{ord::eq, str::contains};
@@ -3965,6 +3967,34 @@ pub fn reject_writing_to_stdout_and_file_size_limit() {
         .stderr(contains(
             "file-size-threshold conflicts with specifying stdout ('-') as output.",
         ));
+}
+
+#[test]
+fn write_statistics_for_text_columns() {
+    // Setup table for test
+    let table_name = "WriteStatisticsForTextColumns";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_rows_as_text(&[["aaa"], ["zzz"]]);
+    let query = format!("SELECT a FROM {table_name}");
+
+    let command = Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "query",
+            "--connection-string",
+            MSSQL,
+            "-", // Use `-` to explicitly write to stdout
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Then
+    let bytes = Bytes::from(command.get_output().stdout.clone());
+    let reader = SerializedFileReader::new(bytes).unwrap();
+    let stats = reader.metadata().row_group(0).column(0).statistics().unwrap();
+    assert_eq!("aaa", str::from_utf8(stats.min_bytes()).unwrap());
+    assert_eq!("zzz", str::from_utf8(stats.max_bytes()).unwrap());
 }
 
 /// This did not work in earlier versions there we set the batch write size of the parquet writer to
