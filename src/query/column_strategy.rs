@@ -34,7 +34,7 @@ use crate::{
 /// Decisions on how to handle a particular column of the ODBC result set. What buffer to bind to it
 /// for fetching, into what parquet type it is going to be translated and how to translate it from
 /// the odbc buffer elements to afformentioned parquet type.
-pub trait FetchStrategy {
+pub trait ColumnStrategy {
     /// Parquet column type used in parquet schema
     fn parquet_type(&self, name: &str) -> Type;
     /// Description of the buffer bound to the ODBC data source.
@@ -78,7 +78,7 @@ pub fn strategy_from_column_description(
     mapping_options: MappingOptions,
     cursor: &mut impl ResultSetMetadata,
     index: i16,
-) -> Result<Box<dyn FetchStrategy>, Error> {
+) -> Result<Box<dyn ColumnStrategy>, Error> {
     let MappingOptions {
         db_name,
         use_utf16,
@@ -117,7 +117,7 @@ pub fn strategy_from_column_description(
         }
     };
 
-    let strategy: Box<dyn FetchStrategy> = match cd.data_type {
+    let strategy: Box<dyn ColumnStrategy> = match cd.data_type {
         DataType::Float { precision: 0..=24 } | DataType::Real => {
             fetch_identical::<FloatType>(is_optional)
         }
@@ -268,7 +268,7 @@ fn unknown_non_char_type(
     repetition: Repetition,
     apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> Result<usize, Error>,
     indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
-) -> Result<Box<dyn FetchStrategy>, Error> {
+) -> Result<Box<dyn ColumnStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
         Some(len)
     } else {

@@ -13,7 +13,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::FetchStrategy;
+use super::column_strategy::ColumnStrategy;
 
 pub struct Date {
     repetition: Repetition,
@@ -27,7 +27,7 @@ impl Date {
     }
 }
 
-impl FetchStrategy for Date {
+impl ColumnStrategy for Date {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT32)
             .with_repetition(self.repetition)

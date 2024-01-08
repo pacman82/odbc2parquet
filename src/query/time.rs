@@ -14,10 +14,10 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::strategy::FetchStrategy;
+use super::column_strategy::ColumnStrategy;
 
 /// Parse wallclock time with fractional seconds from text into time. E.g. 16:04:12.0000000
-pub fn time_from_text(repetition: Repetition, precision: u8) -> Box<dyn FetchStrategy> {
+pub fn time_from_text(repetition: Repetition, precision: u8) -> Box<dyn ColumnStrategy> {
     Box::new(TimeFromText::new(repetition, precision))
 }
 
@@ -35,7 +35,7 @@ impl TimeFromText {
     }
 }
 
-impl FetchStrategy for TimeFromText {
+impl ColumnStrategy for TimeFromText {
     fn parquet_type(&self, name: &str) -> Type {
         let (unit, pt) = match self.precision {
             0..=3 => (TimeUnit::MILLIS(MilliSeconds {}), PhysicalType::INT32),

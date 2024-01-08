@@ -10,7 +10,7 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{strategy::FetchStrategy, timestamp_precision::TimestampPrecision};
+use super::{column_strategy::ColumnStrategy, timestamp_precision::TimestampPrecision};
 
 pub fn timestamp_tz(precision: u8, repetition: Repetition) -> Result<Box<TimestampTz>, Error> {
     Ok(Box::new(TimestampTz::with_bytes_length(
@@ -34,7 +34,7 @@ impl TimestampTz {
     }
 }
 
-impl FetchStrategy for TimestampTz {
+impl ColumnStrategy for TimestampTz {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT64)
             .with_logical_type(Some(LogicalType::Timestamp {

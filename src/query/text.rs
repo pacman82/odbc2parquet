@@ -12,14 +12,14 @@ use parquet::{
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::strategy::FetchStrategy;
+use super::column_strategy::ColumnStrategy;
 
 pub fn text_strategy(
     use_utf16: bool,
     repetition: Repetition,
     length: usize,
     indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
-) -> Box<dyn FetchStrategy> {
+) -> Box<dyn ColumnStrategy> {
     if use_utf16 {
         Box::new(Utf16ToUtf8::new(repetition, length))
     } else {
@@ -46,7 +46,7 @@ impl Utf16ToUtf8 {
     }
 }
 
-impl FetchStrategy for Utf16ToUtf8 {
+impl ColumnStrategy for Utf16ToUtf8 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
             .with_converted_type(ConvertedType::UTF8)
@@ -111,7 +111,7 @@ impl Utf8 {
     }
 }
 
-impl FetchStrategy for Utf8 {
+impl ColumnStrategy for Utf8 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
             .with_converted_type(ConvertedType::UTF8)
@@ -149,7 +149,7 @@ impl Utf8IgnoreIndicators {
     }
 }
 
-impl FetchStrategy for Utf8IgnoreIndicators {
+impl ColumnStrategy for Utf8IgnoreIndicators {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
             .with_converted_type(ConvertedType::UTF8)
