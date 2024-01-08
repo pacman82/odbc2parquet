@@ -1,13 +1,17 @@
 use anyhow::{bail, Context, Error};
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor, ColumnDescription, ResultSetMetadata};
+use odbc_api::{
+    buffers::ColumnarAnyBuffer, BlockCursor, ColumnDescription, Cursor, ResultSetMetadata,
+};
 use parquet::schema::types::{Type, TypePtr};
 use std::sync::Arc;
 
-use crate::{
+use crate::parquet_buffer::ParquetBuffer;
+
+use super::{
     batch_size_limit::BatchSizeLimit,
     column_strategy::{strategy_from_column_description, ColumnStrategy, MappingOptions},
-    parquet_buffer::ParquetBuffer, parquet_writer::ParquetOutput
+    parquet_writer::ParquetOutput,
 };
 
 /// Contains the decisions of how to fetch each columns of a table from an ODBC data source and copy
@@ -66,7 +70,10 @@ impl TableStrategy {
                 .unwrap(),
         );
 
-        Ok(TableStrategy { columns, parquet_schema })
+        Ok(TableStrategy {
+            columns,
+            parquet_schema,
+        })
     }
 
     pub fn allocate_fetch_buffer(
@@ -113,9 +120,9 @@ impl TableStrategy {
         // Count the number of total rows fetched so far for logging. This should be identical to
         // `num_batch * batch_size_row + num_rows`.
         let mut total_rows_fetched = 0;
-    
+
         let mut pb = ParquetBuffer::new(row_set_cursor.row_array_size());
-    
+
         while let Some(buffer) = row_set_cursor
             .fetch()
             .map_err(give_hint_about_flag_for_oracle_users)?
@@ -136,9 +143,9 @@ impl TableStrategy {
                     "Writing column with index {} and name '{}'.",
                     col_index, col_name
                 );
-    
+
                 let odbc_column = buffer.column(col_index);
-    
+
                 self.columns[col_index]
                     .1
                     .copy_odbc_to_parquet(&mut pb, column_writer.untyped(), odbc_column)
