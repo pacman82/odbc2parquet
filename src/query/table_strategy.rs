@@ -127,41 +127,52 @@ impl TableStrategy {
             .fetch()
             .map_err(give_hint_about_flag_for_oracle_users)?
         {
-            let mut row_group_writer = writer.next_row_group(num_batch)?;
-            let mut col_index = 0;
+            num_batch += 1;
             let num_rows = buffer.num_rows();
             total_rows_fetched += num_rows;
-            num_batch += 1;
             info!("Fetched batch {num_batch} with {num_rows} rows.");
             info!("Fetched {total_rows_fetched} rows in total.");
-            pb.set_num_rows_fetched(num_rows);
-            while let Some(mut column_writer) = row_group_writer.next_column()? {
-                let col_name = self.parquet_schema.get_fields()[col_index]
-                    .get_basic_info()
-                    .name();
-                debug!(
-                    "Writing column with index {} and name '{}'.",
-                    col_index, col_name
-                );
-
-                let odbc_column = buffer.column(col_index);
-
-                self.columns[col_index]
-                    .1
-                    .copy_odbc_to_parquet(&mut pb, column_writer.untyped(), odbc_column)
-                    .with_context(|| {
-                        format!(
-                            "Failed to copy column '{col_name}' from ODBC representation into \
-                            Parquet."
-                        )
-                    })?;
-                column_writer.close()?;
-                col_index += 1;
-            }
-            let metadata = row_group_writer.close()?;
-            writer.update_current_file_size(metadata.compressed_size());
+            self.write_batch(&mut writer, num_batch, buffer, &mut pb)?;
         }
         writer.close_box()?;
+        Ok(())
+    }
+
+    fn write_batch(
+        &self,
+        writer: &mut Box<dyn ParquetOutput>,
+        num_batch: u32,
+        buffer: &ColumnarAnyBuffer,
+        pb: &mut ParquetBuffer,
+    ) -> Result<(), Error> {
+        let mut row_group_writer = writer.next_row_group(num_batch)?;
+        let mut col_index = 0;
+        let num_rows = buffer.num_rows();
+        pb.set_num_rows_fetched(num_rows);
+        while let Some(mut column_writer) = row_group_writer.next_column()? {
+            let col_name = self.parquet_schema.get_fields()[col_index]
+                .get_basic_info()
+                .name();
+            debug!(
+                "Writing column with index {} and name '{}'.",
+                col_index, col_name
+            );
+
+            let odbc_column = buffer.column(col_index);
+
+            self.columns[col_index]
+                .1
+                .copy_odbc_to_parquet(pb, column_writer.untyped(), odbc_column)
+                .with_context(|| {
+                    format!(
+                        "Failed to copy column '{col_name}' from ODBC representation into Parquet."
+                    )
+                })?;
+            column_writer.close()?;
+            col_index += 1;
+        }
+        let metadata = row_group_writer.close()?;
+        writer.update_current_file_size(metadata.compressed_size());
         Ok(())
     }
 }
