@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.1
+
+* Decimal parsing is now more robust, against different radix characters and missing trailing zeroes.
+
 ## 4.1.0
 
 * Introduced flag `--driver-returns-memory-garbage-for-indicators`. This is a reaction to witnessing IBM DB2/Linux drivers filling the indicator arrays with memory garbage. Activating this flag will activate a workaround using terminating zeroes to determine string length. `odbc2parquet` will not be able to distinguish between empty strings and NULL anymore with this active and map everything to NULL. Currently the workaround is only active for UTF-8 encoded payloads.

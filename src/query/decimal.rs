@@ -4,7 +4,7 @@ use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
-    DataType,
+    decimal_text_to_i128, DataType,
 };
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -15,7 +15,9 @@ use parquet::{
 
 use crate::parquet_buffer::{BufferedDataType, ParquetBuffer};
 
-use super::{identical::fetch_identical_with_logical_type, column_strategy::ColumnStrategy, text::Utf8};
+use super::{
+    column_strategy::ColumnStrategy, identical::fetch_identical_with_logical_type, text::Utf8,
+};
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
 pub fn decmial_fetch_strategy(
@@ -242,7 +244,7 @@ impl ColumnStrategy for DecimalAsBinary {
                 scale: self.scale,
                 precision: self.precision as i32,
             }))
-            .with_precision(self.precision.try_into().unwrap())
+            .with_precision(self.precision.into())
             .with_scale(self.scale)
             .with_repetition(self.repetition)
             .build()
@@ -272,7 +274,7 @@ impl ColumnStrategy for DecimalAsBinary {
             column_writer,
             column_view,
             self.length_in_bytes,
-            self.precision,
+            self.scale,
         )
     }
 }
@@ -282,28 +284,20 @@ fn write_decimal_col(
     column_writer: &mut ColumnWriter,
     column_reader: AnySlice,
     length_in_bytes: usize,
-    precision: u8,
+    scale: i32,
 ) -> Result<(), Error> {
-    // This vec is going to hold the digits with sign, but without the decimal point. It is
-    // allocated once and reused for each value.
-    let mut digits: Vec<u8> = Vec::with_capacity(precision as usize + 1);
-
     let column_writer = FixedLenByteArrayType::get_column_writer_mut(column_writer).unwrap();
     let view = column_reader.as_text_view().expect(
         "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
         https://github.com/pacman82/odbc2parquet/issues.",
     );
 
+    let scale = scale as usize;
+
     parquet_buffer.write_twos_complement_i128(
         column_writer,
-        view.iter().map(|field| {
-            field.map(|text| {
-                digits.clear();
-                digits.extend(text.iter().filter(|&&c| c != b'.'));
-                let (num, _consumed) = i128::from_radix_10_signed(&digits);
-                num
-            })
-        }),
+        view.iter()
+            .map(|field| field.map(|text| decimal_text_to_i128(text, scale))),
         length_in_bytes,
     )?;
 
