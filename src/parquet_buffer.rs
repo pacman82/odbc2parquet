@@ -143,7 +143,7 @@ impl ParquetBuffer {
             cr.read_records(batch_size, Some(def_levels), None, values)?;
         // Strip mutability form the element of values, so we can use it in scan, there we only want
         // to mutate which part of values we see, not the elements of values themselfes.
-        let values: &_ = values;
+        let values = values.as_slice();
         let it = def_levels.iter().scan(values, |values, def| match def {
             0 => Some(None),
             1 => {
@@ -177,68 +177,69 @@ impl ParquetBuffer {
 }
 
 pub trait BufferedDataType: Sized {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]);
+    /// The tuple returned is (Values, Definiton levels)
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>);
 }
 
 impl BufferedDataType for i32 {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_i32.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_i32,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for i64 {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_i64.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_i64,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for f32 {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_f32.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_f32,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for f64 {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_f64.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_f64,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for bool {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_bool.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_bool,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for ByteArray {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_bytes_array.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_bytes_array,
+            &mut buffer.def_levels,
         )
     }
 }
 
 impl BufferedDataType for FixedLenByteArray {
-    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut [Self], &mut [i16]) {
+    fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
         (
-            buffer.values_fixed_bytes_array.as_mut_slice(),
-            buffer.def_levels.as_mut_slice(),
+            &mut buffer.values_fixed_bytes_array,
+            &mut buffer.def_levels,
         )
     }
 }

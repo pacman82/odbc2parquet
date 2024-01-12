@@ -1,4 +1,3 @@
-use core::panic;
 use std::{
     cmp::min,
     fs::File,
@@ -288,14 +287,20 @@ trait InserterBuilderStart: DataType + Sized {
         } else {
             Box::new(
                 |num_rows: usize,
-                 _: &mut ParquetBuffer,
+                 pb: &mut ParquetBuffer,
                  column_reader: ColumnReader,
                  column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let values = Self::unwrap_writer_required(column_writer);
-                    // Do not utilize parquet buffer. just pass the values through.
-                    let (_complete_rec, _num_val, _num_lvl) =
-                        cr.read_records(num_rows, None, None, values)?;
+
+                    // We could use the identity operation, but cr.records wants to borrow a Vec to
+                    // eventually resize it. So we have to use the parquet buffer, even though this
+                    // is an identity operation and no actual conversion is happening.
+                    let it = pb.read_required(&mut cr, num_rows)?.zip(values);
+                    for (buf, target) in it {
+                        *target = *buf
+                    }
+
                     Ok(())
                 },
             )
