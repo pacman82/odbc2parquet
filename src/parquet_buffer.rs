@@ -159,12 +159,15 @@ impl ParquetBuffer {
         Ok(it)
     }
 
-    /// Iterate over the elements of a column reader over a required column.
+    /// The elements of a column reader over a required column. Contrary to its counterpart
+    /// [`Self::read_optional`] this does not return an iterator but a slice. This allows for a
+    /// memcopy into the ODBC buffer, if no transformation is required. Also since there are no
+    /// NULL values, one does not need to now the def_levels in order to make sense of the values.
     pub fn read_required<T>(
         &mut self,
         cr: &mut ColumnReaderImpl<T>,
         batch_size: usize,
-    ) -> Result<impl Iterator<Item = &T::T> + '_, Error>
+    ) -> Result<&'_[T::T], Error>
     where
         T: DataType,
         T::T: BufferedDataType,
@@ -174,9 +177,7 @@ impl ParquetBuffer {
         values.clear();
         let (_complete_rec, _num_val, _num_lvl) =
             cr.read_records(batch_size, None, None, values)?;
-        let it = values.iter();
-
-        Ok(it)
+        Ok(values)
     }
 }
 
