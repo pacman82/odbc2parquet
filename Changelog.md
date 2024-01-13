@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.2
+
+* Updated dependencies, including an update to `parquet-rs 50`
+
 ## 4.1.1
 
 * Decimal parsing is now more robust, against different radix characters and missing trailing zeroes.
