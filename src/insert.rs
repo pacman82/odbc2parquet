@@ -166,8 +166,8 @@ trait InserterBuilderStart: DataType + Sized {
                       column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Text::unwrap_writer_optional(column_writer);
-                    let it = pb.read_required(&mut cr, num_rows)?;
-                    for (index, value) in it.enumerate() {
+                    let values = pb.read_required(&mut cr, num_rows)?;
+                    for (index, value) in values.iter().enumerate() {
                         f(value, index, &mut cw)?;
                     }
                     Ok(())
@@ -208,8 +208,8 @@ trait InserterBuilderStart: DataType + Sized {
                       column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = WText::unwrap_writer_optional(column_writer);
-                    let it = pb.read_required(&mut cr, num_rows)?;
-                    for (index, value) in it.enumerate() {
+                    let values = pb.read_required(&mut cr, num_rows)?;
+                    for (index, value) in values.iter().enumerate() {
                         f(value, index, &mut cw)?;
                     }
                     Ok(())
@@ -250,8 +250,8 @@ trait InserterBuilderStart: DataType + Sized {
                       column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
                     let mut cw = Binary::unwrap_writer_optional(column_writer);
-                    let it = pb.read_required(&mut cr, num_rows)?;
-                    for (index, value) in it.enumerate() {
+                    let values = pb.read_required(&mut cr, num_rows)?;
+                    for (index, value) in values.iter().enumerate() {
                         f(value, index, &mut cw)?;
                     }
                     Ok(())
@@ -291,15 +291,16 @@ trait InserterBuilderStart: DataType + Sized {
                  column_reader: ColumnReader,
                  column_writer: AnySliceMut| {
                     let mut cr = Self::get_column_reader(column_reader).expect(BUG);
-                    let values = Self::unwrap_writer_required(column_writer);
+                    let target = Self::unwrap_writer_required(column_writer);
 
                     // We could use the identity operation, but cr.records wants to borrow a Vec to
                     // eventually resize it. So we have to use the parquet buffer, even though this
                     // is an identity operation and no actual conversion is happening.
-                    let it = pb.read_required(&mut cr, num_rows)?.zip(values);
-                    for (buf, target) in it {
-                        *target = *buf;
-                    }
+                    let values = pb.read_required(&mut cr, num_rows)?;
+
+                    // While parquet-rs does not fill the ODBC buffer directly we can still just
+                    // copy the identical representations from one buffer to the other.
+                    target.copy_from_slice(values);
 
                     Ok(())
                 },
@@ -353,10 +354,10 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
                       column_reader: ColumnReader,
                       column_writer: AnySliceMut| {
                     let mut cr = Pdt::get_column_reader(column_reader).expect(BUG);
-                    let values = Odt::unwrap_writer_required(column_writer);
-                    let it = pb.read_required(&mut cr, num_rows)?;
-                    for (index, value) in it.enumerate() {
-                        values[index] = f(value)
+                    let dest = Odt::unwrap_writer_required(column_writer);
+                    let source = pb.read_required(&mut cr, num_rows)?;
+                    for (index, value) in source.iter().enumerate() {
+                        dest[index] = f(value)
                     }
                     Ok(())
                 },
