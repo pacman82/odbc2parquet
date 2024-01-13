@@ -298,7 +298,7 @@ trait InserterBuilderStart: DataType + Sized {
                     // is an identity operation and no actual conversion is happening.
                     let it = pb.read_required(&mut cr, num_rows)?.zip(values);
                     for (buf, target) in it {
-                        *target = *buf
+                        *target = *buf;
                     }
 
                     Ok(())

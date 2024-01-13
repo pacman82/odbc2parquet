@@ -139,6 +139,8 @@ impl ParquetBuffer {
         T::T: BufferedDataType,
     {
         let (values, def_levels) = T::T::mut_buf(self);
+        values.clear();
+        def_levels.clear();
         let (_complete_rec, _num_val, _num_lvl) =
             cr.read_records(batch_size, Some(def_levels), None, values)?;
         // Strip mutability form the element of values, so we can use it in scan, there we only want
@@ -168,6 +170,8 @@ impl ParquetBuffer {
         T::T: BufferedDataType,
     {
         let (values, _def_levels) = T::T::mut_buf(self);
+        // Read records would append to values.
+        values.clear();
         let (_complete_rec, _num_val, _num_lvl) =
             cr.read_records(batch_size, None, None, values)?;
         let it = values.iter();

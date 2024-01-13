@@ -2029,21 +2029,17 @@ pub fn insert_32_bit_integer() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
-
     // Prepare file
-
     // A temporary directory, to be removed at the end of the test.
     let tmp_dir = tempdir().unwrap();
     // The name of the input parquet file we are going to write. Since it is in a temporary
     // directory it will not outlive the end of the test.
     let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT32 a;
         }
     ";
-
     write_values_to_file(message_type, &input_path, &[42i32, 5, 1], None);
 
     // Insert file into table
@@ -2064,7 +2060,6 @@ pub fn insert_32_bit_integer() {
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
-
     assert_eq!("42\n5\n1", actual);
 }
 
