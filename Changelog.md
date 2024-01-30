@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.1.3
+
+* Updated dependencies, including a bug fix in decimal parsing. Negative decimals smaller than 1 would have misjuged as positive.
+
 ## 4.1.2
 
 * Updated dependencies, including an update to `parquet-rs 50`
