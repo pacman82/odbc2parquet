@@ -167,7 +167,7 @@ impl ParquetBuffer {
         &mut self,
         cr: &mut ColumnReaderImpl<T>,
         batch_size: usize,
-    ) -> Result<&'_[T::T], Error>
+    ) -> Result<&'_ [T::T], Error>
     where
         T: DataType,
         T::T: BufferedDataType,
@@ -188,64 +188,43 @@ pub trait BufferedDataType: Sized {
 
 impl BufferedDataType for i32 {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_i32,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_i32, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for i64 {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_i64,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_i64, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for f32 {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_f32,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_f32, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for f64 {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_f64,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_f64, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for bool {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_bool,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_bool, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for ByteArray {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_bytes_array,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_bytes_array, &mut buffer.def_levels)
     }
 }
 
 impl BufferedDataType for FixedLenByteArray {
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>) {
-        (
-            &mut buffer.values_fixed_bytes_array,
-            &mut buffer.def_levels,
-        )
+        (&mut buffer.values_fixed_bytes_array, &mut buffer.def_levels)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::CStr};
+use std::borrow::Cow;
 
 use anyhow::{anyhow, Error};
 use log::warn;
@@ -18,19 +18,11 @@ pub fn text_strategy(
     use_utf16: bool,
     repetition: Repetition,
     length: usize,
-    indicators_returned_from_bulk_fetch_are_memory_garbage: bool,
 ) -> Box<dyn ColumnStrategy> {
     if use_utf16 {
         Box::new(Utf16ToUtf8::new(repetition, length))
     } else {
-        // If the indicators are garbage we need to choose a strategy which ignores them. So far
-        // this only happend with the linux drivers of IBM DB2 so we did not implement the
-        // workaround for UTF-16, which is dominant on windows.
-        if indicators_returned_from_bulk_fetch_are_memory_garbage {
-            Box::new(Utf8IgnoreIndicators::with_bytes_length(length))
-        } else {
-            Box::new(Utf8::with_bytes_length(repetition, length))
-        }
+        Box::new(Utf8::with_bytes_length(repetition, length))
     }
 }
 
@@ -136,44 +128,6 @@ impl ColumnStrategy for Utf8 {
     }
 }
 
-/// Alternative fetch strategy for UTF-8. Ignoring indicators. Cannot distinguish between empty
-/// strings and NULL. Always chooses NULL as target representation.
-pub struct Utf8IgnoreIndicators {
-    // Maximum string length in bytes
-    length: usize,
-}
-
-impl Utf8IgnoreIndicators {
-    pub fn with_bytes_length(length: usize) -> Self {
-        Self { length }
-    }
-}
-
-impl ColumnStrategy for Utf8IgnoreIndicators {
-    fn parquet_type(&self, name: &str) -> Type {
-        Type::primitive_type_builder(name, PhysicalType::BYTE_ARRAY)
-            .with_converted_type(ConvertedType::UTF8)
-            .with_repetition(Repetition::OPTIONAL)
-            .build()
-            .unwrap()
-    }
-
-    fn buffer_desc(&self) -> BufferDesc {
-        BufferDesc::Text {
-            max_str_len: self.length,
-        }
-    }
-
-    fn copy_odbc_to_parquet(
-        &self,
-        parquet_buffer: &mut ParquetBuffer,
-        column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
-    ) -> Result<(), Error> {
-        write_to_utf8_ignoring_indicators(parquet_buffer, column_writer, column_view, self.length)
-    }
-}
-
 fn write_to_utf8(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
@@ -204,39 +158,4 @@ fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
         );
     }
     utf8_str.into_owned().into_bytes().into()
-}
-
-fn write_to_utf8_ignoring_indicators(
-    pb: &mut ParquetBuffer,
-    column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
-    length: usize,
-) -> Result<(), Error> {
-    let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
-    let view = column_reader.as_text_view().unwrap();
-
-    // We cannot use `view.iter()` as this implementation relies on the indices being correct.
-    // This workaround assumes that these are memory garbage though due to a bug in the driver. So
-    // we start from the raw value buffer and use the terminating zeroes.
-    let length_including_terminating_zero = length + 1;
-    let utf8_bytes = view
-        .raw_value_buffer()
-        .chunks_exact(length_including_terminating_zero)
-        .map(|bytes| {
-            let bytes = CStr::from_bytes_until_nul(bytes)
-                .expect("ODBC driver must return strings terminated by zero")
-                .to_bytes();
-            if bytes.is_empty() {
-                None // Map empty strings to NULL
-            } else {
-                Some(bytes)
-            }
-        });
-
-    pb.write_optional(
-        cw,
-        utf8_bytes.map(|item| item.map(utf8_bytes_to_byte_array)),
-    )?;
-
-    Ok(())
 }

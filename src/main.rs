@@ -218,13 +218,6 @@ pub struct QueryOpt {
     /// to NULL. Currently this workaround is only active if UTF-8 is used. This should be the case
     /// on non-window platforms by default, or if the `System` encoding is active.
     #[clap(long)]
-    driver_returns_memory_garbage_for_indicators: bool,
-    /// Use this flag if you want to avoid the logical type DECIMAL in the produced output. E.g.
-    /// because you want to process it with polars which does not support DECIMAL. In case the scale
-    /// of the relational Decimal type is 0, the output will be mapped to either 32Bit or 64Bit
-    /// Integeres with logical type none. If the scale is not 0 the Decimal column will be fetches
-    /// as text.
-    #[clap(long)]
     avoid_decimal: bool,
     /// In case fetch results gets split into multiple files a suffix with a number will be appended
     /// to each file name. Default suffix length is 2 leading to suffixes like e.g. `_03`. In case
@@ -422,35 +415,4 @@ fn open_connection<'e>(
 
     let conn = odbc_env.driver_connect(&cs, &mut completed_connection_string, driver_completion)?;
     Ok(conn)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{Cli, Command, QueryOpt};
-    use clap::Parser;
-
-    /// Initially something more elaborate had been planned for parsing quirks. Letting this test
-    /// stand in order to document how to unit test CLI argument parsing.
-    #[test]
-    fn parse_flag_for_garbage_indicators() {
-        let opt = Cli::parse_from([
-            "odbc2parquet",
-            "query",
-            "-c",
-            "dummy_connection_string",
-            "--driver-returns-memory-garbage-for-indicators",
-            "out.par",
-            "SELECT * FROM table",
-        ]);
-
-        assert!(matches!(
-            opt.command,
-            Command::Query {
-                query_opt: QueryOpt {
-                    driver_returns_memory_garbage_for_indicators: true,
-                    ..
-                }
-            }
-        ))
-    }
 }

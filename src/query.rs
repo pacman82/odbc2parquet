@@ -13,11 +13,11 @@ mod timestamp;
 mod timestamp_precision;
 mod timestamp_tz;
 
-use std::io::{stdin, Read};
 use anyhow::Error;
 use io_arg::IoArg;
 use log::info;
-use odbc_api::{Cursor, Environment, IntoParameter, Quirks};
+use odbc_api::{Cursor, Environment, IntoParameter};
+use std::io::{stdin, Read};
 
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
@@ -46,7 +46,6 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         parquet_column_encoding,
         avoid_decimal,
         driver_does_not_support_64bit_integers,
-        driver_returns_memory_garbage_for_indicators,
         suffix_length,
         no_empty_file,
         column_length_limit,
@@ -66,11 +65,6 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
     let db_name = odbc_conn.database_management_system_name()?;
     info!("Database Managment System Name: {db_name}");
 
-    let mut quirks = Quirks::new();
-
-    quirks.indicators_returned_from_bulk_fetch_are_memory_garbage =
-        driver_returns_memory_garbage_for_indicators;
-
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default
             .to_compression(column_compression_level_default)?,
@@ -87,7 +81,6 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         avoid_decimal,
         driver_does_support_i64: !driver_does_not_support_64bit_integers,
         column_length_limit,
-        quirks: &quirks,
     };
 
     if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {

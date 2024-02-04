@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.0 (next)
+
+* Removed flag `--driver_returns_memory_garbage_for_indicators`. Turns out the issue with IBM DB/2 drivers which triggered this can better be solved using a version of their ODBC driver which ends in `o` and is compiled with a 64Bit size for `SQLLEN`.
+
 ## 4.1.3
 
 * Updated dependencies, including a bug fix in decimal parsing. Negative decimals smaller than 1 would have misjuged as positive.
