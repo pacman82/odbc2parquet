@@ -174,11 +174,7 @@ impl ParquetOutput for FileWriter {
     }
 
     fn close(self) -> Result<(), Error> {
-        self.current_file.writer.close()?;
-        if self.current_file.file_size != ByteSize::b(0) || !self.no_empty_file {
-            self.current_file.path.keep()?;
-        }
-        Ok(())
+        self.current_file.finalize()
     }
 
     fn close_box(self: Box<Self>) -> Result<(), Error> {

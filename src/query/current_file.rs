@@ -11,11 +11,11 @@ use tempfile::TempPath;
 pub struct CurrentFile {
     pub writer: SerializedFileWriter<Box<dyn Write + Send>>,
     /// Path to the file currently being written to.
-    pub path: TempPath,
+    path: TempPath,
     /// Keep track of curret file size so we can split it, should it get too large.
     pub file_size: ByteSize,
     /// Wether to persist a file with no rows
-    pub no_empty_file: bool,
+    no_empty_file: bool,
 }
 
 impl CurrentFile {
