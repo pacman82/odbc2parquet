@@ -2,6 +2,7 @@ mod batch_size_limit;
 mod binary;
 mod boolean;
 mod column_strategy;
+mod current_file;
 mod date;
 mod decimal;
 mod identical;

@@ -19,7 +19,7 @@ use parquet::{
 };
 use tempfile::TempPath;
 
-use super::batch_size_limit::FileSizeLimit;
+use super::{batch_size_limit::FileSizeLimit, current_file::CurrentFile};
 
 /// Options influencing the output parquet file independent of schema or row content.
 pub struct ParquetWriterOptions {
@@ -90,18 +90,14 @@ pub trait ParquetOutput {
 /// batches is reached.
 struct FileWriter {
     base_path: PathBuf,
-    /// Path to the file currently being written to.
-    current_path: TempPath,
     schema: Arc<Type>,
     properties: Arc<WriterProperties>,
-    writer: SerializedFileWriter<Box<dyn Write + Send>>,
     file_size: FileSizeLimit,
     num_file: u32,
-    /// Keep track of curret file size so we can split it, should it get too large.
-    current_file_size: ByteSize,
     /// Length of the suffix, appended to the end of a file in case they are numbered.
     suffix_length: usize,
     no_empty_file: bool,
+    current_file: CurrentFile,
 }
 
 impl FileWriter {
@@ -120,31 +116,27 @@ impl FileWriter {
         };
 
         let current_path = Self::current_path(&path, suffix)?;
-        let output: Box<dyn Write + Send> = Box::new(Self::create_output_file(&current_path)?);
-
-        let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
+        let current_file = CurrentFile::new(current_path, schema.clone(), properties.clone())?;
 
         Ok(Self {
             base_path: path,
-            current_path,
             schema,
             properties,
-            writer,
             file_size: options.file_size,
             num_file: 1,
-            current_file_size: ByteSize::b(0),
             suffix_length: options.suffix_length,
             no_empty_file: options.no_empty_file,
+            current_file,
         })
     }
 
-    fn current_path(base_path: &Path, suffix: Option<(u32, usize)>) -> Result<TempPath, Error> {
+    fn current_path(base_path: &Path, suffix: Option<(u32, usize)>) -> Result<PathBuf, Error> {
         let path = if let Some((num_file, suffix_length)) = suffix {
             path_with_suffix(base_path, num_file, suffix_length)?
         } else {
             base_path.to_owned()
         };
-        Ok(TempPath::from_path(path))
+        Ok(path)
     }
 
     fn create_output_file(path: &Path) -> Result<File, Error> {
@@ -159,7 +151,7 @@ impl FileWriter {
 
 impl ParquetOutput for FileWriter {
     fn update_current_file_size(&mut self, row_group_size: i64) {
-        self.current_file_size += ByteSize::b(row_group_size.try_into().unwrap());
+        self.current_file.file_size += ByteSize::b(row_group_size.try_into().unwrap());
     }
 
     fn next_row_group(
@@ -169,35 +161,37 @@ impl ParquetOutput for FileWriter {
         // Check if we need to write the next batch into a new file
         if self
             .file_size
-            .should_start_new_file(num_batch, self.current_file_size)
+            .should_start_new_file(num_batch, self.current_file.file_size)
         {
             // Create next file path
             self.num_file += 1;
             // Reset current file size, so the next file will not be considered too large immediatly
-            self.current_file_size = ByteSize::b(0);
-            let mut tmp_current_path =
-                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
-            swap(&mut self.current_path, &mut tmp_current_path);
+            self.current_file.file_size = ByteSize::b(0);
+            let mut tmp_current_path = TempPath::from_path(Self::current_path(
+                &self.base_path,
+                Some((self.num_file, self.suffix_length)),
+            )?);
+            swap(&mut self.current_file.path, &mut tmp_current_path);
             // Persist last file
             tmp_current_path.keep()?;
             let file: Box<dyn Write + Send> =
-                Box::new(Self::create_output_file(&self.current_path)?);
+                Box::new(Self::create_output_file(&self.current_file.path)?);
 
             // Create new writer as tmp writer
             let mut tmp_writer =
                 SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
             // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
             // Make the new writer self.writer, so we will use it to insert the new data.
-            swap(&mut self.writer, &mut tmp_writer);
+            swap(&mut self.current_file.writer, &mut tmp_writer);
             tmp_writer.close()?;
         }
-        Ok(self.writer.next_row_group()?)
+        Ok(self.current_file.writer.next_row_group()?)
     }
 
     fn close(self) -> Result<(), Error> {
-        self.writer.close()?;
-        if self.current_file_size != ByteSize::b(0) || !self.no_empty_file {
-            self.current_path.keep()?;
+        self.current_file.writer.close()?;
+        if self.current_file.file_size != ByteSize::b(0) || !self.no_empty_file {
+            self.current_file.path.keep()?;
         }
         Ok(())
     }
