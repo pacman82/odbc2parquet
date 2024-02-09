@@ -1,5 +1,4 @@
 use std::{
-    fs::File,
     io::{stdout, Write},
     mem::swap,
     path::{Path, PathBuf},
@@ -17,7 +16,6 @@ use parquet::{
     },
     schema::types::{ColumnPath, Type},
 };
-use tempfile::TempPath;
 
 use super::{batch_size_limit::FileSizeLimit, current_file::CurrentFile};
 
@@ -116,7 +114,12 @@ impl FileWriter {
         };
 
         let current_path = Self::current_path(&path, suffix)?;
-        let current_file = CurrentFile::new(current_path, schema.clone(), properties.clone())?;
+        let current_file = CurrentFile::new(
+            current_path,
+            schema.clone(),
+            properties.clone(),
+            options.no_empty_file,
+        )?;
 
         Ok(Self {
             base_path: path,
@@ -138,15 +141,6 @@ impl FileWriter {
         };
         Ok(path)
     }
-
-    fn create_output_file(path: &Path) -> Result<File, Error> {
-        File::create(path).map_err(|io_err| {
-            Error::from(io_err).context(format!(
-                "Could not create output file '{}'",
-                path.to_string_lossy()
-            ))
-        })
-    }
 }
 
 impl ParquetOutput for FileWriter {
@@ -165,25 +159,16 @@ impl ParquetOutput for FileWriter {
         {
             // Create next file path
             self.num_file += 1;
-            // Reset current file size, so the next file will not be considered too large immediatly
-            self.current_file.file_size = ByteSize::b(0);
-            let mut tmp_current_path = TempPath::from_path(Self::current_path(
-                &self.base_path,
-                Some((self.num_file, self.suffix_length)),
-            )?);
-            swap(&mut self.current_file.path, &mut tmp_current_path);
-            // Persist last file
-            tmp_current_path.keep()?;
-            let file: Box<dyn Write + Send> =
-                Box::new(Self::create_output_file(&self.current_file.path)?);
-
-            // Create new writer as tmp writer
-            let mut tmp_writer =
-                SerializedFileWriter::new(file, self.schema.clone(), self.properties.clone())?;
-            // Make the old writer the tmp_writer, so we can call .close on it, which destroys it.
-            // Make the new writer self.writer, so we will use it to insert the new data.
-            swap(&mut self.current_file.writer, &mut tmp_writer);
-            tmp_writer.close()?;
+            let next_file_path =
+                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
+            let mut tmp_file = CurrentFile::new(
+                next_file_path,
+                self.schema.clone(),
+                self.properties.clone(),
+                self.no_empty_file,
+            )?;
+            swap(&mut self.current_file, &mut tmp_file);
+            tmp_file.finalize()?;
         }
         Ok(self.current_file.writer.next_row_group()?)
     }
