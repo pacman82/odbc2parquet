@@ -148,7 +148,7 @@ impl TableStrategy {
         let num_rows = buffer.num_rows();
         pb.set_num_rows_fetched(num_rows);
 
-        let mut export_nth_column = |col_index: usize, column_writer: &mut SerializedColumnWriter| {
+        let export_nth_column = |col_index: usize, column_writer: &mut SerializedColumnWriter| {
             let col_name = self.parquet_schema.get_fields()[col_index]
                 .get_basic_info()
                 .name();
@@ -168,15 +168,7 @@ impl TableStrategy {
             Ok::<(), Error>(())
         };
 
-        let mut row_group_writer = writer.next_row_group(num_batch)?;
-        let mut col_index = 0;
-        while let Some(mut column_writer) = row_group_writer.next_column()? {
-            export_nth_column(col_index, &mut column_writer)?;
-            column_writer.close()?;
-            col_index += 1;
-        }
-        let metadata = row_group_writer.close()?;
-        writer.update_current_file_size(metadata.compressed_size());
+        writer.write_next_row_group(num_batch, Box::new(export_nth_column))?;
         Ok(())
     }
 }

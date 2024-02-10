@@ -12,7 +12,7 @@ use parquet::{
     basic::{Compression, Encoding},
     file::{
         properties::{WriterProperties, WriterVersion},
-        writer::{SerializedFileWriter, SerializedRowGroupWriter},
+        writer::{SerializedColumnWriter, SerializedFileWriter},
     },
     schema::types::{ColumnPath, Type},
 };
@@ -72,10 +72,11 @@ pub trait ParquetOutput {
     /// # Parametersc
     ///
     /// * `num_batch`: Zero based num batch index
-    fn next_row_group(
+    fn write_next_row_group(
         &mut self,
         num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error>;
+        export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+    ) -> Result<(), Error>;
 
     /// Indicate that no further output is written. this triggers writing the parquet meta data and
     /// potentially persists a temporary file.
@@ -148,10 +149,11 @@ impl ParquetOutput for FileWriter {
         self.current_file.file_size += ByteSize::b(row_group_size.try_into().unwrap());
     }
 
-    fn next_row_group(
+    fn write_next_row_group(
         &mut self,
         num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
+        mut export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+    ) -> Result<(), Error> {
         // Check if we need to write the next batch into a new file
         if self
             .file_size
@@ -170,7 +172,19 @@ impl ParquetOutput for FileWriter {
             swap(&mut self.current_file, &mut tmp_file);
             tmp_file.finalize()?;
         }
-        Ok(self.current_file.writer.next_row_group()?)
+
+        // Write next row group
+        let mut col_index = 0;
+        let mut row_group_writer = self.current_file.writer.next_row_group()?;
+        while let Some(mut column_writer) = row_group_writer.next_column()? {
+            export_nth_column(col_index, &mut column_writer)?;
+            column_writer.close()?;
+            col_index += 1;
+        }
+        let metadata = row_group_writer.close()?;
+        self.update_current_file_size(metadata.compressed_size());
+
+        Ok(())
     }
 
     fn close(self) -> Result<(), Error> {
@@ -199,11 +213,21 @@ impl StandardOut {
 impl ParquetOutput for StandardOut {
     fn update_current_file_size(&mut self, _row_group_size: i64) {}
 
-    fn next_row_group(
+    fn write_next_row_group(
         &mut self,
         _num_batch: u32,
-    ) -> Result<SerializedRowGroupWriter<'_, Box<dyn Write + Send>>, Error> {
-        Ok(self.writer.next_row_group()?)
+        mut export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+    ) -> Result<(), Error> {
+        let mut row_group_writer = self.writer.next_row_group()?;
+        let mut col_index = 0;
+        while let Some(mut column_writer) = row_group_writer.next_column()? {
+            export_nth_column(col_index, &mut column_writer)?;
+            column_writer.close()?;
+            col_index += 1;
+        }
+        let metadata = row_group_writer.close()?;
+        self.update_current_file_size(metadata.compressed_size());
+        Ok(())
     }
 
     fn close(self) -> Result<(), Error> {
