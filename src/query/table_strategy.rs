@@ -157,7 +157,7 @@ impl TableStrategy {
             columns: &self.columns,
         };
 
-        writer.write_next_row_group(num_batch, column_exporter)?;
+        writer.write_row_group(num_batch, column_exporter)?;
         Ok(())
     }
 }

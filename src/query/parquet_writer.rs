@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::{format_err, Error};
-use bytesize::ByteSize;
 use io_arg::IoArg;
 use parquet::{
     basic::{Compression, Encoding},
@@ -64,17 +63,13 @@ pub fn parquet_output(
 /// Writes row groups to the output, which could be either standard out, a single parquet file or
 /// multiple parquet files with incrementing number suffixes.
 pub trait ParquetOutput {
-    /// In case we have a size limit for individual files, we need to keep track of the individual
-    /// file size.
-    fn update_current_file_size(&mut self, row_group_size: i64);
-
     /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
     /// previous one is reached.
     ///
     /// # Parametersc
     ///
     /// * `num_batch`: Zero based num batch index
-    fn write_next_row_group(
+    fn write_row_group(
         &mut self,
         num_batch: u32,
         export_nth_column: ColumnExporter,
@@ -147,14 +142,10 @@ impl FileWriter {
 }
 
 impl ParquetOutput for FileWriter {
-    fn update_current_file_size(&mut self, row_group_size: i64) {
-        self.current_file.file_size += ByteSize::b(row_group_size.try_into().unwrap());
-    }
-
-    fn write_next_row_group(
+    fn write_row_group(
         &mut self,
         num_batch: u32,
-        mut column_exporter: ColumnExporter,
+        column_exporter: ColumnExporter,
     ) -> Result<(), Error> {
         // Check if we need to write the next batch into a new file
         if self
@@ -176,15 +167,7 @@ impl ParquetOutput for FileWriter {
         }
 
         // Write next row group
-        let mut col_index = 0;
-        let mut row_group_writer = self.current_file.writer.next_row_group()?;
-        while let Some(mut column_writer) = row_group_writer.next_column()? {
-            column_exporter.export_nth_column(col_index, &mut column_writer)?;
-            column_writer.close()?;
-            col_index += 1;
-        }
-        let metadata = row_group_writer.close()?;
-        self.update_current_file_size(metadata.compressed_size());
+        self.current_file.write_row_group(column_exporter)?;
 
         Ok(())
     }
@@ -213,9 +196,7 @@ impl StandardOut {
 }
 
 impl ParquetOutput for StandardOut {
-    fn update_current_file_size(&mut self, _row_group_size: i64) {}
-
-    fn write_next_row_group(
+    fn write_row_group(
         &mut self,
         _num_batch: u32,
         mut column_exporter: ColumnExporter,
@@ -227,8 +208,7 @@ impl ParquetOutput for StandardOut {
             column_writer.close()?;
             col_index += 1;
         }
-        let metadata = row_group_writer.close()?;
-        self.update_current_file_size(metadata.compressed_size());
+        row_group_writer.close()?;
         Ok(())
     }
 
