@@ -183,16 +183,28 @@ impl ParquetOutput for FileWriter {
         }
 
         // Write next row group
-        self.current_file
+        let file_size = self.current_file
             .as_mut()
             .unwrap()
             .write_row_group(column_exporter)?;
+
+        if self.file_size.should_start_new_file(num_batch + 1, file_size) {
+            self.current_file.take().unwrap().finalize()?;
+        }
 
         Ok(())
     }
 
     fn close(self) -> Result<(), Error> {
-        self.current_file.unwrap().finalize()
+        // An active file might, or might not exsist at this point, dependening on wether or not the
+        // file splitting to due size thresholds coincides with the data source being consumed and
+        // all data being read from it. If our data source ran out of data, just after we closed the
+        // current file due to its size threshold it is `None`. In this case there is nothing to do
+        // though.
+        if let Some(open_file) = self.current_file {
+            open_file.finalize()?;
+        }
+        Ok(())
     }
 
     fn close_box(self: Box<Self>) -> Result<(), Error> {
