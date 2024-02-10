@@ -163,24 +163,6 @@ impl ParquetOutput for FileWriter {
             )?;
             self.current_file = Some(current_file);
         }
-        // Check if we need to write the next batch into a new file
-        if self
-            .file_size
-            .should_start_new_file(num_batch, self.current_file.as_ref().unwrap().file_size)
-        {
-            // Create next file path
-            self.num_file += 1;
-            let next_file_path =
-                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
-            let tmp_file = CurrentFile::new(
-                next_file_path,
-                self.schema.clone(),
-                self.properties.clone(),
-                self.no_empty_file,
-            )?;
-            self.current_file.take().unwrap().finalize()?;
-            self.current_file = Some(tmp_file);
-        }
 
         // Write next row group
         let file_size = self.current_file

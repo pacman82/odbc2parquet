@@ -15,7 +15,7 @@ pub struct CurrentFile {
     /// Path to the file currently being written to.
     path: TempPath,
     /// Keep track of curret file size so we can split it, should it get too large.
-    pub file_size: ByteSize,
+    file_size: ByteSize,
     /// Wether to persist a file with no rows
     no_empty_file: bool,
 }
