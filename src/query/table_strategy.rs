@@ -3,7 +3,10 @@ use log::{debug, info};
 use odbc_api::{
     buffers::ColumnarAnyBuffer, BlockCursor, ColumnDescription, Cursor, ResultSetMetadata,
 };
-use parquet::{file::writer::SerializedColumnWriter, schema::types::{Type, TypePtr}};
+use parquet::{
+    file::writer::SerializedColumnWriter,
+    schema::types::{Type, TypePtr},
+};
 use std::sync::Arc;
 
 use crate::parquet_buffer::ParquetBuffer;
@@ -148,28 +151,49 @@ impl TableStrategy {
         let num_rows = buffer.num_rows();
         pb.set_num_rows_fetched(num_rows);
 
+        let mut column_exporter = ColumnExporter {
+            buffer,
+            conversion_buffer: pb,
+            columns: &self.columns,
+        };
+
         let export_nth_column = |col_index: usize, column_writer: &mut SerializedColumnWriter| {
-            let col_name = self.parquet_schema.get_fields()[col_index]
-                .get_basic_info()
-                .name();
-            debug!(
-                "Writing column with index {} and name '{}'.",
-                col_index, col_name
-            );
-            let odbc_column = buffer.column(col_index);
-            self.columns[col_index]
-                .1
-                .copy_odbc_to_parquet(pb, column_writer.untyped(), odbc_column)
-                .with_context(|| {
-                    format!(
-                        "Failed to copy column '{col_name}' from ODBC representation into Parquet."
-                    )
-                })?;
-            Ok::<(), Error>(())
+            column_exporter.export_nth_column(col_index, column_writer)?;
+            Ok(())
         };
 
         writer.write_next_row_group(num_batch, Box::new(export_nth_column))?;
         Ok(())
+    }
+}
+
+/// Exposes the contents from a fetch buffer column by column to a parquet serializer
+pub struct ColumnExporter<'a> {
+    buffer: &'a ColumnarAnyBuffer,
+    conversion_buffer: &'a mut ParquetBuffer,
+    columns: &'a [(String, Box<dyn ColumnStrategy>)],
+}
+
+impl<'a> ColumnExporter<'a> {
+    pub fn export_nth_column(
+        &mut self,
+        col_index: usize,
+        column_writer: &mut SerializedColumnWriter,
+    ) -> Result<(), Error> {
+        let col_name = &self.columns[col_index].0;
+        debug!("Writing column with index {col_index} and name '{col_name}'.");
+        let odbc_column = self.buffer.column(col_index);
+        self.columns[col_index]
+            .1
+            .copy_odbc_to_parquet(
+                self.conversion_buffer,
+                column_writer.untyped(),
+                odbc_column,
+            )
+            .with_context(|| {
+                format!("Failed to copy column '{col_name}' from ODBC representation into Parquet.")
+            })?;
+        Ok::<(), Error>(())
     }
 }
 
