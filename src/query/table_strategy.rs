@@ -151,18 +151,13 @@ impl TableStrategy {
         let num_rows = buffer.num_rows();
         pb.set_num_rows_fetched(num_rows);
 
-        let mut column_exporter = ColumnExporter {
+        let column_exporter = ColumnExporter {
             buffer,
             conversion_buffer: pb,
             columns: &self.columns,
         };
 
-        let export_nth_column = |col_index: usize, column_writer: &mut SerializedColumnWriter| {
-            column_exporter.export_nth_column(col_index, column_writer)?;
-            Ok(())
-        };
-
-        writer.write_next_row_group(num_batch, Box::new(export_nth_column))?;
+        writer.write_next_row_group(num_batch, column_exporter)?;
         Ok(())
     }
 }
@@ -185,11 +180,7 @@ impl<'a> ColumnExporter<'a> {
         let odbc_column = self.buffer.column(col_index);
         self.columns[col_index]
             .1
-            .copy_odbc_to_parquet(
-                self.conversion_buffer,
-                column_writer.untyped(),
-                odbc_column,
-            )
+            .copy_odbc_to_parquet(self.conversion_buffer, column_writer.untyped(), odbc_column)
             .with_context(|| {
                 format!("Failed to copy column '{col_name}' from ODBC representation into Parquet.")
             })?;

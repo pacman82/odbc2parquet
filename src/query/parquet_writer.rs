@@ -12,12 +12,14 @@ use parquet::{
     basic::{Compression, Encoding},
     file::{
         properties::{WriterProperties, WriterVersion},
-        writer::{SerializedColumnWriter, SerializedFileWriter},
+        writer::SerializedFileWriter,
     },
     schema::types::{ColumnPath, Type},
 };
 
-use super::{batch_size_limit::FileSizeLimit, current_file::CurrentFile};
+use super::{
+    batch_size_limit::FileSizeLimit, current_file::CurrentFile, table_strategy::ColumnExporter,
+};
 
 /// Options influencing the output parquet file independent of schema or row content.
 pub struct ParquetWriterOptions {
@@ -75,7 +77,7 @@ pub trait ParquetOutput {
     fn write_next_row_group(
         &mut self,
         num_batch: u32,
-        export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+        export_nth_column: ColumnExporter,
     ) -> Result<(), Error>;
 
     /// Indicate that no further output is written. this triggers writing the parquet meta data and
@@ -152,7 +154,7 @@ impl ParquetOutput for FileWriter {
     fn write_next_row_group(
         &mut self,
         num_batch: u32,
-        mut export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+        mut column_exporter: ColumnExporter,
     ) -> Result<(), Error> {
         // Check if we need to write the next batch into a new file
         if self
@@ -177,7 +179,7 @@ impl ParquetOutput for FileWriter {
         let mut col_index = 0;
         let mut row_group_writer = self.current_file.writer.next_row_group()?;
         while let Some(mut column_writer) = row_group_writer.next_column()? {
-            export_nth_column(col_index, &mut column_writer)?;
+            column_exporter.export_nth_column(col_index, &mut column_writer)?;
             column_writer.close()?;
             col_index += 1;
         }
@@ -216,12 +218,12 @@ impl ParquetOutput for StandardOut {
     fn write_next_row_group(
         &mut self,
         _num_batch: u32,
-        mut export_nth_column: Box<dyn FnMut(usize, &mut SerializedColumnWriter) -> Result<(), Error> + '_>,
+        mut column_exporter: ColumnExporter,
     ) -> Result<(), Error> {
         let mut row_group_writer = self.writer.next_row_group()?;
         let mut col_index = 0;
         while let Some(mut column_writer) = row_group_writer.next_column()? {
-            export_nth_column(col_index, &mut column_writer)?;
+            column_exporter.export_nth_column(col_index, &mut column_writer)?;
             column_writer.close()?;
             col_index += 1;
         }
