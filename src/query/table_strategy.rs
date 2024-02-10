@@ -3,7 +3,7 @@ use log::{debug, info};
 use odbc_api::{
     buffers::ColumnarAnyBuffer, BlockCursor, ColumnDescription, Cursor, ResultSetMetadata,
 };
-use parquet::schema::types::{Type, TypePtr};
+use parquet::{file::writer::SerializedColumnWriter, schema::types::{Type, TypePtr}};
 use std::sync::Arc;
 
 use crate::parquet_buffer::ParquetBuffer;
@@ -145,11 +145,10 @@ impl TableStrategy {
         buffer: &ColumnarAnyBuffer,
         pb: &mut ParquetBuffer,
     ) -> Result<(), Error> {
-        let mut row_group_writer = writer.next_row_group(num_batch)?;
-        let mut col_index = 0;
         let num_rows = buffer.num_rows();
         pb.set_num_rows_fetched(num_rows);
-        while let Some(mut column_writer) = row_group_writer.next_column()? {
+
+        let mut export_nth_column = |col_index: usize, column_writer: &mut SerializedColumnWriter| {
             let col_name = self.parquet_schema.get_fields()[col_index]
                 .get_basic_info()
                 .name();
@@ -157,9 +156,7 @@ impl TableStrategy {
                 "Writing column with index {} and name '{}'.",
                 col_index, col_name
             );
-
             let odbc_column = buffer.column(col_index);
-
             self.columns[col_index]
                 .1
                 .copy_odbc_to_parquet(pb, column_writer.untyped(), odbc_column)
@@ -168,6 +165,13 @@ impl TableStrategy {
                         "Failed to copy column '{col_name}' from ODBC representation into Parquet."
                     )
                 })?;
+            Ok::<(), Error>(())
+        };
+
+        let mut row_group_writer = writer.next_row_group(num_batch)?;
+        let mut col_index = 0;
+        while let Some(mut column_writer) = row_group_writer.next_column()? {
+            export_nth_column(col_index, &mut column_writer)?;
             column_writer.close()?;
             col_index += 1;
         }
