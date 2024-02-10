@@ -47,7 +47,7 @@ impl CurrentFile {
     pub fn write_row_group(
         &mut self,
         mut column_exporter: ColumnExporter,
-    ) -> Result<(), Error> {
+    ) -> Result<ByteSize, Error> {
         let mut col_index = 0;
         let mut row_group_writer = self.writer.next_row_group()?;
         while let Some(mut column_writer) = row_group_writer.next_column()? {
@@ -59,7 +59,7 @@ impl CurrentFile {
         // Of course writing a row group increases file size. We keep track of it here, so we can
         // split on file size if we go over a threshold.
         self.file_size += ByteSize::b(metadata.compressed_size().try_into().unwrap());
-        Ok(())
+        Ok(self.file_size)
     }
 
     /// Writes metadata at the end and persists the file. Called if we do not want to continue

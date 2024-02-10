@@ -1,6 +1,5 @@
 use std::{
     io::{stdout, Write},
-    mem::swap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -93,7 +92,10 @@ struct FileWriter {
     /// Length of the suffix, appended to the end of a file in case they are numbered.
     suffix_length: usize,
     no_empty_file: bool,
-    current_file: CurrentFile,
+    /// Current file open for writing. `None`, if we are in between files, i.e. a file has been
+    /// closed, due to the size threshold, but a new row group has not yet been received from the
+    /// database.
+    current_file: Option<CurrentFile>,
 }
 
 impl FileWriter {
@@ -127,7 +129,7 @@ impl FileWriter {
             num_file: 1,
             suffix_length: options.suffix_length,
             no_empty_file: options.no_empty_file,
-            current_file,
+            current_file: Some(current_file),
         })
     }
 
@@ -147,33 +149,50 @@ impl ParquetOutput for FileWriter {
         num_batch: u32,
         column_exporter: ColumnExporter,
     ) -> Result<(), Error> {
+        // There is no file. Let us create one so we can write the row group.
+        if self.current_file.is_none() {
+            // Create next file path
+            self.num_file += 1;
+            let path =
+                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
+            let current_file = CurrentFile::new(
+                path,
+                self.schema.clone(),
+                self.properties.clone(),
+                self.no_empty_file,
+            )?;
+            self.current_file = Some(current_file);
+        }
         // Check if we need to write the next batch into a new file
         if self
             .file_size
-            .should_start_new_file(num_batch, self.current_file.file_size)
+            .should_start_new_file(num_batch, self.current_file.as_ref().unwrap().file_size)
         {
             // Create next file path
             self.num_file += 1;
             let next_file_path =
                 Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
-            let mut tmp_file = CurrentFile::new(
+            let tmp_file = CurrentFile::new(
                 next_file_path,
                 self.schema.clone(),
                 self.properties.clone(),
                 self.no_empty_file,
             )?;
-            swap(&mut self.current_file, &mut tmp_file);
-            tmp_file.finalize()?;
+            self.current_file.take().unwrap().finalize()?;
+            self.current_file = Some(tmp_file);
         }
 
         // Write next row group
-        self.current_file.write_row_group(column_exporter)?;
+        self.current_file
+            .as_mut()
+            .unwrap()
+            .write_row_group(column_exporter)?;
 
         Ok(())
     }
 
     fn close(self) -> Result<(), Error> {
-        self.current_file.finalize()
+        self.current_file.unwrap().finalize()
     }
 
     fn close_box(self: Box<Self>) -> Result<(), Error> {
