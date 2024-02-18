@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.0
+
+* Additional log message with info level emitting the number of total number of rows written, the file size and the path for each file.
+
 ## 5.0.0
 
 * Removed flag `--driver_returns_memory_garbage_for_indicators`. Turns out the issue with IBM DB/2 drivers which triggered this can better be solved using a version of their ODBC driver which ends in `o` and is compiled with a 64Bit size for `SQLLEN`.
