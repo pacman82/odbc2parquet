@@ -16,8 +16,6 @@ pub struct CurrentFile {
     path: TempPath,
     /// Keep track of curret file size so we can split it, should it get too large.
     file_size: ByteSize,
-    /// Wether to persist a file with no rows
-    no_empty_file: bool,
 }
 
 impl CurrentFile {
@@ -25,7 +23,6 @@ impl CurrentFile {
         path: PathBuf,
         schema: Arc<Type>,
         properties: Arc<WriterProperties>,
-        no_empty_file: bool,
     ) -> Result<CurrentFile, Error> {
         let output: Box<dyn Write + Send> = Box::new(File::create(&path).map_err(|io_err| {
             Error::from(io_err).context(format!(
@@ -40,7 +37,6 @@ impl CurrentFile {
             writer,
             path,
             file_size: ByteSize::b(0),
-            no_empty_file,
         })
     }
 
@@ -67,9 +63,7 @@ impl CurrentFile {
     pub fn finalize(self) -> Result<(), Error> {
         self.writer.close()?;
         // Do not persist empty files
-        if !self.no_empty_file || self.file_size != ByteSize::b(0) {
-            let _ = self.path.keep()?;
-        }
+        let _ = self.path.keep()?;
         Ok(())
     }
 }

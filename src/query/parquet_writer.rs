@@ -91,7 +91,6 @@ struct FileWriter {
     num_file: u32,
     /// Length of the suffix, appended to the end of a file in case they are numbered.
     suffix_length: usize,
-    no_empty_file: bool,
     /// Current file open for writing. `None`, if we are in between files, i.e. a file has been
     /// closed, due to the size threshold, but a new row group has not yet been received from the
     /// database.
@@ -114,12 +113,16 @@ impl FileWriter {
         };
 
         let current_path = Self::current_path(&path, suffix)?;
-        let current_file = CurrentFile::new(
-            current_path,
-            schema.clone(),
-            properties.clone(),
-            options.no_empty_file,
-        )?;
+
+        let current_file = if !options.no_empty_file {
+            Some(CurrentFile::new(
+                current_path,
+                schema.clone(),
+                properties.clone(),
+            )?)
+        } else {
+            None
+        };
 
         Ok(Self {
             base_path: path,
@@ -128,8 +131,7 @@ impl FileWriter {
             file_size: options.file_size,
             num_file: 1,
             suffix_length: options.suffix_length,
-            no_empty_file: options.no_empty_file,
-            current_file: Some(current_file),
+            current_file,
         })
     }
 
@@ -155,22 +157,22 @@ impl ParquetOutput for FileWriter {
             self.num_file += 1;
             let path =
                 Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
-            let current_file = CurrentFile::new(
-                path,
-                self.schema.clone(),
-                self.properties.clone(),
-                self.no_empty_file,
-            )?;
+            let current_file =
+                CurrentFile::new(path, self.schema.clone(), self.properties.clone())?;
             self.current_file = Some(current_file);
         }
 
         // Write next row group
-        let file_size = self.current_file
+        let file_size = self
+            .current_file
             .as_mut()
             .unwrap()
             .write_row_group(column_exporter)?;
 
-        if self.file_size.should_start_new_file(num_batch + 1, file_size) {
+        if self
+            .file_size
+            .should_start_new_file(num_batch + 1, file_size)
+        {
             self.current_file.take().unwrap().finalize()?;
         }
 
