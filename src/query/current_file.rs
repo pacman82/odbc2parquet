@@ -2,6 +2,7 @@ use std::{fs::File, io::Write, path::PathBuf, sync::Arc};
 
 use anyhow::Error;
 use bytesize::ByteSize;
+use log::info;
 use parquet::{
     file::{properties::WriterProperties, writer::SerializedFileWriter},
     schema::types::Type,
@@ -16,6 +17,8 @@ pub struct CurrentFile {
     path: TempPath,
     /// Keep track of curret file size so we can split it, should it get too large.
     file_size: ByteSize,
+    /// Keep track of the total number of rows writte into the file so far.
+    total_num_rows: u64,
 }
 
 impl CurrentFile {
@@ -37,6 +40,7 @@ impl CurrentFile {
             writer,
             path,
             file_size: ByteSize::b(0),
+            total_num_rows: 0,
         })
     }
 
@@ -55,6 +59,8 @@ impl CurrentFile {
         // Of course writing a row group increases file size. We keep track of it here, so we can
         // split on file size if we go over a threshold.
         self.file_size += ByteSize::b(metadata.compressed_size().try_into().unwrap());
+        let rows_in_row_group: u64 = metadata.num_rows().try_into().unwrap();
+        self.total_num_rows += rows_in_row_group;
         Ok(self.file_size)
     }
 
@@ -63,7 +69,13 @@ impl CurrentFile {
     pub fn finalize(self) -> Result<(), Error> {
         self.writer.close()?;
         // Do not persist empty files
-        let _ = self.path.keep()?;
+        let path = self.path.keep()?;
+        info!(
+            "{} rows have been written to {} with a file size of {}.",
+            self.total_num_rows,
+            path.to_string_lossy(),
+            self.file_size
+        );
         Ok(())
     }
 }
