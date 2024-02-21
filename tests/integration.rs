@@ -1297,6 +1297,37 @@ fn no_empty_file_works_with_split_files() {
     );
 }
 
+/// If the query does not come back empty, of course a file should be created, even if the
+/// `--no-empty-file` flag is set.
+#[test]
+fn emit_file_despite_no_empty_file_set() {
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = "SELECT 42 as a";
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            out_str,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: 42}\n";
+    parquet_read_out(out_str).stdout(eq(expected));
+}
+
 /// Should read query from standard input if "-" is provided as query text.
 #[test]
 fn read_query_from_stdin() {
@@ -1371,6 +1402,55 @@ fn split_files_on_num_row_groups() {
             out_str,
             "--connection-string",
             MSSQL,
+            "--batch-size-row",
+            "1",
+            "--row-groups-per-file",
+            "1",
+            &query,
+        ])
+        .assert()
+        .success();
+
+    // Expect one file per row in table (3)
+
+    parquet_read_out(out_dir.path().join("out_01.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_02.par").to_str().unwrap());
+    parquet_read_out(out_dir.path().join("out_03.par").to_str().unwrap());
+}
+
+/// Verify naming of the files is with successive numbers starting from 1 to 3 with split files and
+/// `--no-empty-file` flag set. This was messed up, with a refactoring once and file names started
+/// with `2` instead of `1``.
+#[test]
+fn file_name_no_empty_file_and_split_files() {
+    // Setup table for test
+    let table_name = "FileNameNoEmptyFileAndSplitFiles";
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
+    conn.execute(&insert, ()).unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name}");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--no-empty-file",
             "--batch-size-row",
             "1",
             "--row-groups-per-file",

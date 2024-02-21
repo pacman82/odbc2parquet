@@ -114,14 +114,14 @@ impl FileWriter {
 
         let current_path = Self::current_path(&path, suffix)?;
 
-        let current_file = if !options.no_empty_file {
-            Some(CurrentFile::new(
+        let (current_file, num_file) = if !options.no_empty_file {
+            (Some(CurrentFile::new(
                 current_path,
                 schema.clone(),
                 properties.clone(),
-            )?)
+            )?), 1)
         } else {
-            None
+            (None, 0)
         };
 
         Ok(Self {
@@ -129,7 +129,7 @@ impl FileWriter {
             schema,
             properties,
             file_size: options.file_size,
-            num_file: 1,
+            num_file,
             suffix_length: options.suffix_length,
             current_file,
         })
