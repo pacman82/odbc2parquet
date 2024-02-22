@@ -104,35 +104,29 @@ impl FileWriter {
         options: ParquetWriterOptions,
         properties: Arc<WriterProperties>,
     ) -> Result<Self, Error> {
-        let suffix = {
-            if options.file_size.output_is_splitted() {
-                Some((1, options.suffix_length))
-            } else {
-                None
-            }
-        };
-
-        let current_path = Self::current_path(&path, suffix)?;
-
-        let (current_file, num_file) = if !options.no_empty_file {
-            (Some(CurrentFile::new(
-                current_path,
-                schema.clone(),
-                properties.clone(),
-            )?), 1)
-        } else {
-            (None, 0)
-        };
-
-        Ok(Self {
+        let mut file_writer = Self {
             base_path: path,
             schema,
             properties,
             file_size: options.file_size,
-            num_file,
+            num_file: 0,
             suffix_length: options.suffix_length,
-            current_file,
-        })
+            current_file: None,
+        };
+
+        if !options.no_empty_file {
+            file_writer.next_file()?;
+        }
+
+        Ok(file_writer)
+    }
+
+    fn next_file(&mut self) -> Result<(), Error> {
+        let suffix = self.file_size.output_is_splitted().then_some((self.num_file + 1, self.suffix_length));
+        let path = Self::current_path(&self.base_path, suffix)?;
+        self.current_file = Some(CurrentFile::new(path, self.schema.clone(), self.properties.clone())?);
+        self.num_file += 1;
+        Ok(())
     }
 
     fn current_path(base_path: &Path, suffix: Option<(u32, usize)>) -> Result<PathBuf, Error> {
@@ -153,13 +147,7 @@ impl ParquetOutput for FileWriter {
     ) -> Result<(), Error> {
         // There is no file. Let us create one so we can write the row group.
         if self.current_file.is_none() {
-            // Create next file path
-            self.num_file += 1;
-            let path =
-                Self::current_path(&self.base_path, Some((self.num_file, self.suffix_length)))?;
-            let current_file =
-                CurrentFile::new(path, self.schema.clone(), self.properties.clone())?;
-            self.current_file = Some(current_file);
+            self.next_file()?
         }
 
         // Write next row group

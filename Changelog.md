@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.1.2
+
+* Fix: 5.1.0 introduced a regression, which caused output file enumeration to happen even if file splitting is not activated, if `--no-empty-file` had been set.
+ 
+
 ## 5.1.1
 
 * Fix: 5.1.0 introduced a regression, which caused output file enumeration to be start with a suffix of `2` instead of `1` if in addition to file splitting the `--no-empty-file` flag had also been set.

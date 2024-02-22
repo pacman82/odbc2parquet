@@ -1318,6 +1318,7 @@ fn emit_file_despite_no_empty_file_set() {
             "query",
             "--connection-string",
             MSSQL,
+            "--no-empty-file",
             out_str,
             query,
         ])
