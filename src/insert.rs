@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{bail, Error};
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike};
 use log::info;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
@@ -479,7 +479,7 @@ fn parquet_type_to_odbc_buffer_desc(
                 BufferDesc::Timestamp { nullable },
                 Int64Type::map_to::<Timestamp>().with(
                     |&microseconds_since_epoch| {
-                        let dt = NaiveDateTime::from_timestamp_opt(
+                        let dt = DateTime::from_timestamp(
                             microseconds_since_epoch / 1_000_000,
                             ((microseconds_since_epoch % 1_000_000) * 1_000) as u32,
                         )
@@ -501,7 +501,7 @@ fn parquet_type_to_odbc_buffer_desc(
                 BufferDesc::Timestamp { nullable },
                 Int64Type::map_to::<Timestamp>().with(
                     |&milliseconds_since_epoch| {
-                        let dt = NaiveDateTime::from_timestamp_opt(
+                        let dt = DateTime::from_timestamp(
                             milliseconds_since_epoch / 1000,
                             ((milliseconds_since_epoch % 1000) * 1_000_000) as u32,
                         )
@@ -717,7 +717,7 @@ fn i128_from_be_slice(bytes: &[u8]) -> i128 {
 
 fn days_since_epoch_to_odbc_date(days_since_epoch: i32) -> odbc_api::sys::Date {
     let unix_epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-    let naive_date = unix_epoch.add(Duration::days(days_since_epoch as i64));
+    let naive_date = unix_epoch.add(Duration::try_days(days_since_epoch as i64).unwrap());
     odbc_api::sys::Date {
         year: naive_date.year().try_into().unwrap(),
         month: naive_date.month().try_into().unwrap(),

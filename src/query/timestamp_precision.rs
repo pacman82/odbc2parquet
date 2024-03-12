@@ -43,9 +43,10 @@ impl TimestampPrecision {
             .unwrap();
 
         let ret = match self {
-            TimestampPrecision::Milliseconds => datetime.timestamp_millis(),
-            TimestampPrecision::Microseconds => datetime.timestamp_micros(),
+            TimestampPrecision::Milliseconds => datetime.and_utc().timestamp_millis(),
+            TimestampPrecision::Microseconds => datetime.and_utc().timestamp_micros(),
             TimestampPrecision::Nanoseconds => datetime
+                .and_utc()
                 .timestamp_nanos_opt()
                 .ok_or_else(|| nanoseconds_precision_error(&datetime))?,
         };

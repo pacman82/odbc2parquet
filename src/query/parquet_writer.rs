@@ -122,9 +122,16 @@ impl FileWriter {
     }
 
     fn next_file(&mut self) -> Result<(), Error> {
-        let suffix = self.file_size.output_is_splitted().then_some((self.num_file + 1, self.suffix_length));
+        let suffix = self
+            .file_size
+            .output_is_splitted()
+            .then_some((self.num_file + 1, self.suffix_length));
         let path = Self::current_path(&self.base_path, suffix)?;
-        self.current_file = Some(CurrentFile::new(path, self.schema.clone(), self.properties.clone())?);
+        self.current_file = Some(CurrentFile::new(
+            path,
+            self.schema.clone(),
+            self.properties.clone(),
+        )?);
         self.num_file += 1;
         Ok(())
     }
