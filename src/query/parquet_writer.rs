@@ -232,21 +232,8 @@ impl ParquetOutput for StandardOut {
     }
 }
 
-fn pad_number(num_file: u32, suffix_length: usize) -> String {
-    let num_file = num_file.to_string();
-    let num_leading_zeroes = if suffix_length > num_file.len() {
-        suffix_length - num_file.len()
-    } else {
-        // Suffix is already large enough (if not too large) without leading zeroes
-        0
-    };
-    let padding = "0".repeat(num_leading_zeroes);
-    let suffix = format!("_{padding}{num_file}");
-    suffix
-}
-
 fn path_with_suffix(path: &Path, num_file: u32, suffix_length: usize) -> Result<PathBuf, Error> {
-    let suffix = pad_number(num_file, suffix_length);
+    let suffix = format!("{:0width$}", num_file, width = suffix_length);
     let mut stem = path
         .file_stem()
         .ok_or_else(|| format_err!("Output needs To have a file stem."))?
