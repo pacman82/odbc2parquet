@@ -233,13 +233,16 @@ impl ParquetOutput for StandardOut {
 }
 
 fn path_with_suffix(path: &Path, num_file: u32, suffix_length: usize) -> Result<PathBuf, Error> {
-    let suffix = format!("{:0width$}", num_file, width = suffix_length);
+    let suffix = format!("_{:0width$}", num_file, width = suffix_length);
     let mut stem = path
         .file_stem()
         .ok_or_else(|| format_err!("Output needs To have a file stem."))?
         .to_owned();
     stem.push(suffix);
     let mut path_with_suffix = path.with_file_name(stem);
-    path_with_suffix = path_with_suffix.with_extension("par");
+    // Retain file extension
+    if let Some(extension) = path.extension() {
+        path_with_suffix = path_with_suffix.with_extension(extension);
+    }
     Ok(path_with_suffix)
 }
