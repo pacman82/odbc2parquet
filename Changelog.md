@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.0
+
+* File extensions are now retained then splitting files. E.g. if `--output` is 'my_results.parquet' and split into two files they will be named 'my_results_01.parquet' and 'my_results_02.parquet'. Previously there has been always the ending '.par' attached.
+
 ## 5.1.2
 
 * Fix: 5.1.0 introduced a regression, which caused output file enumeration to happen even if file splitting is not activated, if `--no-empty-file` had been set.
