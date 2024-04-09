@@ -71,6 +71,14 @@ This tool links both at runtime and during build against `libodbc.so`. To get it
 brew install unixodbc
 ```
 
+### Via scoop package manager
+
+If you have [scoop package manager](https://scoop.sh) installed (Windows only), you can install this with:
+
+```shell
+scoop install odbc2parquet
+```
+
 ### Download binary from GitHub
 
 <https://github.com/pacman82/odbc2parquet/releases/latest>
