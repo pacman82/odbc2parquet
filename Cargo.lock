@@ -960,20 +960,6 @@ checksum = "d079845b37af429bfe5dfa76e6d087d788031045b25cfc6fd898486fd9847666"
 
 [[package]]
 name = "odbc-api"
-version = "6.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "732c83a6098cea3e7c5604390d22389efe20d23bcce18e7cd3e87685c927da6d"
-dependencies = [
- "atoi",
- "log",
- "odbc-sys",
- "thiserror",
- "widestring",
- "winit",
-]
-
-[[package]]
-name = "odbc-api"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e53cd49196dfbaeea079afac5305cd38bf16c7d3e595764dc045f386cbde8d6"
@@ -1008,8 +994,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api 6.0.2",
- "odbc-api 7.0.0",
+ "odbc-api",
  "parquet",
  "predicates",
  "stderrlog",
