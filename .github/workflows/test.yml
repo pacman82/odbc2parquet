@@ -1,9 +1,9 @@
-name: Rust
+name: Push
 
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     name: Run tests on Ubuntu
     runs-on: ubuntu-latest
 
@@ -56,3 +56,18 @@ jobs:
           cargo install parquet --features cli
           # Run test suite
           cargo test
+
+
+  dependabot:
+    needs: [test]
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
+    steps:
+      - name: Merge Depenabot Pull Request
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

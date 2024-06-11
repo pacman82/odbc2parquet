@@ -7,7 +7,6 @@
 ## 5.1.2
 
 * Fix: 5.1.0 introduced a regression, which caused output file enumeration to happen even if file splitting is not activated, if `--no-empty-file` had been set.
- 
 
 ## 5.1.1
 

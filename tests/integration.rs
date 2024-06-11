@@ -4122,6 +4122,7 @@ impl<'a, const NUM_COLUMNS: usize> TableMssql<'a, NUM_COLUMNS> {
                 MSSQL,
                 ConnectionOptions {
                     login_timeout_sec: Some(5),
+                    ..Default::default()
                 },
             )
             .expect("Must be able to connect to MSSQL database.");
