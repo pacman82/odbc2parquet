@@ -341,9 +341,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.6"
+version = "4.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbca90c87c2a04da41e95d1856e8bcd22f159bdbfa147314d2ce5218057b0e58"
+checksum = "1d598e88f6874d4b888ed40c71efbcbf4076f1dfbae128a08a8c9e45f710605d"
 dependencies = [
  "clap",
 ]
@@ -1126,6 +1126,20 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
+version = "7.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f13064f9d099c4036c8e32229e1fa4dafdd4900ea6833471e089ae23a47707ce"
+dependencies = [
+ "atoi",
+ "log",
+ "odbc-sys",
+ "thiserror",
+ "widestring",
+ "winit",
+]
+
+[[package]]
+name = "odbc-api"
 version = "8.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e1979fd9753cb49687aa6fc9e71a56ab02cbd947124b11562b00e534fae2e87"
@@ -1160,7 +1174,8 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api",
+ "odbc-api 7.2.4",
+ "odbc-api 8.1.1",
  "parquet",
  "predicates",
  "stderrlog",
