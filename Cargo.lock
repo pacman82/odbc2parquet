@@ -1126,6 +1126,20 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
+version = "7.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f13064f9d099c4036c8e32229e1fa4dafdd4900ea6833471e089ae23a47707ce"
+dependencies = [
+ "atoi",
+ "log",
+ "odbc-sys",
+ "thiserror",
+ "widestring",
+ "winit",
+]
+
+[[package]]
+name = "odbc-api"
 version = "8.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b8725f2ab306c5650783eff4e22f846ec1536aa242f0d3045842fd277e4e804"
@@ -1160,7 +1174,8 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api",
+ "odbc-api 7.2.4",
+ "odbc-api 8.1.2",
  "parquet",
  "predicates",
  "stderrlog",
@@ -1193,9 +1208,9 @@ dependencies = [
 
 [[package]]
 name = "parquet"
-version = "52.1.0"
+version = "52.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f22ba0d95db56dde8685e3fadcb915cdaadda31ab8abbe3ff7f0ad1ef333267"
+checksum = "e977b9066b4d3b03555c22bdc442f3fadebd96a39111249113087d0edb2691cd"
 dependencies = [
  "ahash",
  "base64",
