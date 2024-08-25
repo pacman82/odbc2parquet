@@ -65,7 +65,7 @@ pub trait ParquetOutput {
     /// Retrieve the next row group writer. May trigger creation of a new file if limit of the
     /// previous one is reached.
     ///
-    /// # Parametersc
+    /// # Parameters
     ///
     /// * `num_batch`: Zero based num batch index
     fn write_row_group(
@@ -175,8 +175,8 @@ impl ParquetOutput for FileWriter {
     }
 
     fn close(self) -> Result<(), Error> {
-        // An active file might, or might not exsist at this point, dependening on wether or not the
-        // file splitting to due size thresholds coincides with the data source being consumed and
+        // An active file might, or might not exist at this point, depending on whether the
+        // file splitting due to size thresholds coincides with the data source being consumed and
         // all data being read from it. If our data source ran out of data, just after we closed the
         // current file due to its size threshold it is `None`. In this case there is nothing to do
         // though.

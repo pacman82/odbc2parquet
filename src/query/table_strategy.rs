@@ -104,7 +104,7 @@ impl TableStrategy {
             batch_size_row,
             self.columns
                 .iter()
-                .map(|(_name, strategy)| (strategy.buffer_desc())),
+                .map(|(_name, strategy)| strategy.buffer_desc()),
         );
 
         Ok(fetch_buffer)

@@ -54,7 +54,7 @@ impl FileSizeLimit {
     }
 }
 
-/// Batches can be limitied by either number of rows or the total size of the rows in the batch in
+/// Batches can be limited by either number of rows or the total size of the rows in the batch in
 /// bytes.
 pub enum BatchSizeLimit {
     Rows(usize),

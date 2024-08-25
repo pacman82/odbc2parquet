@@ -15,9 +15,9 @@ pub struct CurrentFile {
     writer: SerializedFileWriter<Box<dyn Write + Send>>,
     /// Path to the file currently being written to.
     path: TempPath,
-    /// Keep track of curret file size so we can split it, should it get too large.
+    /// Keep track of current file size so we can split it, should it get too large.
     file_size: ByteSize,
-    /// Keep track of the total number of rows writte into the file so far.
+    /// Keep track of the total number of rows written into the file so far.
     total_num_rows: u64,
 }
 

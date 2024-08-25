@@ -20,7 +20,7 @@ use super::{
 };
 
 /// Choose how to fetch decimals from ODBC and store them in parquet
-pub fn decmial_fetch_strategy(
+pub fn decimal_fetch_strategy(
     is_optional: bool,
     scale: i32,
     precision: u8,
@@ -57,7 +57,7 @@ pub fn decmial_fetch_strategy(
             fetch_identical_with_logical_type::<Int32Type>(is_optional, logical_type)
         }
         (0..=9, 1..=9) => {
-            // As these values have a scale unequal to 0 we read them from the datebase as text, but
+            // As these values have a scale unequal to 0 we read them from the database as text, but
             // since their precision is <= 9 we will store them as i32 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int32Type>::new(
                 precision,
@@ -109,7 +109,7 @@ pub fn decmial_fetch_strategy(
             }
         }
         (10..=18, 1..=18) => {
-            // As these values have a scale unequal to 0 we read them from the datebase as text, but
+            // As these values have a scale unequal to 0 we read them from the database as text, but
             // since their precision is <= 18 we will store them as i64 (physical parquet type)
             Box::new(DecimalTextToInteger::<Int64Type>::new(
                 precision,

@@ -23,7 +23,7 @@ use clap_complete::{generate, Shell};
 #[derive(Parser)]
 #[clap(version)]
 struct Cli {
-    /// Only print errors to standard error stream. Supresses warnings and all other log levels
+    /// Only print errors to standard error stream. Suppresses warnings and all other log levels
     /// independent of the verbose mode.
     #[arg(short = 'q', long)]
     quiet: bool,
@@ -133,10 +133,10 @@ pub struct QueryOpt {
     row_groups_per_file: u32,
     /// Then the size of the currently written parquet files goes beyond this threshold the current
     /// row group will be finished and then the file will be closed. So the file will be somewhat
-    /// larger than the threshold. All furthrer row groups will be written into new files to which
+    /// larger than the threshold. All further row groups will be written into new files to which
     /// the threshold size limit is applied as well. If this option is not set, no size threshold is
     /// applied. If the threshold is applied the first file name will have the suffix `_01`, the
-    /// second the suffix `_2` and so on. Therfore the first resulting file will be called e.g.
+    /// second the suffix `_2` and so on. Therefore, the first resulting file will be called e.g.
     /// `out_1.par`, if `out.par` has been specified as the output argument.
     /// Also note that this option will not act as an upper bound. It will act as a lower bound for
     /// all but the last file, all others however will not be larger than this threshold by more
@@ -152,16 +152,16 @@ pub struct QueryOpt {
     ///
     /// This is useful in situations there ODBC would require us to allocate a ridiculous amount of
     /// memory for a single element of a row. Usually this is the case because the Database schema
-    /// has been ill defined (like choosing `TEXT` for a user name, although a users name is
+    /// has been ill-defined (like choosing `TEXT` for a username, although a users name is
     /// unlikely to be several GB long). Another situation is that the ODBC driver is not good at
-    /// reporting the maximum length and therfore reports a really large value. The third option is
+    /// reporting the maximum length and therefore reports a really large value. The third option is
     /// of course that your values are actually large. In this case you just need a  ton of memory.
     /// You can use the batch size limit though to retrieve less at once. For binary columns this is
-    /// a maximum element length in bytes. For text columns it depends wether UTF-8 or UTF-16
-    /// encoding is used. See documentation of the `encondig` option. In case of UTF-8 this is the
+    /// a maximum element length in bytes. For text columns it depends on whether UTF-8 or UTF-16
+    /// encoding is used. See documentation of the `encoding` option. In case of UTF-8 this is the
     /// maximum length in bytes for an element. In case of UTF-16 the binary length is multiplied by
     /// two. This allows domain experts to configure limits (roughly) in the domain of how many
-    /// letters do I expect in this column, rather than to care about wether the command is executed
+    /// letters do I expect in this column, rather than to care about whether the command is executed
     /// on Linux or Windows. The encoding of the column on the Database does not matter for this
     /// setting or determining buffer sizes.
     #[arg(long)]
@@ -195,7 +195,7 @@ pub struct QueryOpt {
     /// been introduced in an effort to increase the compatibility of the output with Apache Spark.
     #[clap(long)]
     prefer_varbinary: bool,
-    /// Specify the fallback encoding of the parquet output column. You can parse mutliple values
+    /// Specify the fallback encoding of the parquet output column. You can parse multiple values
     /// in format `COLUMN:ENCODING`. `ENCODING` must be one of: `plain`, `delta-binary-packed`,
     /// `delta-byte-array`, `delta-length-byte-array` or `rle`.
     #[arg(
@@ -204,18 +204,18 @@ pub struct QueryOpt {
         action = ArgAction::Append
     )]
     parquet_column_encoding: Vec<(String, Encoding)>,
-    /// Tells the odbc2parquet, that the ODBC driver does not support binding 64 Bit integers (aka
+    /// Tells the odbc2parquet, that the ODBC driver does not support binding 64-Bit integers (aka
     /// S_C_BIGINT in ODBC speak). This will cause the odbc2parquet to query large integers as text
-    /// instead and convert them to 64 Bit integers itself. Setting this flag will not affect the
-    /// output, but may incurr a performance penality. In case you are using an Oracle Database it
-    /// can make queries work which did not before, because Oracle does not support 64 Bit integers.
+    /// instead and convert them to 64-Bit integers itself. Setting this flag will not affect the
+    /// output, but may incur a performance penalty. In case you are using an Oracle Database it
+    /// can make queries work which did not before, because Oracle does not support 64-Bit integers.
     #[clap(long)]
     driver_does_not_support_64bit_integers: bool,
     /// The IBM DB2 Linux ODBC drivers have been reported to return memory garbage instead of
     /// indicators for the string length. Setting this flag will cause `odbc2parquet` to rely on
     /// terminating zeroes, instead of indicators. This prevents `odbc2parquet` from disambiguating
     /// between empty strings and `NULL``. As a side effect of this workaround empty might be mapped
-    /// to NULL. Currently this workaround is only active if UTF-8 is used. This should be the case
+    /// to NULL. Currently, this workaround is only active if UTF-8 is used. This should be the case
     /// on non-window platforms by default, or if the `System` encoding is active.
     #[clap(long)]
     avoid_decimal: bool,
@@ -236,7 +236,7 @@ pub struct QueryOpt {
     output: IoArg,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters. E.g. "SELECT Name FROM Employees WHERE salary > ?;".
-    /// Instead of passing a query verbatum, you may pass a plain dash (`-`), to indicate that the
+    /// Instead of passing a query verbatim, you may pass a plain dash (`-`), to indicate that the
     /// query should be read from standard input. In this case the entire input until EOF will be
     /// considered the query.
     query: String,
@@ -251,7 +251,7 @@ pub struct InsertOpt {
     connect_opts: ConnectOpts,
     /// Encoding used for transferring character data to the database.
     ///
-    /// `Utf16`: Use 16Bit characters to send text text to the database, which implies the using
+    /// `Utf16`: Use 16Bit characters to send text to the database, which implies the using
     /// UTF-16 encoding. This should work well independent of the system configuration, but requires
     /// additional work since text is always stored as UTF-8 in parquet.
     ///
@@ -409,7 +409,7 @@ fn open_connection<'e>(
         DriverCompleteOption::NoPrompt
     };
 
-    // We are not interessted in the completed connection string, beyond creating a connection, so
+    // We are not interested in the completed connection string, beyond creating a connection, so
     // we pass an empty buffer.
     let mut completed_connection_string = OutputStringBuffer::empty();
 

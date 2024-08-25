@@ -22,7 +22,7 @@ use crate::{
         binary::Binary,
         boolean::Boolean,
         date::Date,
-        decimal::decmial_fetch_strategy,
+        decimal::decimal_fetch_strategy,
         identical::{fetch_identical, fetch_identical_with_logical_type},
         text::text_strategy,
         time::time_from_text,
@@ -33,7 +33,7 @@ use crate::{
 
 /// Decisions on how to handle a particular column of the ODBC result set. What buffer to bind to it
 /// for fetching, into what parquet type it is going to be translated and how to translate it from
-/// the odbc buffer elements to afformentioned parquet type.
+/// the odbc buffer elements to aforementioned parquet type.
 pub trait ColumnStrategy {
     /// Parquet column type used in parquet schema
     fn parquet_type(&self, name: &str) -> Type;
@@ -59,17 +59,17 @@ pub struct MappingOptions<'a> {
     pub column_length_limit: Option<usize>,
 }
 
-/// Fetch strategies based on column description and enviroment arguments `MappingOptions`.
+/// Fetch strategies based on column description and environment arguments `MappingOptions`.
 ///
 /// * `cd`: Description of the column for which we need to pick a fetch strategy
 /// * `name`: Name of the column which we fetch
 /// * `mapping_options`: Options describing the environment and desired outcome which are also
 ///   influencing the decision of what to pick.
-/// * `cursor`: Used to query additional inforamtion about the columns, not contained in the initial
+/// * `cursor`: Used to query additional information about the columns, not contained in the initial
 ///   column description. Passing them here, allows us to query these only lazily then needed. ODBC
 ///   calls can be quite costly, although an argument could be made, that these times do not matter
 ///   within the runtime of the odbc2parquet command line tool.
-/// * `index`: One based column index. Usefull if additional metainformation needs to be acquired
+/// * `index`: One based column index. Useful if additional meta-information needs to be acquired
 ///   using `cursor`
 pub fn strategy_from_column_description(
     cd: &ColumnDescription,
@@ -87,7 +87,7 @@ pub fn strategy_from_column_description(
         column_length_limit,
     } = mapping_options;
 
-    // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell wether a
+    // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell whether a
     // given column in the result may contain NULLs we assume it does.
     let repetition = match cd.nullability {
         Nullability::Nullable | Nullability::Unknown => Repetition::OPTIONAL,
@@ -138,7 +138,7 @@ pub fn strategy_from_column_description(
         ),
         DataType::Date => Box::new(Date::new(repetition)),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
-            decmial_fetch_strategy(
+            decimal_fetch_strategy(
                 is_optional,
                 scale as i32,
                 precision.try_into().unwrap(),
@@ -208,9 +208,9 @@ pub fn strategy_from_column_description(
         } => {
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
-                // give it special treatment so users can sort by time instead lexographically.
+                // give it special treatment so users can sort by time instead lexicographically.
                 info!(
-                    "Detected Timestamp type with time zone. Appyling instant semantics for \
+                    "Detected Timestamp type with time zone. Applying instant semantics for \
                     column {}.",
                     cd.name_to_string()?
                 );

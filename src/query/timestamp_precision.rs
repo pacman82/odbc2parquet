@@ -4,7 +4,7 @@ use odbc_api::sys::Timestamp;
 use parquet::format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit};
 
 /// Relational types communicate the precision of timestamps in number of fraction digits, while
-/// parquet uses time units (milli, micro, nano). This enumartion stores the the decision which time
+/// parquet uses time units (milli, micro, nano). This enumeration stores the decision which time
 /// unit to use and how to map it to parquet representations (both units and values)
 #[derive(Clone, Copy)]
 pub enum TimestampPrecision {
@@ -68,7 +68,7 @@ impl TimestampPrecision {
 
 fn nanoseconds_precision_error(value: &NaiveDateTime) -> Error {
     // The valid time ranges for parquet and datetime align. Normally this could be considered
-    // incidential and should not be relied upon. However both interfaces are shaped by what is
+    // incidental and should not be relied upon. However, both interfaces are shaped by what is
     // mathematically possible with a 64Bit integer. So the manual bounds checking in this code base
     // has been removed in favour of the one provided by `chrono`.
     anyhow!(

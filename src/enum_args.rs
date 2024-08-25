@@ -78,7 +78,7 @@ pub fn encoding_from_str(source: &str) -> Result<Encoding, Error> {
         "delta-byte-array" => Encoding::DELTA_BYTE_ARRAY,
         "delta-length-byte-array" => Encoding::DELTA_LENGTH_BYTE_ARRAY,
         "rle" => Encoding::RLE,
-        // ommitted, not a valid fallback encoding
+        // omitted, not a valid fallback encoding
         //"rle-dictionary" => Encoding::RLE_DICTIONARY,
         _ => bail!(
             "Sorry, I do not know a column encoding called '{}'.",

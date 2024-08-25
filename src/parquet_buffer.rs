@@ -62,7 +62,7 @@ impl ParquetBuffer {
         source: impl Iterator<Item = Option<i128>>,
         length_in_bytes: usize,
     ) -> Result<(), Error> {
-        self.write_optional_any_falliable(cw, source.map(Ok), |num| {
+        self.write_optional_any_fallible(cw, source.map(Ok), |num| {
             let out = num.to_be_bytes()[(16 - length_in_bytes)..].to_owned();
             // Vec<u8> -> ByteArray -> FixedLenByteArray
             let out: ByteArray = out.into();
@@ -70,7 +70,7 @@ impl ParquetBuffer {
         })
     }
 
-    fn write_optional_any_falliable<T, S>(
+    fn write_optional_any_fallible<T, S>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
         source: impl Iterator<Item = Result<Option<S>, Error>>,
@@ -98,7 +98,7 @@ impl ParquetBuffer {
     /// Write to a parquet buffer using an iterator over optional source items. A default
     /// transformation, defined via the `IntoPhysical` trait is used to transform the items into
     /// buffer elements.
-    pub fn write_optional_falliable<T>(
+    pub fn write_optional_fallible<T>(
         &mut self,
         cw: &mut ColumnWriterImpl<T>,
         source: impl Iterator<Item = Result<Option<T::T>, Error>>,
@@ -107,7 +107,7 @@ impl ParquetBuffer {
         T: DataType,
         T::T: BufferedDataType,
     {
-        self.write_optional_any_falliable(cw, source, |s| s)
+        self.write_optional_any_fallible(cw, source, |s| s)
     }
 
     /// Write to a parquet buffer using an iterator over optional source items. A default
@@ -122,7 +122,7 @@ impl ParquetBuffer {
         T: DataType,
         T::T: BufferedDataType,
     {
-        self.write_optional_any_falliable(cw, source.map(Ok), |s| s)
+        self.write_optional_any_fallible(cw, source.map(Ok), |s| s)
     }
 
     /// Iterate over the elements of a column reader over an optional column.
@@ -144,7 +144,7 @@ impl ParquetBuffer {
         let (_complete_rec, _num_val, _num_lvl) =
             cr.read_records(batch_size, Some(def_levels), None, values)?;
         // Strip mutability form the element of values, so we can use it in scan, there we only want
-        // to mutate which part of values we see, not the elements of values themselfes.
+        // to mutate which part of values we see, not the elements of values themselves.
         let values = values.as_slice();
         let it = def_levels.iter().scan(values, |values, def| match def {
             0 => Some(None),
@@ -161,7 +161,7 @@ impl ParquetBuffer {
 
     /// The elements of a column reader over a required column. Contrary to its counterpart
     /// [`Self::read_optional`] this does not return an iterator but a slice. This allows for a
-    /// memcopy into the ODBC buffer, if no transformation is required. Also since there are no
+    /// memcpy into the ODBC buffer, if no transformation is required. Also since there are no
     /// NULL values, one does not need to now the def_levels in order to make sense of the values.
     pub fn read_required<T>(
         &mut self,
@@ -182,7 +182,7 @@ impl ParquetBuffer {
 }
 
 pub trait BufferedDataType: Sized {
-    /// The tuple returned is (Values, Definiton levels)
+    /// The tuple returned is (Values, Definition levels)
     fn mut_buf(buffer: &mut ParquetBuffer) -> (&mut Vec<Self>, &mut Vec<i16>);
 }
 

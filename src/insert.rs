@@ -94,7 +94,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
             batch_size = num_rows;
             let descs = column_buf_desc.iter().map(|(desc, _)| *desc);
             // An inefficiency here: Currently `odbc-api`s interface forces us to prepare the
-            // statetement again, in case we need to allocate more row groups.
+            // statement again, in case we need to allocate more row groups.
             odbc_buffer = odbc_conn
                 .prepare(&insert_statement)?
                 .into_column_inserter(batch_size, descs)?;
@@ -573,7 +573,7 @@ fn parquet_type_to_odbc_buffer_desc(
                             BufferDesc::WText { max_str_len },
                             ByteArrayType::map_to_wtext(
                                 move |text, index, odbc_buf| {
-                                    // This allocation is not strictly neccessary, we could just as
+                                    // This allocation is not strictly necessary, we could just as
                                     // write directly into the buffer or at least preallocate the
                                     // U16String.
                                     let value = U16String::from_str(

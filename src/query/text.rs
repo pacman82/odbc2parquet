@@ -71,7 +71,7 @@ fn write_utf16_to_utf8(
     let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
     let view = column_reader.as_w_text_view().unwrap();
 
-    pb.write_optional_falliable(
+    pb.write_optional_fallible(
         cw,
         view.iter().map(|item| {
             if let Some(ustr) = item {
