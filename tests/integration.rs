@@ -45,8 +45,8 @@ lazy_static! {
         //
         // # Safety
         //
-        // This is safe because it is called once in the entire process. Therfore no race to this
-        // setting can occurr. It is also called before intializing the environment, making it
+        // This is safe because it is called once in the entire process. Therefore, no race to this
+        // setting can occur. It is also called before initializing the environment, making it
         // certain that the newly created environment knows it is supposed to initialize the
         // connection pools.
         unsafe {
@@ -200,7 +200,7 @@ fn should_give_good_error_if_specifying_directory_for_output() {
 #[test]
 fn parameters_in_query() {
     // Setup table for test
-    let table_name = "ParamtersInQuery";
+    let table_name = "ParametersInQuery";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)", "INTEGER"]);
     table.insert_rows_as_text(&[["Wrong", "5"], ["Right", "42"]]);
 
@@ -494,7 +494,7 @@ fn query_decimals_optional() {
     parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
-/// Query a numeric/decimal which could be represented is i64 as text instead to accomondate missing
+/// Query a numeric/decimal which could be represented is i64 as text instead to accommodate missing
 /// driver support for i64
 #[test]
 fn query_large_numeric_as_text() {
@@ -775,8 +775,8 @@ fn should_correctly_fetch_upper_bound_timestamp() {
         .assert()
         .success();
 
-    // Binary of the expectation is all `1`, execpt for the first (sign) and the last three digits
-    // (precision of MsSQL is not nano seconds, but 7 digits).
+    // Binary of the expectation is all `1`, except for the first (sign) and the last three digits
+    // (precision of MsSQL is not nanoseconds, but 7 digits).
     let expected_values = "{a: 9223372036854775800}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 }
@@ -1206,7 +1206,7 @@ fn query_doubles() {
 
     parquet_read_out(out_str).stdout(eq(expected_values));
 
-    // Also verify schema to ensure f64 is choosen and not f32
+    // Also verify schema to ensure f64 is chosen and not f32
     parquet_schema_out(out_str).stdout(contains(expected_schema));
 }
 
@@ -1255,7 +1255,7 @@ fn query_comes_back_with_no_rows() {
 ///
 /// This test has been created after a bug report. Original implementation of `--no-empty-file`
 /// deleted the file after the fact. Yet it tried to delete the base path without taking the suffix
-/// from file splitting into acconut.
+/// from file splitting into account.
 #[test]
 fn no_empty_file_works_with_split_files() {
     // Setup table for test
@@ -1779,7 +1779,7 @@ fn binary_column() {
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
-/// The prefer-varbinary flag must enforce mapping of binary colmuns to BYTE_ARRAY instead of
+/// The prefer-varbinary flag must enforce mapping of binary columns to BYTE_ARRAY instead of
 /// FIXED_LEN_BYTE_ARRAY.
 #[test]
 fn prefer_varbinary() {

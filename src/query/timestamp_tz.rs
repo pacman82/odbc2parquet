@@ -20,7 +20,7 @@ pub fn timestamp_tz(precision: u8, repetition: Repetition) -> Result<Box<Timesta
 
 pub struct TimestampTz {
     repetition: Repetition,
-    // We store digit precision, rather than TimestampPrecision, in order to be able to adequatly
+    // We store digit precision, rather than TimestampPrecision, in order to be able to adequately
     // calculate ODBC text buffer length.
     precision: u8,
 }
@@ -81,7 +81,7 @@ fn write_timestamp_tz(
         https://github.com/pacman82/odbc2parquet/issues.",
     );
     let cw = get_typed_column_writer_mut::<Int64Type>(column_writer);
-    pb.write_optional_falliable(
+    pb.write_optional_fallible(
         cw,
         view.iter()
             .map(|item| item.map(|text| to_utc_epoch(text, precision)).transpose()),

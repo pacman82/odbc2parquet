@@ -26,5 +26,5 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 
-    # Allows accessing dbs through the port forwardings. dev container behaves like host for networking
+    # Allows accessing dbs through port forwarding. dev container behaves like host for networking
     network_mode: host

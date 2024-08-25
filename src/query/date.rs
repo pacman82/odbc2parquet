@@ -20,10 +20,8 @@ pub struct Date {
 }
 
 impl Date {
-    pub fn new(repetetion: Repetition) -> Self {
-        Self {
-            repetition: repetetion,
-        }
+    pub fn new(repetition: Repetition) -> Self {
+        Self { repetition }
     }
 }
 

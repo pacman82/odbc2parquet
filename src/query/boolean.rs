@@ -21,10 +21,8 @@ pub struct Boolean {
 }
 
 impl Boolean {
-    pub fn new(repetetion: Repetition) -> Self {
-        Self {
-            repetition: repetetion,
-        }
+    pub fn new(repetition: Repetition) -> Self {
+        Self { repetition }
     }
 }
 
