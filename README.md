@@ -93,6 +93,25 @@ If you have a rust tool chain installed, you can install this tool via cargo.
 cargo install odbc2parquet
 ```
 
+### Build in docker from stracth
+
+```
+FROM rust:alpine AS builder
+
+RUN apk add --no-cache musl-dev unixodbc-static
+# In addation to unixodbc you also want to install the database drivers you need.
+
+WORKDIR /src/odbc2parquet
+COPY . .
+RUN cargo build --release
+
+FROM scratch AS runner
+
+COPY --from=builder /src/odbc2parquet/target/release/odbc2parquet /usr/local/bin/
+
+ENTRYPOINT ["/usr/local/bin/odbc2parquet"]
+```
+
 You can install `cargo` from here <https://rustup.rs/>.
 
 ## Usage
