@@ -26,7 +26,7 @@ jobs:
           file: odbc2parquet-win64.zip
           asset_name: odbc2parquet-win64.zip
           tag: ${{ github.ref }}
-  
+
   release_win32:
     name: Build and release Windows 32Bit
     runs-on: windows-latest
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install latests rust toolchain
+      - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -63,7 +63,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install latests rust toolchain
+      - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -135,4 +135,35 @@ jobs:
         with:
           file: target/release/odbc2parquet
           asset_name: odbc2parquet-macos-m1
+          tag: ${{ github.ref }}
+
+  release_arm_ubuntu:
+    name: Build and release Ubuntu ARM (aarch64)
+    runs-on: macos-latest # Use MacOS runner with ARM architecture
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Install cross for cross-compilation
+        run: cargo install cross
+
+      - name: Cross-build for Ubuntu ARM (aarch64)
+        run: |
+          cross build --release --target aarch64-unknown-linux-gnu
+          gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
+          mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-arm64-ubuntu.gz
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: odbc2parquet-arm64-ubuntu.gz
+          asset_name: odbc2parquet-arm64-ubuntu.gz
           tag: ${{ github.ref }}
