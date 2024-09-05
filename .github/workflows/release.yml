@@ -71,13 +71,16 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-osx.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: target/release/odbc2parquet
-          asset_name: odbc2parquet-osx
+          file: odbc2parquet-osx.gz
+          asset_name: odbc2parquet-osx.gz
           tag: ${{ github.ref }}
 
       - name: Publish to cargo
@@ -128,13 +131,16 @@ jobs:
           sudo ln -s /opt/homebrew/lib ~/lib
 
       - name: Build
-        run: cargo build --release
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-macos-m1.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: target/release/odbc2parquet
-          asset_name: odbc2parquet-macos-m1
+          file: odbc2parquet-macos-m1.gz
+          asset_name: odbc2parquet-macos-m1.gz
           tag: ${{ github.ref }}
 
   release_arm_ubuntu:
