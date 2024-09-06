@@ -8,7 +8,7 @@ on:
 
 jobs:
   release_win64:
-    name: Build and release Windows 64Bit
+    name: Build and release Windows 64-bit
     runs-on: windows-latest
 
     steps:
@@ -28,7 +28,7 @@ jobs:
           tag: ${{ github.ref }}
 
   release_win32:
-    name: Build and release Windows 32Bit
+    name: Build and release Windows 32-bit
     runs-on: windows-latest
 
     steps:
@@ -55,9 +55,10 @@ jobs:
           asset_name: odbc2parquet-win32.zip
           tag: ${{ github.ref }}
 
-  release_os-x:
-    name: Build and release OS-X
-    runs-on: macos-latest
+  release_osx:
+    name: Build and release macOS Intel
+    # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    runs-on: macos-13 # Intel-based macOS runner
 
     steps:
       - name: Checkout
@@ -90,7 +91,7 @@ jobs:
           cargo publish --token "${CARGO_TOKEN}"
 
   ubuntu:
-    name: Build and release for Ubuntu
+    name: Build and release Ubuntu x86_64
     runs-on: ubuntu-latest
 
     steps:
@@ -111,8 +112,9 @@ jobs:
           tag: ${{ github.ref }}
 
   release_m1:
-    name: Build and release macos M1
-    runs-on: flyci-macos-14-m1
+    name: Build and release macOS M1
+    # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    runs-on: macos-latest # ARM-based macOS runner (Apple Silicon)
 
     steps:
       - name: Checkout
@@ -144,8 +146,9 @@ jobs:
           tag: ${{ github.ref }}
 
   release_arm_ubuntu:
-    name: Build and release Ubuntu ARM (aarch64)
-    runs-on: macos-latest # Use MacOS runner with ARM architecture
+    name: Build and release Ubuntu ARM64
+    # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    runs-on: macos-latest # ARM-based macOS runner to cross-compile for Ubuntu ARM
 
     steps:
       - name: Checkout
