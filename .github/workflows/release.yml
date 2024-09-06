@@ -55,7 +55,7 @@ jobs:
           asset_name: odbc2parquet-win-x86.zip
           tag: ${{ github.ref }}
 
-  release_osx:
+  release_macos_intel:
     name: Build and release macOS Intel
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
     runs-on: macos-13 # Intel-based macOS runner
@@ -83,7 +83,7 @@ jobs:
         run: |
           cargo publish --token "${CARGO_TOKEN}"
 
-  ubuntu:
+  release_ubuntu_x64:
     name: Build and release Ubuntu x86_64
     runs-on: ubuntu-latest
 
@@ -104,7 +104,7 @@ jobs:
           asset_name: odbc2parquet-ubuntu-x64.gz
           tag: ${{ github.ref }}
 
-  release_m1:
+  release_macos_arm64:
     name: Build and release macOS ARM64
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
     runs-on: macos-latest # ARM-based macOS runner (Apple Silicon)
@@ -131,7 +131,7 @@ jobs:
           asset_name: odbc2parquet-macos-arm64.gz
           tag: ${{ github.ref }}
 
-  release_arm_ubuntu:
+  release_ubuntu_arm64:
     name: Build and release Ubuntu ARM64
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
     runs-on: macos-latest # ARM-based macOS runner to cross-compile for Ubuntu ARM
