@@ -148,8 +148,10 @@ jobs:
           default: true
           override: true
 
-      - name: Install cross for cross-compilation
-        run: cargo install cross
+      - name: Install Unix ODBC
+        run: |
+          brew install unixodbc
+          sudo ln -s /opt/homebrew/lib ~/lib
 
       - name: Cross-build for Ubuntu ARM (aarch64)
         run: |
