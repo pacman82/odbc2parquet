@@ -18,13 +18,13 @@ jobs:
       - name: Build
         run: |
           cargo build --release
-          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win64.zip
+          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x64.zip
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-win64.zip
-          asset_name: odbc2parquet-win64.zip
+          file: odbc2parquet-win-x64.zip
+          asset_name: odbc2parquet-win-x64.zip
           tag: ${{ github.ref }}
 
   release_win32:
@@ -46,13 +46,13 @@ jobs:
       - name: Build
         run: |
           cargo build --release
-          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win32.zip
+          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86.zip
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-win32.zip
-          asset_name: odbc2parquet-win32.zip
+          file: odbc2parquet-win-x86.zip
+          asset_name: odbc2parquet-win-x86.zip
           tag: ${{ github.ref }}
 
   release_osx:
@@ -75,13 +75,13 @@ jobs:
         run: |
           cargo build --release
           gzip --force target/release/odbc2parquet
-          mv target/release/odbc2parquet.gz odbc2parquet-osx.gz
+          mv target/release/odbc2parquet.gz odbc2parquet-macos-x64.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-osx.gz
-          asset_name: odbc2parquet-osx.gz
+          file: odbc2parquet-macos-x64.gz
+          asset_name: odbc2parquet-macos-x64.gz
           tag: ${{ github.ref }}
 
       - name: Publish to cargo
@@ -102,17 +102,17 @@ jobs:
         run: |
           cargo build --release
           gzip --force target/release/odbc2parquet
-          mv target/release/odbc2parquet.gz odbc2parquet-x86_64-ubuntu.gz
+          mv target/release/odbc2parquet.gz odbc2parquet-ubuntu-x64.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-x86_64-ubuntu.gz
-          asset_name: odbc2parquet-x86_64-ubuntu.gz
+          file: odbc2parquet-ubuntu-x64.gz
+          asset_name: odbc2parquet-ubuntu-x64.gz
           tag: ${{ github.ref }}
 
   release_m1:
-    name: Build and release macOS M1
+    name: Build and release macOS ARM64
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
     runs-on: macos-latest # ARM-based macOS runner (Apple Silicon)
 
@@ -136,13 +136,13 @@ jobs:
         run: |
           cargo build --release
           gzip --force target/release/odbc2parquet
-          mv target/release/odbc2parquet.gz odbc2parquet-macos-m1.gz
+          mv target/release/odbc2parquet.gz odbc2parquet-macos-arm64.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-macos-m1.gz
-          asset_name: odbc2parquet-macos-m1.gz
+          file: odbc2parquet-macos-arm64.gz
+          asset_name: odbc2parquet-macos-arm64.gz
           tag: ${{ github.ref }}
 
   release_arm_ubuntu:
@@ -168,11 +168,11 @@ jobs:
         run: |
           cross build --release --target aarch64-unknown-linux-gnu
           gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
-          mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-arm64-ubuntu.gz
+          mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-arm64-ubuntu.gz
-          asset_name: odbc2parquet-arm64-ubuntu.gz
+          file: odbc2parquet-arm64-ubuntu-arm64.gz
+          asset_name: odbc2parquet-arm64-ubuntu-arm64.gz
           tag: ${{ github.ref }}
