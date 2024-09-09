@@ -1,13 +1,12 @@
 # Changelog
 
-## 6.0.2-5
+## 6.0.2-6
 
 * Fix release 6.0.1
 
 ## 6.0.1
 
-* ~~Additional binary release for Ubuntu ARM. Thanks to @sindilevich~~.
-* Binary release names for windows artifacts now end in architecture rather native bit size
+* Binary release names for artifacts now end in architecture rather native bit size
 
 ## 6.0.0
 
