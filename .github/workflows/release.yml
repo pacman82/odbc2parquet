@@ -55,7 +55,7 @@ jobs:
           asset_name: odbc2parquet-win-x86.zip
           tag: ${{ github.ref }}
 
-    publish_to_cargo:
+  publish_to_cargo:
     name: Publish to cargo
     runs-on: macos-13 # Any runner should do
 
