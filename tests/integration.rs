@@ -4027,8 +4027,8 @@ fn write_statistics_for_text_columns() {
         .column(0)
         .statistics()
         .unwrap();
-    assert_eq!("aaa", str::from_utf8(stats.min_bytes()).unwrap());
-    assert_eq!("zzz", str::from_utf8(stats.max_bytes()).unwrap());
+    assert_eq!("aaa", str::from_utf8(stats.min_bytes_opt().unwrap()).unwrap());
+    assert_eq!("zzz", str::from_utf8(stats.max_bytes_opt().unwrap()).unwrap());
 }
 
 /// This did not work in earlier versions there we set the batch write size of the parquet writer to
