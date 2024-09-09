@@ -108,7 +108,7 @@ jobs:
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
-          file: odbc2parquet-ubuntu-x84_64.gz
+          file: odbc2parquet-ubuntu-x86_64.gz
           asset_name: odbc2parquet-ubuntu-x86_64.gz
           tag: ${{ github.ref }}
 
