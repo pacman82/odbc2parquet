@@ -1,8 +1,8 @@
 # Changelog
 
-## 6.0.2
+## 6.0.2-3
 
-* Fix release 6.0.2
+* Fix release 6.0.1
 
 ## 6.0.1
 
