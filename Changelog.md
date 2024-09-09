@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.0.1
+
+* Additional binary release for Ubuntu ARM. Thanks to @sindilevich.
+* Binary release names for windows artifacts now end in architecture rather native bit size
+
 ## 6.0.0
 
 * File extensions are now retained then splitting files. E.g. if `--output` is 'my_results.parquet' and split into two files they will be named 'my_results_01.parquet' and 'my_results_02.parquet'. Previously there has been always the ending '.par' attached.
