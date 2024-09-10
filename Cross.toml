@@ -1,0 +1,11 @@
+[target.aarch64-unknown-linux-gnu]
+# Disable `build-std` for `aarch64-unknown-linux-gnu`,
+# since it already has a std library pre-built.
+build-std = false
+# Install unixodbc:arm64 and unixodbc-dev:arm64, see <https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#adding-dependencies-to-existing-images>
+# Additional commands to run prior to building the package.
+# These override the commands present in `[build]`: they will not merge.
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes unixodbc:$CROSS_DEB_ARCH unixodbc-dev:$CROSS_DEB_ARCH"
+]
