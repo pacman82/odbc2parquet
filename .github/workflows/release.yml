@@ -36,17 +36,15 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install latest rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
           target: i686-pc-windows-msvc
-          default: true
-          override: true
 
       - name: Build
         run: |
-          cargo build --release
-          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86.zip
+          cargo build --release --target i686-pc-windows-msvc
+          Compress-Archive -LiteralPath target/i686-pc-windows-msvc/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86.zip
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
@@ -91,27 +89,6 @@ jobs:
           asset_name: odbc2parquet-macos-x86_64.gz
           tag: ${{ github.ref }}
 
-  release_ubuntu_x64:
-    name: Build and release Ubuntu x86_64
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Build
-        run: |
-          cargo build --release
-          gzip --force target/release/odbc2parquet
-          mv target/release/odbc2parquet.gz odbc2parquet-ubuntu-x86_64.gz
-
-      - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
-        with:
-          file: odbc2parquet-ubuntu-x86_64.gz
-          asset_name: odbc2parquet-ubuntu-x86_64.gz
-          tag: ${{ github.ref }}
-
   release_macos_arm64:
     name: Build and release macOS ARM64
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
@@ -139,39 +116,53 @@ jobs:
           asset_name: odbc2parquet-macos-arm64.gz
           tag: ${{ github.ref }}
 
-  # Doesn't work yet. Needs package `aarch64-linux-gnu-gcc`
-  #
-  # release_ubuntu_arm64:
-  #   name: Build and release Ubuntu ARM64
-  #   # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
-  #   runs-on: macos-latest # ARM-based macOS runner to cross-compile for Ubuntu ARM
+  release_ubuntu_x64:
+    name: Build and release Ubuntu x86_64
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Install latest rust toolchain
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-  #         target: aarch64-unknown-linux-gnu
-  #         default: true
-  #         override: true
+      - name: Build
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-ubuntu-x86_64.gz
 
-  #     - name: Install Unix ODBC
-  #       run: |
-  #         brew install unixodbc
-  #         sudo ln -s /opt/homebrew/lib ~/lib
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: odbc2parquet-ubuntu-x86_64.gz
+          asset_name: odbc2parquet-ubuntu-x86_64.gz
+          tag: ${{ github.ref }}
 
-  #     - name: Cross-build for Ubuntu ARM (aarch64)
-  #       run: |
-  #         cargo build --release --target aarch64-unknown-linux-gnu
-  #         gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
-  #         mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
+  release_ubuntu_arm64:
+    name: Build and release Ubuntu ARM64
+    runs-on: ubuntu-latest
 
-  #     - name: Github Upload
-  #       uses: svenstaro/upload-release-action@v2
-  #       with:
-  #         file: odbc2parquet-ubuntu-arm64.gz
-  #         asset_name: odbc2parquet-ubuntu-arm64.gz
-  #         tag: ${{ github.ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+
+      - name: Install cross for cross-compilation
+        run: cargo install cross
+
+      - name: Cross-build for Ubuntu ARM (aarch64)
+        run: |
+          cross build --release --target aarch64-unknown-linux-gnu
+          gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
+          mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
+  
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: odbc2parquet-ubuntu-arm64.gz
+          asset_name: odbc2parquet-ubuntu-arm64.gz
+          tag: ${{ github.ref }}

@@ -3,3 +3,6 @@
 # IDEs
 /.vscode/
 /.idea/
+
+# OSs
+.DS_Store
