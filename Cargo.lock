@@ -139,9 +139,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.87"
+version = "1.0.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f00e1f6e58a40e807377c75c6a7f97bf9044fab57816f2414e6f5f4499d7b8"
+checksum = "4e1496f8fb1fbf272686b8d37f523dab3e4a7443300055e74cdaa449f3114356"
 
 [[package]]
 name = "assert_cmd"
@@ -1133,6 +1133,20 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
+version = "7.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f13064f9d099c4036c8e32229e1fa4dafdd4900ea6833471e089ae23a47707ce"
+dependencies = [
+ "atoi",
+ "log",
+ "odbc-sys",
+ "thiserror",
+ "widestring",
+ "winit",
+]
+
+[[package]]
+name = "odbc-api"
 version = "8.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc59611ab2d583ad4e419d5bfb72849bda357a91cf7b379ff95d86658865a0de"
@@ -1167,7 +1181,8 @@ dependencies = [
  "lazy_static",
  "log",
  "num-traits",
- "odbc-api",
+ "odbc-api 7.2.4",
+ "odbc-api 8.1.4",
  "parquet",
  "predicates",
  "stderrlog",
