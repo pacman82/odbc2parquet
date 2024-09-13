@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.7
+
+* Binary release for Ubuntu ARM architectures. Thanks @sindelevich
+
 ## 6.0.2-6
 
 * Fix release 6.0.1
