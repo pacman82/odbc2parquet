@@ -2,7 +2,7 @@
 
 ## 6.0.7
 
-* Binary release for Ubuntu ARM architectures. Thanks @sindelevich
+* Binary release for Ubuntu ARM architectures. Thanks @sindilevich
 
 ## 6.0.2-6
 
