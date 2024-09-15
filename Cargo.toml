@@ -24,7 +24,7 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.88"
+anyhow = "1.0.89"
 stderrlog = "0.6.0"
 log = "0.4.22"
 chrono = "0.4.38"
@@ -57,7 +57,7 @@ odbc-api = "8"
 # importantly, UTF-8 is likely to be more battled tested on these platforms, while UTF-16 is "only"
 # required by the standard.
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-odbc-api = { version = "7", features = ["narrow"] }
+odbc-api = { version = "8", features = ["narrow"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
