@@ -1,5 +1,9 @@
 # Changelog
 
+## next
+
+* Utilize ODBC API version 3.5 instead of 3.8 to increase compatibility with older drivers.
+
 ## 6.0.7
 
 * Binary release for Ubuntu ARM architectures. Thanks @sindilevich
