@@ -1,6 +1,6 @@
 # Changelog
 
-## next
+## 6.1.0
 
 * Utilize ODBC API version 3.5 instead of 3.8 to increase compatibility with older drivers.
 
