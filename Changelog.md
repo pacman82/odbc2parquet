@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.1.1
+
+* DEBUG Log messages now show column names as text, rather than utf-8 bytes
+* Not enough memory message mentions option to limit length using `--column-length-limit`
+
 ## 6.1.0
 
 * Utilize ODBC API version 3.5 instead of 3.8 to increase compatibility with older drivers.
