@@ -43,7 +43,14 @@ impl TableStrategy {
             cd.name.reserve(128);
             cursor.describe_col(index as u16, &mut cd)?;
 
-            debug!("ODBC column description for column {}: {:?}", index, cd);
+            debug!(
+                "ODBC column description for column {index}: name: '{}', \
+                relational type: '{:?}', \
+                nullability: {:?}",
+                cd.name_to_string().unwrap_or_default(),
+                cd.data_type,
+                cd.nullability
+            );
 
             let name = cd.name_to_string()?;
             // Give a generated name, should we fail to retrieve one from the ODBC data source.

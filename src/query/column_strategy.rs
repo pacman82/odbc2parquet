@@ -99,9 +99,10 @@ pub fn strategy_from_column_description(
     let apply_length_limit = |reported_length: Option<NonZeroUsize>| {
         match (reported_length, column_length_limit) {
             (None, None) => bail!(
-                "Column '{}' with index {}. Driver reported a display length of 0. This can happen for \
-                variadic types without a fixed upper bound. You can manually specify an upper bound \
-                for variadic columns using the `--column-length-limit` command line argument.",
+                "Column '{}' with index {}. Driver reported a display length of 0. This can happen \
+                for variadic types without a fixed upper bound. You can manually specify an upper \
+                bound for variadic columns using the `--column-length-limit` command line \
+                argument.",
                 name, index
             ),
             // No upper bound has been reported by the driver, so we use the one supplied by the
@@ -224,11 +225,8 @@ pub fn strategy_from_column_description(
         }
     };
 
-    debug!(
-        "ODBC buffer description for column {}: {:?}",
-        index,
-        strategy.buffer_desc()
-    );
+    let desc = strategy.buffer_desc();
+    debug!("ODBC buffer description for column at index {index}: {desc:?}",);
 
     Ok(strategy)
 }

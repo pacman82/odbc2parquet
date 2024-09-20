@@ -88,7 +88,8 @@ impl BatchSizeLimit {
                     {} bytes, Memory per row: {} bytes.\nYou can use either '--batch-size-row' or \
                     '--batch-size-mib' to raise the limit. You may also try more verbose output to \
                     see which columns require so much memory and consider casting them into \
-                    something smaller.",
+                    something smaller. You could also apply an upper size limit to expected values \
+                    on variadic columns using `--column-length-limit`.",
                     num_bytes,
                     total_mem_usage_per_row
                 )
