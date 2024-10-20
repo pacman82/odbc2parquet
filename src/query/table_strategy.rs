@@ -123,7 +123,7 @@ impl TableStrategy {
 
     pub fn block_cursor_to_parquet(
         &self,
-        mut row_set_cursor: BlockCursor<impl Cursor, &mut ColumnarAnyBuffer>,
+        mut row_set_cursor: BlockCursor<impl Cursor, ColumnarAnyBuffer>,
         mut writer: Box<dyn ParquetOutput>,
     ) -> Result<(), Error> {
         let mut num_batch = 0;

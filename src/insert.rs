@@ -13,7 +13,7 @@ use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{AnySliceMut, BinColumnSliceMut, BufferDesc, NullableSliceMut, TextColumnSliceMut},
     sys::{Date, Timestamp},
-    Bit, Environment, U16String,
+    Bit, U16String,
 };
 use parquet::{
     basic::{ConvertedType, Type as PhysicalType},
@@ -37,7 +37,7 @@ const BUG: &str = "This is not supposed to happen. Please open a Bug at \
                   https://github.com/pacman82/odbc2parquet/issues.";
 
 /// Read the content of a parquet file and insert it into a table.
-pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Error> {
+pub fn insert(insert_opt: &InsertOpt) -> Result<(), Error> {
     let InsertOpt {
         encoding,
         input,
@@ -45,7 +45,7 @@ pub fn insert(odbc_env: &Environment, insert_opt: &InsertOpt) -> Result<(), Erro
         table,
     } = insert_opt;
 
-    let odbc_conn = open_connection(odbc_env, connect_opts)?;
+    let odbc_conn = open_connection(connect_opts)?;
 
     let file = File::open(input)?;
     let reader = SerializedFileReader::new(file)?;

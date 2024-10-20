@@ -9,8 +9,8 @@ use bytesize::ByteSize;
 use enum_args::CompressionVariants;
 use io_arg::IoArg;
 use odbc_api::{
-    escape_attribute_value, handles::OutputStringBuffer, Connection, ConnectionOptions,
-    DriverCompleteOption, Environment,
+    environment, escape_attribute_value, handles::OutputStringBuffer, Connection,
+    ConnectionOptions, DriverCompleteOption,
 };
 use parquet::basic::Encoding;
 use std::{fs::File, path::PathBuf};
@@ -319,15 +319,19 @@ fn main() -> Result<(), Error> {
         .init()
         .unwrap();
 
-    // Initialize ODBC environment used to create the connection to the Database
-    let odbc_env = Environment::new()?;
+    // Initialize ODBC environment used to create the connection to the Database. We now use the
+    // singleton pattern with `environment`. This makes our life easier if using concurrent fetching
+    // since it allows us to create an environment with a 'static lifetime. From this point forward
+    // in the application, we may assume that calls to environment are succesful, since any error
+    // creating the environment must occur now.
+    let odbc_env = environment()?;
 
     match opt.command {
         Command::Query { query_opt } => {
-            query::query(&odbc_env, query_opt)?;
+            query::query(query_opt)?;
         }
         Command::Insert { insert_opt } => {
-            insert::insert(&odbc_env, &insert_opt)?;
+            insert::insert(&insert_opt)?;
         }
         Command::ListDrivers => {
             for driver_info in odbc_env.drivers()? {
@@ -361,10 +365,8 @@ fn main() -> Result<(), Error> {
 }
 
 /// Open a database connection using the options provided on the command line.
-fn open_connection<'e>(
-    odbc_env: &'e Environment,
-    opt: &ConnectOpts,
-) -> Result<Connection<'e>, Error> {
+fn open_connection<'e>(opt: &ConnectOpts) -> Result<Connection<'e>, Error> {
+    let odbc_env = environment().expect("Enviornment must already be initialized in main.");
     // If a data source name has been given, try connecting with that.
     if let Some(dsn) = opt.dsn.as_deref() {
         let conn = odbc_env.connect(

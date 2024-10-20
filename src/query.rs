@@ -17,7 +17,7 @@ mod timestamp_tz;
 use anyhow::Error;
 use io_arg::IoArg;
 use log::info;
-use odbc_api::{Cursor, Environment, IntoParameter};
+use odbc_api::{Cursor, IntoParameter};
 use std::io::{stdin, Read};
 
 use self::{
@@ -30,7 +30,7 @@ use self::{
 use crate::{open_connection, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
-pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
+pub fn query(opt: QueryOpt) -> Result<(), Error> {
     let QueryOpt {
         connect_opts,
         output,
@@ -62,7 +62,7 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         .map(|param| param.as_str().into_parameter())
         .collect();
 
-    let odbc_conn = open_connection(environment, &connect_opts)?;
+    let odbc_conn = open_connection(&connect_opts)?;
     let db_name = odbc_conn.database_management_system_name()?;
     info!("Database Management System Name: {db_name}");
 
@@ -84,7 +84,15 @@ pub fn query(environment: &Environment, opt: QueryOpt) -> Result<(), Error> {
         column_length_limit,
     };
 
-    if let Some(cursor) = odbc_conn.execute(&query, params.as_slice())? {
+    if let Some(cursor) = odbc_conn
+        .into_cursor(&query, params.as_slice())
+        // Drop the connection for odbc_api::ConnectionAndError in order to make the error
+        // convertible into an anyhow error. The connection is offered by odbc_api in the error type
+        // to allow reusing the same connection, even after conversion into cursor failed. However
+        // within the context of `odbc2parquet`, we just want to shutdown the application and
+        // present an error to the user.
+        .map_err(odbc_api::Error::from)?
+    {
         cursor_to_parquet(
             cursor,
             output,
@@ -114,15 +122,16 @@ fn query_statement_text(query: String) -> Result<String, Error> {
 }
 
 fn cursor_to_parquet(
-    mut cursor: impl Cursor,
+    mut cursor: impl Cursor + Send + 'static,
     path: IoArg,
     batch_size: BatchSizeLimit,
     mapping_options: MappingOptions,
     parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
     let table_strategy = TableStrategy::new(&mut cursor, mapping_options)?;
-    let mut odbc_buffer = table_strategy.allocate_fetch_buffer(batch_size)?;
-    let block_cursor = cursor.bind_buffer(&mut odbc_buffer)?;
+    let odbc_buffer = table_strategy.allocate_fetch_buffer(batch_size)?;
+    let block_cursor = cursor.bind_buffer(odbc_buffer)?;
+    // let block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
     let parquet_schema = table_strategy.parquet_schema();
     let writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
     table_strategy.block_cursor_to_parquet(block_cursor, writer)?;
