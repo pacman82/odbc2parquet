@@ -17,7 +17,7 @@ mod timestamp_tz;
 use anyhow::Error;
 use io_arg::IoArg;
 use log::info;
-use odbc_api::{Cursor, IntoParameter};
+use odbc_api::{ConcurrentBlockCursor, Cursor, IntoParameter};
 use std::io::{stdin, Read};
 
 use self::{
@@ -129,11 +129,11 @@ fn cursor_to_parquet(
     parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
     let table_strategy = TableStrategy::new(&mut cursor, mapping_options)?;
-    let odbc_buffer = table_strategy.allocate_fetch_buffer(batch_size)?;
-    let block_cursor = cursor.bind_buffer(odbc_buffer)?;
-    // let block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
+    let (fetch_buffer_1, fetch_buffer_2) = table_strategy.allocate_fetch_buffers(batch_size)?;
+    let block_cursor = cursor.bind_buffer(fetch_buffer_1)?;
+    let block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
     let parquet_schema = table_strategy.parquet_schema();
     let writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
-    table_strategy.block_cursor_to_parquet(block_cursor, writer)?;
+    table_strategy.block_cursor_to_parquet(block_cursor, writer, fetch_buffer_2)?;
     Ok(())
 }

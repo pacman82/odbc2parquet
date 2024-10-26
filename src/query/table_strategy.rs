@@ -1,7 +1,8 @@
 use anyhow::{bail, Context, Error};
 use log::{debug, info};
 use odbc_api::{
-    buffers::ColumnarAnyBuffer, BlockCursor, ColumnDescription, Cursor, ResultSetMetadata,
+    buffers::ColumnarAnyBuffer, ColumnDescription, ConcurrentBlockCursor, Cursor,
+    ResultSetMetadata, RowSetBuffer,
 };
 use parquet::{
     file::writer::SerializedColumnWriter,
@@ -86,17 +87,17 @@ impl TableStrategy {
         })
     }
 
-    pub fn allocate_fetch_buffer(
+    pub fn allocate_fetch_buffers(
         &self,
         batch_size: BatchSizeLimit,
-    ) -> Result<ColumnarAnyBuffer, Error> {
+    ) -> Result<(ColumnarAnyBuffer, ColumnarAnyBuffer), Error> {
         let mem_usage_odbc_buffer_per_row: usize = self
             .columns
             .iter()
             .map(|(_name, strategy)| strategy.buffer_desc().bytes_per_row())
             .sum();
         let total_mem_usage_per_row =
-            mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
+            2 * mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
         info!(
             "Memory usage per row is {} bytes. This excludes memory directly allocated by the ODBC \
             driver.",
@@ -107,14 +108,21 @@ impl TableStrategy {
 
         info!("Batch size set to {} rows.", batch_size_row);
 
-        let fetch_buffer = ColumnarAnyBuffer::from_descs(
+        let fetch_buffer_1 = ColumnarAnyBuffer::from_descs(
             batch_size_row,
             self.columns
                 .iter()
                 .map(|(_name, strategy)| strategy.buffer_desc()),
         );
 
-        Ok(fetch_buffer)
+        let fetch_buffer_2 = ColumnarAnyBuffer::from_descs(
+            batch_size_row,
+            self.columns
+                .iter()
+                .map(|(_name, strategy)| strategy.buffer_desc()),
+        );
+
+        Ok((fetch_buffer_1, fetch_buffer_2))
     }
 
     pub fn parquet_schema(&self) -> TypePtr {
@@ -123,16 +131,18 @@ impl TableStrategy {
 
     pub fn block_cursor_to_parquet(
         &self,
-        mut row_set_cursor: BlockCursor<impl Cursor, ColumnarAnyBuffer>,
+        mut row_set_cursor: ConcurrentBlockCursor<impl Cursor, ColumnarAnyBuffer>,
         mut writer: Box<dyn ParquetOutput>,
+        next_fetch_buffer: ColumnarAnyBuffer,
     ) -> Result<(), Error> {
         let mut num_batch = 0;
         // Count the number of total rows fetched so far for logging. This should be identical to
         // `num_batch * batch_size_row + num_rows`.
         let mut total_rows_fetched = 0;
 
-        let mut pb = ParquetBuffer::new(row_set_cursor.row_array_size());
+        let mut pb = ParquetBuffer::new(next_fetch_buffer.row_array_size());
 
+        row_set_cursor.fill(next_fetch_buffer);
         while let Some(buffer) = row_set_cursor
             .fetch()
             .map_err(give_hint_about_flag_for_oracle_users)?
@@ -142,7 +152,8 @@ impl TableStrategy {
             total_rows_fetched += num_rows;
             info!("Fetched batch {num_batch} with {num_rows} rows.");
             info!("Fetched {total_rows_fetched} rows in total.");
-            self.write_batch(&mut writer, num_batch, buffer, &mut pb)?;
+            self.write_batch(&mut writer, num_batch, &buffer, &mut pb)?;
+            row_set_cursor.fill(buffer);
         }
         writer.close_box()?;
         Ok(())
