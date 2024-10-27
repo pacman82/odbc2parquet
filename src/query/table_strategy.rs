@@ -1,8 +1,6 @@
 use anyhow::{bail, Context, Error};
 use log::{debug, info};
-use odbc_api::{
-    buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, ResultSetMetadata,
-};
+use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, ResultSetMetadata};
 use parquet::{
     file::writer::SerializedColumnWriter,
     schema::types::{Type, TypePtr},
