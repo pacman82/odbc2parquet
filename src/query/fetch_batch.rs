@@ -1,10 +1,13 @@
-use anyhow::Error;
+use anyhow::{bail, Error};
 use log::info;
 use odbc_api::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor};
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{batch_size_limit::BatchSizeLimit, conversion_strategy::ConversionStrategy};
+use super::{
+    batch_size_limit::BatchSizeLimit,
+    conversion_strategy::ConversionStrategy,
+};
 
 pub trait FetchBatch {
     /// Maximum batch size in rows. This is used to allocate the parquet buffer of correct size.
@@ -14,10 +17,27 @@ pub trait FetchBatch {
     fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error>;
 }
 
+pub fn fetch_strategy<'a>(
+    concurrent_fetching: bool,
+    cursor: impl Cursor + 'a,
+    conversion_strategy: &ConversionStrategy,
+    batch_size_limit: BatchSizeLimit,
+) -> Result<Box<dyn FetchBatch + 'a>, Error> {
+    if concurrent_fetching {
+        bail!("Concurrent fetching not yet supported")
+    } else {
+        Ok(Box::new(SequentialFetch::new(
+            cursor,
+            conversion_strategy,
+            batch_size_limit,
+        )?))
+    }
+}
+
 /// Fetch one fetch buffer and write its contents to parquet. Then fill it again. This is not as
 /// fast as double buffering with concurrent fetching, but it uses less memory due to only requiring
 /// one fetch buffer.
-pub struct SequentialFetch<C: Cursor> {
+struct SequentialFetch<C: Cursor> {
     block_cursor: BlockCursor<C, ColumnarAnyBuffer>,
 }
 
