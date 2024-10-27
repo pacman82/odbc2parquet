@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.2.0
+
+* Introduced flag `--concurrent-fetching`. Setting it uses separate system threads for writing to parquet and fetching from the database. This can be a significant speepedup, but also increases memory consumption.
+
 ## 6.1.1
 
 * DEBUG Log messages now show column names as text, rather than utf-8 bytes
