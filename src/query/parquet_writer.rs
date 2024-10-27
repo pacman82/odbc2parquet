@@ -16,7 +16,7 @@ use parquet::{
 };
 
 use super::{
-    batch_size_limit::FileSizeLimit, current_file::CurrentFile, table_strategy::ColumnExporter,
+    batch_size_limit::FileSizeLimit, conversion_strategy::ColumnExporter, current_file::CurrentFile,
 };
 
 /// Options influencing the output parquet file independent of schema or row content.

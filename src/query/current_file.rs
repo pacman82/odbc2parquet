@@ -9,7 +9,7 @@ use parquet::{
 };
 use tempfile::TempPath;
 
-use super::table_strategy::ColumnExporter;
+use super::conversion_strategy::ColumnExporter;
 
 pub struct CurrentFile {
     writer: SerializedFileWriter<Box<dyn Write + Send>>,
