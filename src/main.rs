@@ -139,8 +139,6 @@ pub struct QueryOpt {
     /// up two a factor of two in case writing to parquet takes just as much time as fetching from
     /// the database. Usually io to the database is the bottlneck so the actual speedup is likely
     /// lower, but often still significant.
-    /// 
-    /// CURRENTLY THIS VALUE IS UNSTABLE AND IGNORED
     #[arg(long)]
     concurrent_fetching: bool,
     /// Then the size of the currently written parquet files goes beyond this threshold the current
