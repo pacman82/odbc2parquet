@@ -15,8 +15,8 @@ mod timestamp;
 mod timestamp_precision;
 mod timestamp_tz;
 
-use anyhow::{bail, Error};
-use fetch_batch::{FetchBatch, SequentialFetch};
+use anyhow::Error;
+use fetch_batch::{fetch_strategy, FetchBatch};
 use io_arg::IoArg;
 use log::info;
 use odbc_api::{Cursor, IntoParameter};
@@ -136,11 +136,8 @@ fn cursor_to_parquet(
     let table_strategy = ConversionStrategy::new(&mut cursor, mapping_options)?;
     let parquet_schema = table_strategy.parquet_schema();
     let writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
-    let fetch_strategy: Box<dyn FetchBatch> = if concurrent_fetching {
-        bail!("Concurrent fetching not yet supported")
-    } else {
-        Box::new(SequentialFetch::new(cursor, &table_strategy, batch_size)?)
-    };
+    let fetch_strategy: Box<dyn FetchBatch> =
+        fetch_strategy(concurrent_fetching, cursor, &table_strategy, batch_size)?;
     table_strategy.block_cursor_to_parquet(fetch_strategy, writer)?;
     Ok(())
 }
