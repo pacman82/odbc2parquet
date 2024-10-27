@@ -2,13 +2,13 @@ mod batch_size_limit;
 mod binary;
 mod boolean;
 mod column_strategy;
+mod conversion_strategy;
 mod current_file;
 mod date;
 mod decimal;
 mod fetch_batch;
 mod identical;
 mod parquet_writer;
-mod table_strategy;
 mod text;
 mod time;
 mod timestamp;
@@ -25,8 +25,8 @@ use std::io::{stdin, Read};
 use self::{
     batch_size_limit::{BatchSizeLimit, FileSizeLimit},
     column_strategy::{ColumnStrategy, MappingOptions},
+    conversion_strategy::ConversionStrategy,
     parquet_writer::{parquet_output, ParquetWriterOptions},
-    table_strategy::TableStrategy,
 };
 
 use crate::{open_connection, QueryOpt};
@@ -130,7 +130,7 @@ fn cursor_to_parquet(
     mapping_options: MappingOptions,
     parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
-    let table_strategy = TableStrategy::new(&mut cursor, mapping_options)?;
+    let table_strategy = ConversionStrategy::new(&mut cursor, mapping_options)?;
     let fetch_strategy = SequentialFetch::new(cursor, &table_strategy, batch_size)?;
     let parquet_schema = table_strategy.parquet_schema();
     let writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;

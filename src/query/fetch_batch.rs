@@ -4,7 +4,7 @@ use odbc_api::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor};
 
 use crate::parquet_buffer::ParquetBuffer;
 
-use super::{batch_size_limit::BatchSizeLimit, table_strategy::TableStrategy};
+use super::{batch_size_limit::BatchSizeLimit, conversion_strategy::ConversionStrategy};
 
 pub trait FetchBatch {
     /// Maximum batch size in rows. This is used to allocate the parquet buffer of correct size.
@@ -27,7 +27,7 @@ where
 {
     pub fn new(
         cursor: C,
-        table_strategy: &TableStrategy,
+        table_strategy: &ConversionStrategy,
         batch_size_limit: BatchSizeLimit,
     ) -> Result<Self, Error> {
         let mem_usage_odbc_buffer_per_row: usize = table_strategy.fetch_buffer_size_per_row();
@@ -50,7 +50,10 @@ where
     }
 }
 
-impl<C> FetchBatch for SequentialFetch<C> where C: Cursor {
+impl<C> FetchBatch for SequentialFetch<C>
+where
+    C: Cursor,
+{
     fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
         let batch = self.block_cursor.fetch()?;
         Ok(batch)

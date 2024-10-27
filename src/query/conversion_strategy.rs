@@ -18,7 +18,7 @@ use super::{
 /// Contains the decisions of how to fetch each columns of a table from an ODBC data source and copy
 /// it into a parquet file. This decisions include what kind of ODBC C_TYPE to use to fetch the data
 /// and in what these columns are transformed.
-pub struct TableStrategy {
+pub struct ConversionStrategy {
     columns: Vec<ColumnInfo>,
     parquet_schema: TypePtr,
 }
@@ -26,7 +26,7 @@ pub struct TableStrategy {
 /// Name, ColumnStrategy
 type ColumnInfo = (String, Box<dyn ColumnStrategy>);
 
-impl TableStrategy {
+impl ConversionStrategy {
     pub fn new(
         cursor: &mut impl ResultSetMetadata,
         mapping_options: MappingOptions,
@@ -78,7 +78,7 @@ impl TableStrategy {
                 .unwrap(),
         );
 
-        Ok(TableStrategy {
+        Ok(ConversionStrategy {
             columns,
             parquet_schema,
         })
