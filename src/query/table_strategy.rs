@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Error};
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, Cursor, ResultSetMetadata};
+use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, ResultSetMetadata};
 use parquet::{
     file::writer::SerializedColumnWriter,
     schema::types::{Type, TypePtr},
@@ -11,8 +11,8 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::{
     column_strategy::{strategy_from_column_description, ColumnStrategy, MappingOptions},
+    fetch_batch::FetchBatch,
     parquet_writer::ParquetOutput,
-    SequentialFetch,
 };
 
 /// Contains the decisions of how to fetch each columns of a table from an ODBC data source and copy
@@ -107,7 +107,7 @@ impl TableStrategy {
 
     pub fn block_cursor_to_parquet(
         &self,
-        mut fetch_strategy: SequentialFetch<impl Cursor>,
+        mut fetch_strategy: impl FetchBatch,
         mut writer: Box<dyn ParquetOutput>,
     ) -> Result<(), Error> {
         let mut num_batch = 0;
@@ -115,7 +115,7 @@ impl TableStrategy {
         // `num_batch * batch_size_row + num_rows`.
         let mut total_rows_fetched = 0;
 
-        let mut pb = ParquetBuffer::new(fetch_strategy.batch_size_in_rows());
+        let mut pb = ParquetBuffer::new(fetch_strategy.max_batch_size_in_rows());
 
         while let Some(buffer) = fetch_strategy
             .next_batch()
