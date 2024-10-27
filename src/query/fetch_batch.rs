@@ -6,6 +6,14 @@ use crate::parquet_buffer::ParquetBuffer;
 
 use super::{batch_size_limit::BatchSizeLimit, table_strategy::TableStrategy};
 
+pub trait FetchBatch {
+    /// Maximum batch size in rows. This is used to allocate the parquet buffer of correct size.
+    fn max_batch_size_in_rows(&self) -> usize;
+
+    /// Borrows a buffer containing the next batch to be written to the output parquet file
+    fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error>;
+}
+
 /// Fetch one fetch buffer and write its contents to parquet. Then fill it again. This is not as
 /// fast as double buffering with concurrent fetching, but it uses less memory due to only requiring
 /// one fetch buffer.
@@ -40,13 +48,15 @@ where
         let block_cursor = cursor.bind_buffer(fetch_buffer)?;
         Ok(Self { block_cursor })
     }
+}
 
-    pub fn batch_size_in_rows(&self) -> usize {
-        self.block_cursor.row_array_size()
-    }
-
-    pub fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
+impl<C> FetchBatch for SequentialFetch<C> where C: Cursor {
+    fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
         let batch = self.block_cursor.fetch()?;
         Ok(batch)
+    }
+
+    fn max_batch_size_in_rows(&self) -> usize {
+        self.block_cursor.row_array_size()
     }
 }

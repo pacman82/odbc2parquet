@@ -5,7 +5,7 @@ mod column_strategy;
 mod current_file;
 mod date;
 mod decimal;
-mod fetch_strategy;
+mod fetch_batch;
 mod identical;
 mod parquet_writer;
 mod table_strategy;
@@ -16,7 +16,7 @@ mod timestamp_precision;
 mod timestamp_tz;
 
 use anyhow::Error;
-use fetch_strategy::SequentialFetch;
+use fetch_batch::SequentialFetch;
 use io_arg::IoArg;
 use log::info;
 use odbc_api::{Cursor, IntoParameter};
