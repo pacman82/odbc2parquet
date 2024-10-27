@@ -15,8 +15,8 @@ mod timestamp;
 mod timestamp_precision;
 mod timestamp_tz;
 
-use anyhow::Error;
-use fetch_batch::SequentialFetch;
+use anyhow::{bail, Error};
+use fetch_batch::{FetchBatch, SequentialFetch};
 use io_arg::IoArg;
 use log::info;
 use odbc_api::{Cursor, IntoParameter};
@@ -41,6 +41,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
         batch_size_row,
         batch_size_memory,
         row_groups_per_file,
+        concurrent_fetching,
         file_size_threshold,
         encoding,
         prefer_varbinary,
@@ -99,6 +100,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
             cursor,
             output,
             batch_size,
+            concurrent_fetching,
             mapping_options,
             parquet_format_options,
         )?;
@@ -127,13 +129,18 @@ fn cursor_to_parquet(
     mut cursor: impl Cursor + Send + 'static,
     path: IoArg,
     batch_size: BatchSizeLimit,
+    concurrent_fetching: bool,
     mapping_options: MappingOptions,
     parquet_format_options: ParquetWriterOptions,
 ) -> Result<(), Error> {
     let table_strategy = ConversionStrategy::new(&mut cursor, mapping_options)?;
-    let fetch_strategy = SequentialFetch::new(cursor, &table_strategy, batch_size)?;
     let parquet_schema = table_strategy.parquet_schema();
     let writer = parquet_output(path, parquet_schema.clone(), parquet_format_options)?;
+    let fetch_strategy: Box<dyn FetchBatch> = if concurrent_fetching {
+        bail!("Concurrent fetching not yet supported")
+    } else {
+        Box::new(SequentialFetch::new(cursor, &table_strategy, batch_size)?)
+    };
     table_strategy.block_cursor_to_parquet(fetch_strategy, writer)?;
     Ok(())
 }
