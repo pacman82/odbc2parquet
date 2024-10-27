@@ -107,7 +107,7 @@ impl ConversionStrategy {
 
     pub fn block_cursor_to_parquet(
         &self,
-        mut fetch_strategy: impl FetchBatch,
+        mut fetch_strategy: Box<dyn FetchBatch>,
         mut writer: Box<dyn ParquetOutput>,
     ) -> Result<(), Error> {
         let mut num_batch = 0;

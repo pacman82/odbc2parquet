@@ -312,6 +312,50 @@ fn query_sales() {
 }
 
 #[test]
+#[should_panic]
+fn query_sales_concurrently() {
+    // Setup table for test
+    let table_name = "QuerySales";
+    let mut table = TableMssql::new(table_name, &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"]);
+    table.insert_rows_as_text(&[
+        ["2020-09-09", "00:05:34", "54", "9.99"],
+        ["2020-09-10", "12:05:32", "54", "9.99"],
+        ["2020-09-10", "14:05:32", "34", "2.00"],
+        ["2020-09-11", "06:05:12", "12", "-1.50"],
+    ]);
+    let expected_values = "\
+        {a: 2020-09-09, b: 334000000000, c: 54, d: 9.99}\n\
+        {a: 2020-09-10, b: 43532000000000, c: 54, d: 9.99}\n\
+        {a: 2020-09-10, b: 50732000000000, c: 34, d: 2.00}\n\
+        {a: 2020-09-11, b: 21912000000000, c: 12, d: -1.50}\n\
+    ";
+    let query = format!("SELECT a,b,c,d FROM {table_name} ORDER BY id");
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Tempfile path must be utf8");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            "--concurrent_fetching",
+            MSSQL,
+            &query,
+        ])
+        .assert()
+        .success();
+
+    parquet_read_out(out_str).stdout(eq(expected_values));
+}
+
+#[test]
 fn query_decimals() {
     // Setup table for test
     let table_name = "QueryDecimals";

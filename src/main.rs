@@ -131,6 +131,18 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[arg(long, default_value = "0")]
     row_groups_per_file: u32,
+    /// Trade memory for speed. If `true`, two fetch buffers are allocated. These take usually way
+    /// more memory than the buffers required to write into parques, since they contain the data
+    /// uncompressed and need to be able to hold the largest possible value of fields, even if the
+    /// actual data is small. So this usually almost doubles the required memory, but it allows to
+    /// fetch the next batch, while the current one is written, which can speed up the operation
+    /// up two a factor of two in case writing to parquet takes just as much time as fetching from
+    /// the database. Usually io to the database is the bottlneck so the actual speedup is likely
+    /// lower, but often still significant.
+    /// 
+    /// CURRENTLY THIS VALUE IS UNSTABLE AND IGNORED
+    #[arg(long)]
+    concurrent_fetching: bool,
     /// Then the size of the currently written parquet files goes beyond this threshold the current
     /// row group will be finished and then the file will be closed. So the file will be somewhat
     /// larger than the threshold. All further row groups will be written into new files to which
@@ -161,9 +173,9 @@ pub struct QueryOpt {
     /// encoding is used. See documentation of the `encoding` option. In case of UTF-8 this is the
     /// maximum length in bytes for an element. In case of UTF-16 the binary length is multiplied by
     /// two. This allows domain experts to configure limits (roughly) in the domain of how many
-    /// letters do I expect in this column, rather than to care about whether the command is executed
-    /// on Linux or Windows. The encoding of the column on the Database does not matter for this
-    /// setting or determining buffer sizes.
+    /// letters do I expect in this column, rather than to care about whether the command is
+    /// executed on Linux or Windows. The encoding of the column on the Database does not matter for
+    /// this setting or determining buffer sizes.
     #[arg(long)]
     column_length_limit: Option<usize>,
     /// Default compression used by the parquet file writer.
