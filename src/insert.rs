@@ -300,7 +300,7 @@ trait InserterBuilderStart: DataType + Sized {
 
                     // While parquet-rs does not fill the ODBC buffer directly we can still just
                     // copy the identical representations from one buffer to the other.
-                    target.copy_from_slice(values);
+                    target[..values.len()].copy_from_slice(values);
 
                     Ok(())
                 },

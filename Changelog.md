@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.3.1
+
+* Fix: A panic then inserting from a parquet file there the last row group has less rows than the other row groups.
+
 ## 6.3.0
 
 * Introduced flag `--concurrent-fetching`. Setting it uses separate system threads for writing to parquet and fetching from the database. This can be a significant speepedup, but also increases memory consumption.
