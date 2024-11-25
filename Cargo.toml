@@ -57,7 +57,7 @@ odbc-api = { version = "10", features = ["odbc_version_3_5"] }
 # importantly, UTF-8 is likely to be more battled tested on these platforms, while UTF-16 is "only"
 # required by the standard.
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-odbc-api = { version = "9", features = ["narrow", "odbc_version_3_5"] }
+odbc-api = { version = "10", features = ["odbc_version_3_5"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
