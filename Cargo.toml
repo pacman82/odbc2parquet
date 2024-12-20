@@ -54,7 +54,7 @@ features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 assert_cmd = "2.0.16"
 bytes = "1.9.0"
 lazy_static = "1.5.0"
-predicates = "3.1.2"
+predicates = "3.1.3"
 
 [profile.release]
 # Panics should only be caused by logic errors and are considered bugs
