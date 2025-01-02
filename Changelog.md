@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.3.2
+
+* Utilize upstream dependency `odbc-api 10.1` which autodetects homebrew library path. This allows for easier builds on Mac-OS ARM platforms.
+
 ## 6.3.1
 
 * Fix: A panic then inserting from a parquet file there the last row group has less rows than the other row groups.
