@@ -160,7 +160,7 @@ pub struct ColumnExporter<'a> {
     columns: &'a [(String, Box<dyn ColumnStrategy>)],
 }
 
-impl<'a> ColumnExporter<'a> {
+impl ColumnExporter<'_> {
     pub fn export_nth_column(
         &mut self,
         col_index: usize,
