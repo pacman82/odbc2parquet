@@ -131,16 +131,17 @@ pub struct QueryOpt {
     /// `out_2.par`, ...
     #[arg(long, default_value = "0")]
     row_groups_per_file: u32,
-    /// Trade memory for speed. If `true`, two fetch buffers are allocated. These take usually way
-    /// more memory than the buffers required to write into parques, since they contain the data
-    /// uncompressed and need to be able to hold the largest possible value of fields, even if the
-    /// actual data is small. So this usually almost doubles the required memory, but it allows to
-    /// fetch the next batch, while the current one is written, which can speed up the operation
-    /// up two a factor of two in case writing to parquet takes just as much time as fetching from
-    /// the database. Usually io to the database is the bottlneck so the actual speedup is likely
-    /// lower, but often still significant.
+    /// Trade speed for memory. If `true`, only one fetch buffer is allocated. It usually takes way
+    /// more memory than the buffers required to write into parquet, since it contains the data
+    /// uncompressed and must be able to hold the largest possible value of fields, even if the
+    /// actual data is small. So only using one instead of two usually halfes the required memory,
+    /// yet it blocks fetching the next batch from the database, until the contents of the current
+    /// one have been written. This can slow down the creation of parquet up to a factor of two in
+    /// in case writing to parquet takes just as much time as fetching from the database. Usually
+    /// io to the database is the bottlneck so the actual slow down is likely lower, but often still
+    /// significant.
     #[arg(long)]
-    concurrent_fetching: bool,
+    sequential_fetching: bool,
     /// Then the size of the currently written parquet files goes beyond this threshold the current
     /// row group will be finished and then the file will be closed. So the file will be somewhat
     /// larger than the threshold. All further row groups will be written into new files to which

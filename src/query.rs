@@ -41,7 +41,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
         batch_size_row,
         batch_size_memory,
         row_groups_per_file,
-        concurrent_fetching,
+        sequential_fetching,
         file_size_threshold,
         encoding,
         prefer_varbinary,
@@ -100,7 +100,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
             cursor,
             output,
             batch_size,
-            concurrent_fetching,
+            !sequential_fetching,
             mapping_options,
             parquet_format_options,
         )?;
