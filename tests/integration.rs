@@ -312,9 +312,9 @@ fn query_sales() {
 }
 
 #[test]
-fn query_sales_concurrently() {
+fn query_sales_sequentially() {
     // Setup table for test
-    let table_name = "QuerySalesConcurrently";
+    let table_name = "QuerySalesSequentially";
     let mut table = TableMssql::new(table_name, &["DATE", "TIME(7)", "INT", "DECIMAL(10,2)"]);
     table.insert_rows_as_text(&[
         ["2020-09-09", "00:05:34", "54", "9.99"],
@@ -345,7 +345,7 @@ fn query_sales_concurrently() {
             out_str,
             "--connection-string",
             MSSQL,
-            "--concurrent-fetching",
+            "--sequential-fetching",
             &query,
         ])
         .assert()
