@@ -236,7 +236,7 @@ fn parameters_in_query() {
 }
 
 #[test]
-fn should_error_on_truncation() {
+fn should_error_on_truncation_utf_8() {
     // Setup table for test
     let table_name = "ErrorOnTruncation";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
@@ -258,6 +258,8 @@ fn should_error_on_truncation() {
             "-vvvv",
             "query",
             out_str,
+            "--encoding",
+            "system",
             "--connection-string",
             MSSQL,
             "--column-length-limit",
@@ -266,15 +268,51 @@ fn should_error_on_truncation() {
         ])
         .assert();
 
-    #[cfg(target_os = "windows")]
+    // For UTF-8 the MSSQL driver does return a length indicator.
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
+        the `--column-length-limit` option to increase the maximum element size of columns. The \
+        driver indicated an actual length of 10. The error occurred for column a.";
+    assertion.failure().stderr(contains(expectation));
+}
+
+#[test]
+fn should_error_on_truncation_utf_16() {
+    // Setup table for test
+    let table_name = "ErrorOnTruncation";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_rows_as_text(&[["0123456789"]]);
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name}");
+
+    let assertion = Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--encoding",
+            "Utf16",
+            "--connection-string",
+            MSSQL,
+            "--column-length-limit",
+            "5",
+            &query,
+        ])
+        .assert();
+
+    // For UTF-16 the MSSQL driver does not return a length indicator.
     let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
         the `--column-length-limit` option to increase the maximum element size of columns. Sadly \
         the driver did not return a length indicator for the value, so you will have to guess its \
         actual length. The error occurred for column a.";
-    #[cfg(not(target_os = "windows"))]
-    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
-        the `--column-length-limit` option to increase the maximum element size of columns. The \
-        driver indicated an actual length of 10. The error occurred for column a.";
     assertion.failure().stderr(contains(expectation));
 }
 
