@@ -1,10 +1,11 @@
 name: Release
 
+permissions:
+  contents: write
+
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  release:
+    types: [published]
 
 jobs:
   release_win64:
@@ -53,19 +54,6 @@ jobs:
           asset_name: odbc2parquet-win-x86.zip
           tag: ${{ github.ref }}
 
-  publish_to_cargo:
-    name: Publish to cargo
-    runs-on: macos-13 # Any runner should do
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Publish to cargo
-        env:
-          CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
-        run: |
-          cargo publish --token "${CARGO_TOKEN}"
 
   release_macos_intel:
     name: Build and release macOS Intel
