@@ -175,8 +175,7 @@ impl ConversionStrategy {
             } => {
                 let indicator_msg = if let Some(length) = indicator {
                     format!(
-                        "The indicator returned by the driver indicated an actual length of \
-                        {length}."
+                        "The driver indicated an actual length of {length}."
                     )
                 } else {
                     "Sadly the driver did not return a length indicator for the value, so you will \

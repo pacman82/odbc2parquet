@@ -35,11 +35,10 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-
-      - name: Install PostgreSQL Driver
+      - name: Install ODBC Drivers
         run: |
           sudo apt-get update
-          sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
+          sudo apt-get install -y unixodbc-dev odbc-postgresql msodbcsql18 devscripts
           # Fix PostgreSQL driver paths
           sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
           sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
