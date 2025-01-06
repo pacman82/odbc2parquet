@@ -2,6 +2,8 @@
 
 ## [7.0.0](https://github.com/pacman82/odbc2parquet/compare/v6.3.2...v7.0.0) - 2025-01-06
 
+In the past users struggled to find the `--column-length-limit` options. Therefore the default behavior of `odbc2parquet` is now to set it by default to `4096`. In order to prevent silent data loss due to truncation as a consequence of this change, reporting truncation errors is now always active. In addition to that the error message for the truncation errors have been improved, mentioning the affected column as well as hinting that increasing the `--column-length-limit` option might be a good idea.
+
 ### Added
 
 - [**breaking**] column-length-limit now defaults to 4096
@@ -9,18 +11,6 @@
 - Mention column name in truncation error.
 - Error message for truncation now hints at column-length-limit option.
 - [**breaking**] The `--concurrent-fetching` flag has been removed, since concurrent fetching is now the new default behavior. The `--sequential-fetching` flag has been introduced to opt into the old behaviour.
-
-### Other
-
-- Separate truncation tests for UTF-8 and UTF-16
-- Add release-plz
-- rename Changelog to uppercase
-- open_connection now resides in separate module
-- Install MSSQL ODBC driver 18 in CI
-- Update Microsoft ODBC driver
-- *(deps)* bump tempfile from 3.14.0 to 3.15.0
-- *(deps)* bump odbc-api from 10.1.0 to 10.1.1
-- Change test query sales concurrently into query sales sequentially
 
 ## 6.3.2
 
