@@ -238,7 +238,7 @@ fn parameters_in_query() {
 #[test]
 fn should_error_on_truncation_utf_8() {
     // Setup table for test
-    let table_name = "ErrorOnTruncation";
+    let table_name = "ErrorOnTruncationUtf8";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
     table.insert_rows_as_text(&[["0123456789"]]);
 
@@ -278,7 +278,7 @@ fn should_error_on_truncation_utf_8() {
 #[test]
 fn should_error_on_truncation_utf_16() {
     // Setup table for test
-    let table_name = "ErrorOnTruncation";
+    let table_name = "ErrorOnTruncationUtf16";
     let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
     table.insert_rows_as_text(&[["0123456789"]]);
 
