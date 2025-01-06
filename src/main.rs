@@ -166,7 +166,7 @@ pub struct QueryOpt {
     /// has been ill-defined (like choosing `TEXT` for a username, although a users name is
     /// unlikely to be several GB long). Another situation is that the ODBC driver is not good at
     /// reporting the maximum length and therefore reports a really large value. The third option is
-    /// of course that your values are actually large. In this case you just need a  ton of memory.
+    /// of course that your values are actually large. In this case you just need a ton of memory.
     /// You can use the batch size limit though to retrieve less at once. For binary columns this is
     /// a maximum element length in bytes. For text columns it depends on whether UTF-8 or UTF-16
     /// encoding is used. See documentation of the `encoding` option. In case of UTF-8 this is the
@@ -175,8 +175,8 @@ pub struct QueryOpt {
     /// letters do I expect in this column, rather than to care about whether the command is
     /// executed on Linux or Windows. The encoding of the column on the Database does not matter for
     /// this setting or determining buffer sizes.
-    #[arg(long)]
-    column_length_limit: Option<usize>,
+    #[arg(long, default_value = "4096")]
+    column_length_limit: usize,
     /// Default compression used by the parquet file writer.
     #[arg(long, value_enum, default_value = "zstd")]
     column_compression_default: CompressionVariants,

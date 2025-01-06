@@ -268,16 +268,14 @@ fn should_error_on_truncation() {
 
     #[cfg(target_os = "windows")]
     let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
-        the `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
+        the `--column-length-limit` option to increase the maximum element size of columns. Sadly \
         the driver did not return a length indicator for the value, so you will have to guess its \
         actual length. The error occurred for column a.";
     #[cfg(not(target_os = "windows"))]
     let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
-        the `--column-length-limit` flag to adjust the limit for text columns in characters. The \
+        the `--column-length-limit` option to increase the maximum element size of columns. The \
         driver indicated an actual length of 10. The error occurred for column a.";
-    assertion
-        .failure()
-        .stderr(contains(expectation));
+    assertion.failure().stderr(contains(expectation));
 }
 
 #[test]
@@ -313,17 +311,15 @@ fn should_error_on_truncation_for_sequential_fetch() {
         .assert();
 
     #[cfg(target_os = "windows")]
-    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
-        the `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
-        the driver did not return a length indicator for the value, so you will have to guess its \
-        actual length. The error occurred for column a.";
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can \
+        use the `--column-length-limit` option to increase the maximum element size of columns. \
+        Sadly the driver did not return a length indicator for the value, so you will have to \
+        guess its actual length. The error occurred for column a.";
     #[cfg(not(target_os = "windows"))]
-    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
-        the `--column-length-limit` flag to adjust the limit for text columns in characters. The \
-        driver indicated an actual length of 10. The error occurred for column a.";
-    assertion
-        .failure()
-        .stderr(contains(expectation));
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can \
+        use the `--column-length-limit` option to increase the maximum element size of columns. \
+        The driver indicated an actual length of 10. The error occurred for column a.";
+    assertion.failure().stderr(contains(expectation));
 }
 
 #[test]
@@ -1737,8 +1733,8 @@ fn varbinary_column() {
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
-/// Since VARCHARMAX reports a size of 0. odbc2parquet should detect this and give the user an error
-/// instead.
+/// Since VARCHARMAX reports a size of 0. odbc2parquet should detect this and use the global column
+/// length limit instead.
 #[test]
 fn query_varchar_max() {
     let conn = ENV
@@ -1748,7 +1744,7 @@ fn query_varchar_max() {
 
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
-        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
+        &format!("INSERT INTO {table_name} (a) Values ('Hello, World!');"),
         (),
     )
     .unwrap();
@@ -1771,60 +1767,15 @@ fn query_varchar_max() {
             "query",
             "--connection-string",
             MSSQL,
-            out_str,
-            &query,
-        ])
-        .assert()
-        .failure()
-        .stderr(contains(
-            "Column 'a' with index 1. Driver reported a display length of 0. This can happen for \
-        variadic types without a fixed upper bound. You can manually specify an upper bound for \
-        variadic columns using the `--column-length-limit` command line argument.",
-        ));
-}
-
-/// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
-/// columns. Yet by setting a size limit we can make it work.
-#[test]
-fn query_varchar_max_with_column_length_limit() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    let table_name = "QueryVarcharMaxWithColumnLengthLimit";
-
-    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
-    conn.execute(
-        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
-        (),
-    )
-    .unwrap();
-
-    // A temporary directory, to be removed at the end of the test.
-    let out_dir = tempdir().unwrap();
-    // The name of the output parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let out_path = out_dir.path().join("out.par");
-    // We need to pass the output path as a string argument.
-    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
-
-    let query = format!("SELECT a FROM {table_name};");
-
-    // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
-        .args([
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            "--column-length-limit",
-            "4096",
             out_str,
             &query,
         ])
         .assert()
         .success();
+
+    parquet_read_out(out_str).stdout(eq("{a: \"Hello, World!\"}\n"));
 }
+
 
 /// Introduced after discovering a bug, that columns were not ignored on windows.
 ///
@@ -1839,7 +1790,7 @@ fn query_varchar_max_utf16() {
 
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(MAX)"]).unwrap();
     conn.execute(
-        &format!("INSERT INTO {table_name} (a) Values ('Hello'), ('World');"),
+        &format!("INSERT INTO {table_name} (a) Values ('Hello, World!');"),
         (),
     )
     .unwrap();
@@ -1868,7 +1819,9 @@ fn query_varchar_max_utf16() {
             &query,
         ])
         .assert()
-        .failure();
+        .success();
+
+    parquet_read_out(out_str).stdout(eq("{a: \"Hello, World!\"}\n"));
 }
 
 #[test]

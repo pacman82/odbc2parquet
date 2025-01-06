@@ -59,7 +59,7 @@ impl ConversionStrategy {
             };
 
             let column_fetch_strategy =
-                strategy_from_column_description(&cd, &name, mapping_options, cursor, index)?;
+                strategy_from_column_description(&cd, mapping_options, cursor, index)?;
             columns.push((name, column_fetch_strategy));
         }
 
@@ -185,8 +185,8 @@ impl ConversionStrategy {
                 let column_name = self.columns[buffer_index].0.as_str();
                 anyhow!(format!(
                     "A field exceeds the maximum element length of a column buffer. You can use \
-                    the `--column-length-limit` flag to adjust the limit for text columns in \
-                    characters. {indicator_msg} The error occurred for column {column_name}."
+                    the `--column-length-limit` option to increase the maximum element size of \
+                    columns. {indicator_msg} The error occurred for column {column_name}."
                 ))
             }
             other => other.into(),

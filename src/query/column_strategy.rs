@@ -1,6 +1,6 @@
 use std::{cmp::min, convert::TryInto, num::NonZeroUsize};
 
-use anyhow::{bail, Error};
+use anyhow::Error;
 use log::{debug, info};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
@@ -56,13 +56,12 @@ pub struct MappingOptions<'a> {
     pub prefer_varbinary: bool,
     pub avoid_decimal: bool,
     pub driver_does_support_i64: bool,
-    pub column_length_limit: Option<usize>,
+    pub column_length_limit: usize,
 }
 
 /// Fetch strategies based on column description and environment arguments `MappingOptions`.
 ///
 /// * `cd`: Description of the column for which we need to pick a fetch strategy
-/// * `name`: Name of the column which we fetch
 /// * `mapping_options`: Options describing the environment and desired outcome which are also
 ///   influencing the decision of what to pick.
 /// * `cursor`: Used to query additional information about the columns, not contained in the initial
@@ -73,7 +72,6 @@ pub struct MappingOptions<'a> {
 ///   using `cursor`
 pub fn strategy_from_column_description(
     cd: &ColumnDescription,
-    name: &str,
     mapping_options: MappingOptions,
     cursor: &mut impl ResultSetMetadata,
     index: i16,
@@ -97,23 +95,12 @@ pub fn strategy_from_column_description(
     let is_optional = cd.could_be_nullable();
 
     let apply_length_limit = |reported_length: Option<NonZeroUsize>| {
-        match (reported_length, column_length_limit) {
-            (None, None) => bail!(
-                "Column '{}' with index {}. Driver reported a display length of 0. This can happen \
-                for variadic types without a fixed upper bound. You can manually specify an upper \
-                bound for variadic columns using the `--column-length-limit` command line \
-                argument.",
-                name, index
-            ),
-            // No upper bound has been reported by the driver, so we use the one supplied by the
-            // user.
-            (None, Some(column_length_limit)) => Ok(column_length_limit),
-            // Driver provided us with a length and no upper bound has been specified by the user.
-            (Some(reported_length), None) => Ok(reported_length.get()),
-            (Some(reported_length), Some(column_length_limit)) => {
-                Ok(min(reported_length.get(), column_length_limit))
-            }
-        }
+        min(
+            reported_length
+                .map(NonZeroUsize::get)
+                .unwrap_or(column_length_limit),
+            column_length_limit,
+        )
     };
 
     let strategy: Box<dyn ColumnStrategy> = match cd.data_type {
@@ -163,7 +150,7 @@ pub fn strategy_from_column_description(
             )
         }
         DataType::Binary { length } => {
-            let length = apply_length_limit(length)?;
+            let length = apply_length_limit(length);
             if prefer_varbinary {
                 Box::new(Binary::<ByteArrayType>::new(repetition, length))
             } else {
@@ -171,7 +158,7 @@ pub fn strategy_from_column_description(
             }
         }
         DataType::Varbinary { length } | DataType::LongVarbinary { length } => {
-            let length = apply_length_limit(length)?;
+            let length = apply_length_limit(length);
             Box::new(Binary::<ByteArrayType>::new(repetition, length))
         }
         // For character data we consider binding to wide (16-Bit) buffers in order to avoid
@@ -188,7 +175,7 @@ pub fn strategy_from_column_description(
             } else {
                 dt.utf8_len()
             };
-            let length = apply_length_limit(len_in_chars)?;
+            let length = apply_length_limit(len_in_chars);
             text_strategy(use_utf16, repetition, length)
         }
         DataType::Other {
@@ -236,14 +223,14 @@ fn unknown_non_char_type(
     cursor: &mut impl ResultSetMetadata,
     index: i16,
     repetition: Repetition,
-    apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> Result<usize, Error>,
+    apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> usize,
 ) -> Result<Box<dyn ColumnStrategy>, Error> {
     let length = if let Some(len) = cd.data_type.utf8_len() {
         Some(len)
     } else {
         cursor.col_display_size(index.try_into().unwrap())?
     };
-    let length = apply_length_limit(length)?;
+    let length = apply_length_limit(length);
     let use_utf16 = false;
     Ok(text_strategy(use_utf16, repetition, length))
 }
