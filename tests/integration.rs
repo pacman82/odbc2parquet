@@ -26,10 +26,11 @@ use parquet::{
 use predicates::{ord::eq, str::contains};
 use tempfile::{tempdir, NamedTempFile};
 
-const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};\
+const MSSQL: &str = "Driver={ODBC Driver 18 for SQL Server};\
     Server=localhost;\
     UID=SA;\
-    PWD=My@Test@Password1;";
+    PWD=My@Test@Password1;\
+    TrustServerCertificate=yes;";
 
 const POSTGRES: &str = "Driver={PostgreSQL UNICODE};\
     Server=localhost;\
