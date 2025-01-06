@@ -27,7 +27,7 @@ use parquet::{
 };
 
 use crate::{
-    open_connection,
+    connection::open_connection,
     parquet_buffer::{BufferedDataType, ParquetBuffer},
     InsertOpt,
 };

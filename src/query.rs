@@ -29,7 +29,7 @@ use self::{
     parquet_writer::{parquet_output, ParquetWriterOptions},
 };
 
-use crate::{open_connection, QueryOpt};
+use crate::{connection::open_connection, QueryOpt};
 
 /// Execute a query and writes the result to parquet.
 pub fn query(opt: QueryOpt) -> Result<(), Error> {
