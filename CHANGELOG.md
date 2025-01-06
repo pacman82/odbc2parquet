@@ -1,5 +1,27 @@
 # Changelog
 
+## [7.0.0](https://github.com/pacman82/odbc2parquet/compare/v6.3.2...v7.0.0) - 2025-01-06
+
+### Added
+
+- [**breaking**] column-length-limit now defaults to 4096
+- Report truncations for sequential fetches
+- Mention column name in truncation error.
+- Error message for truncation now hints at column-length-limit option.
+- [**breaking**] The `--concurrent-fetching` flag has been removed, since concurrent fetching is now the new default behavior. The `--sequential-fetching` flag has been introduced to opt into the old behaviour.
+
+### Other
+
+- Separate truncation tests for UTF-8 and UTF-16
+- Add release-plz
+- rename Changelog to uppercase
+- open_connection now resides in separate module
+- Install MSSQL ODBC driver 18 in CI
+- Update Microsoft ODBC driver
+- *(deps)* bump tempfile from 3.14.0 to 3.15.0
+- *(deps)* bump odbc-api from 10.1.0 to 10.1.1
+- Change test query sales concurrently into query sales sequentially
+
 ## 6.3.2
 
 * Utilize upstream dependency `odbc-api 10.1` which autodetects homebrew library path. This allows for easier builds on Mac-OS ARM platforms.
