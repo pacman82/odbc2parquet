@@ -80,7 +80,7 @@ where
     C: Cursor,
 {
     fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
-        let batch = self.block_cursor.fetch()?;
+        let batch = self.block_cursor.fetch_with_truncation_check(true)?;
         Ok(batch)
     }
 

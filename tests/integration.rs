@@ -281,6 +281,52 @@ fn should_error_on_truncation() {
 }
 
 #[test]
+fn should_error_on_truncation_for_sequential_fetch() {
+    // Setup table for test
+    let table_name = "ErrorOnTruncationForSequentialFetch";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_rows_as_text(&[["0123456789"]]);
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name}");
+
+    let assertion = Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--sequential-fetching",
+            "--column-length-limit",
+            "5",
+            &query,
+        ])
+        .assert();
+
+    #[cfg(target_os = "windows")]
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
+        the `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
+        the driver did not return a length indicator for the value, so you will have to guess its \
+        actual length. The error occurred for column a.";
+    #[cfg(not(target_os = "windows"))]
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
+        the `--column-length-limit` flag to adjust the limit for text columns in characters. The \
+        driver indicated an actual length of 10. The error occurred for column a.";
+    assertion
+        .failure()
+        .stderr(contains(expectation));
+}
+
+#[test]
 fn should_allow_specifying_explicit_compression_level() {
     // Setup table for test
     let table_name = "ShouldAllowSpecifyingExplicitCompressionLevel";
