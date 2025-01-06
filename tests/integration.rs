@@ -252,7 +252,7 @@ fn should_error_on_truncation() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
+    let assertion = Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
             "-vvvv",
@@ -264,14 +264,20 @@ fn should_error_on_truncation() {
             "5",
             &query,
         ])
-        .assert()
+        .assert();
+
+    #[cfg(target_os = "windows")]
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
+        the `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
+        the driver did not return a length indicator for the value, so you will have to guess its \
+        actual length. The error occurred for column a.";
+    #[cfg(not(target_os = "windows"))]
+    let expectation = "A field exceeds the maximum element length of a column buffer. You can use \
+        the `--column-length-limit` flag to adjust the limit for text columns in characters. The \
+        driver indicated an actual length of 10. The error occurred for column a.";
+    assertion
         .failure()
-        .stderr(contains(
-            "A field exceeds the maximum element length of a column buffer. You can use the \
-            `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
-            the driver did not return a length indicator for the value, so you will have to guess \
-            its actual length. The error occurred for column a.",
-        ));
+        .stderr(contains(expectation));
 }
 
 #[test]
