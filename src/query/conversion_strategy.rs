@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use log::{debug, info};
 use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, ResultSetMetadata};
 use parquet::{
@@ -119,7 +119,7 @@ impl ConversionStrategy {
 
         while let Some(buffer) = fetch_strategy
             .next_batch()
-            .map_err(give_hint_about_flag_for_oracle_users)?
+            .map_err(translate_error)?
         {
             num_batch += 1;
             let num_rows = buffer.num_rows();
@@ -179,16 +179,36 @@ impl ColumnExporter<'_> {
     }
 }
 
-/// If we hit the issue with oracle not supporting 64Bit, let's tell our users that we have
-/// implemented a solution to it.
-fn give_hint_about_flag_for_oracle_users(error: odbc_api::Error) -> Error {
+/// Enrich or translate the `odbc_api::Error` with information about flags and options which could
+/// be set in order to resolve them in the next run of `odbc2parquet`.
+fn translate_error(error: odbc_api::Error) -> Error {
     match error {
+        // If we hit the issue with oracle not supporting 64Bit, let's tell our users that we have
+        // implemented a solution to it.
         error @ odbc_api::Error::OracleOdbcDriverDoesNotSupport64Bit(_) => {
             let error: Error = error.into();
             error.context(
                 "Looks like you are using an Oracle database. Try the \
                 `--driver-does-not-support-64bit-integers` flag.",
             )
+        }
+        odbc_api::Error::TooLargeValueForBuffer {
+            indicator,
+            buffer_index,
+        } => {
+            let indicator_msg = if let Some(length) = indicator {
+                format!(
+                    "The indicator returned by the driver indicated an actual length of {length}."
+                )
+            } else {
+                "Sadly the driver did not return a length indicator for the value, so you will \
+                have to guess its actual length.".to_owned()
+            };
+            anyhow!(format!(
+                "A field exceeds the maximum element length of a column buffer. You can use the \
+                `--column-length-limit` flag to adjust the limit for text columns in characters. \
+                {indicator_msg} The error occurred for column {buffer_index} (zero-based index)."
+            ))
         }
         other => other.into(),
     }

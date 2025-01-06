@@ -235,6 +235,45 @@ fn parameters_in_query() {
 }
 
 #[test]
+fn should_error_on_truncation() {
+    // Setup table for test
+    let table_name = "ErrorOnTruncation";
+    let mut table = TableMssql::new(table_name, &["VARCHAR(10)"]);
+    table.insert_rows_as_text(&[["0123456789"]]);
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = format!("SELECT a FROM {table_name}");
+
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "query",
+            out_str,
+            "--connection-string",
+            MSSQL,
+            "--column-length-limit",
+            "5",
+            &query,
+        ])
+        .assert()
+        .failure()
+        .stderr(contains(
+            "A field exceeds the maximum element length of a column buffer. You can use the \
+            `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
+            the driver did not return a length indicator for the value, so you will have to guess \
+            its actual length. The error occurred for column 0 (zero-based index).",
+        ));
+}
+
+#[test]
 fn should_allow_specifying_explicit_compression_level() {
     // Setup table for test
     let table_name = "ShouldAllowSpecifyingExplicitCompressionLevel";
@@ -2235,7 +2274,7 @@ pub fn insert_64_bit_integer() {
 }
 
 /// See issue: <https://github.com/pacman82/odbc2parquet/issues/665>
-/// 
+///
 /// Underlying issue for the bug has been the assumption the buffer used to write into parquet is
 /// always the same length as the source buffer, which happens usually in the last row group which
 /// may have less rows, because the total number of rows is not a divisor of max row group size.
@@ -2268,7 +2307,7 @@ pub fn insert_file_with_last_row_group_of_less_size() {
     let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
     let mut row_group_writer = writer.next_row_group().unwrap();
     let mut col_writer = row_group_writer.next_column().unwrap().unwrap();
-    i64::write_batch(col_writer.untyped(), &[1,2], None);
+    i64::write_batch(col_writer.untyped(), &[1, 2], None);
     col_writer.close().unwrap();
     row_group_writer.close().unwrap();
     let mut row_group_writer = writer.next_row_group().unwrap();
