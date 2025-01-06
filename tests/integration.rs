@@ -270,7 +270,7 @@ fn should_error_on_truncation() {
             "A field exceeds the maximum element length of a column buffer. You can use the \
             `--column-length-limit` flag to adjust the limit for text columns in characters. Sadly \
             the driver did not return a length indicator for the value, so you will have to guess \
-            its actual length. The error occurred for column 0 (zero-based index).",
+            its actual length. The error occurred for column a.",
         ));
 }
 
