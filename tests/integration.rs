@@ -79,7 +79,8 @@ fn append_user_and_password_to_connection_string() {
     TableMssql::new(table_name, &["VARCHAR(10)"]);
 
     // Connection string without user name and password.
-    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+    let connection_string = "Driver={ODBC Driver 18 for SQL Server};Server=localhost;\
+        TrustServerCertificate=yes;";
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary

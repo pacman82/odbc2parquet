@@ -126,7 +126,7 @@ Use `odbc2parquet help query` to see all options related to fetching data.
 
 ```bash
 odbc2parquet query \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 18` for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;TrustServerCertificate=yes;" \
 out.par  \
 "SELECT * FROM Birthdays"
 ```
@@ -146,7 +146,7 @@ out.par1 \
 
 ```shell
 odbc2parquet query \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;TrustServerCertificate=yes;" \
 out.par  \
 "SELECT * FROM Birthdays WHERE year > ? and year < ?" \
 1990 2010
@@ -168,7 +168,7 @@ odbc2parquet list-data-sources
 
 ```shell
 odbc2parquet insert \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;TrustServerCertificate=yes;" \
 input.par \
 MyTable
 ```
