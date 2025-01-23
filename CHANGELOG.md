@@ -5,18 +5,7 @@
 ### Fixed
 
 - If `--output` is ommited for `completions` subcommand, emit shell completions to stdout
-- Restore help text for avoid-decimal
-
-### Other
-
-- *(deps)* bump clap from 4.5.26 to 4.5.27
-- Update ODBC driver version to 18 in remaining places
-- *(deps)* bump log from 0.4.22 to 0.4.25
-- *(deps)* bump clap from 4.5.24 to 4.5.26
-- *(deps)* bump clap_complete from 4.5.41 to 4.5.42
-- *(deps)* bump clap from 4.5.23 to 4.5.24
-- *(deps)* bump clap_complete from 4.5.40 to 4.5.41
-- fix duplicated table name
+- Restore help text for `--avoid-decimal` option in query subcommand
 
 ## [7.0.0](https://github.com/pacman82/odbc2parquet/compare/v6.3.2...v7.0.0) - 2025-01-06
 
