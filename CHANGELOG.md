@@ -1,5 +1,23 @@
 # Changelog
 
+## [7.0.1](https://github.com/pacman82/odbc2parquet/compare/v7.0.0...v7.0.1) - 2025-01-23
+
+### Fixed
+
+- If `--output` is ommited for `completions` subcommand, emit shell completions to stdout
+- Restore help text for avoid-decimal
+
+### Other
+
+- *(deps)* bump clap from 4.5.26 to 4.5.27
+- Update ODBC driver version to 18 in remaining places
+- *(deps)* bump log from 0.4.22 to 0.4.25
+- *(deps)* bump clap from 4.5.24 to 4.5.26
+- *(deps)* bump clap_complete from 4.5.41 to 4.5.42
+- *(deps)* bump clap from 4.5.23 to 4.5.24
+- *(deps)* bump clap_complete from 4.5.40 to 4.5.41
+- fix duplicated table name
+
 ## [7.0.0](https://github.com/pacman82/odbc2parquet/compare/v6.3.2...v7.0.0) - 2025-01-06
 
 In the past users struggled to find the `--column-length-limit` options. Therefore the default behavior of `odbc2parquet` is now to set it by default to `4096`. In order to prevent silent data loss due to truncation as a consequence of this change, reporting truncation errors is now always active. In addition to that the error message for the truncation errors have been improved, mentioning the affected column as well as hinting that increasing the `--column-length-limit` option might be a good idea.
