@@ -12,7 +12,7 @@ use enum_args::CompressionVariants;
 use io_arg::IoArg;
 use odbc_api::environment;
 use parquet::basic::Encoding;
-use std::{fs::File, path::PathBuf};
+use std::path::PathBuf;
 use stderrlog::ColorChoice;
 
 use clap::{ArgAction, Args, CommandFactory, Parser};
@@ -62,9 +62,9 @@ enum Command {
     },
     /// Generate shell completions
     Completions {
-        #[arg(long, short = 'o', default_value = ".")]
-        /// Output directory
-        output: PathBuf,
+        #[arg(long, short = 'o', default_value = "-")]
+        /// Output file. Defaults to `-` which means standard output.
+        output: IoArg,
         /// Name of the shell to generate completions for.
         shell: Shell,
     },
@@ -338,7 +338,8 @@ fn main() -> Result<(), Error> {
             }
         }
         Command::Completions { shell, output } => {
-            let mut output = File::create(output)?;
+            let output = output.open_as_output()?;
+            let mut output = output.into_write();
             generate(shell, &mut Cli::command(), "odbc2parquet", &mut output);
         }
     }
