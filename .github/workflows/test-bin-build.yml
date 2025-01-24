@@ -1,0 +1,116 @@
+name: Test binary build
+
+permissions:
+  contents: write
+
+on: [push, pull_request]
+
+jobs:
+  release_win64:
+    name: Build and release Windows 64-bit
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cargo build --release
+          Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86_64.zip
+
+  release_win32:
+    name: Build and release Windows 32-bit
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install latest rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: i686-pc-windows-msvc
+
+      - name: Build
+        run: |
+          cargo build --release --target i686-pc-windows-msvc
+          Compress-Archive -LiteralPath target/i686-pc-windows-msvc/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86.zip
+
+
+  release_macos_intel:
+    name: Build and release macOS Intel
+    # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    runs-on: macos-13 # Intel-based macOS runner
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-macos-x86_64.gz
+
+  release_macos_arm64:
+    name: Build and release macOS ARM64
+    # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    runs-on: macos-latest # ARM-based macOS runner (Apple Silicon)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Unix ODBC
+        run: |
+          brew install unixodbc
+
+      - name: Build
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-macos-arm64.gz
+
+  release_ubuntu_x64:
+    name: Build and release Ubuntu x86_64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install unixODBC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unixodbc-dev
+
+      - name: Build
+        run: |
+          cargo build --release
+          gzip --force target/release/odbc2parquet
+          mv target/release/odbc2parquet.gz odbc2parquet-ubuntu-x86_64.gz
+
+  release_ubuntu_arm64:
+    name: Build and release Ubuntu ARM64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install latest rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+
+      - name: Install cross for cross-compilation
+        run: cargo install cross
+
+      - name: Cross-build for Ubuntu ARM (aarch64)
+        run: |
+          cross build --release --target aarch64-unknown-linux-gnu
+          gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
+          mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
