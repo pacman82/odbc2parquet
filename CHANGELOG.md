@@ -1,5 +1,20 @@
 # Changelog
 
+## [7.0.2](https://github.com/pacman82/odbc2parquet/compare/v7.0.1...v7.0.2) - 2025-02-16
+
+### Other
+
+- fix linux tests
+- Update to odbc-api 11
+- *(deps)* bump clap from 4.5.28 to 4.5.29
+- *(deps)* bump bytesize from 1.3.0 to 1.3.2
+- *(deps)* bump clap from 4.5.27 to 4.5.28
+- *(deps)* bump bytes from 1.9.0 to 1.10.0
+- *(deps)* bump parquet from 54.0.0 to 54.1.0
+- *(deps)* bump clap_complete from 4.5.43 to 4.5.44
+- *(deps)* bump tempfile from 3.15.0 to 3.16.0
+- *(deps)* bump clap_complete from 4.5.42 to 4.5.43
+
 ## [7.0.1](https://github.com/pacman82/odbc2parquet/compare/v7.0.0...v7.0.1) - 2025-01-23
 
 ### Fixed
