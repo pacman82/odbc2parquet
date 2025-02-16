@@ -2019,6 +2019,7 @@ fn nchar_not_truncated() {
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
         &"Ü".into_parameter(),
+        None
     )
     .unwrap();
 
@@ -2065,6 +2066,7 @@ fn system_encoding() {
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
         &"Ü".into_parameter(),
+        None,
     )
     .unwrap();
 
