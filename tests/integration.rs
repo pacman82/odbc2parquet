@@ -784,7 +784,7 @@ fn query_timestamp_with_timezone_mssql() {
         VALUES
         ('2022-09-07 16:04:12.1234567 +02:00');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1001,7 +1001,7 @@ fn query_timestamp_ms_with_timezone_mssql() {
         VALUES
         ('2022-09-07 16:04:12 +02:00');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1044,7 +1044,7 @@ fn query_time_mssql() {
         VALUES
         ('16:04:12');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1087,7 +1087,7 @@ fn query_time_0_mssql() {
         VALUES
         ('16:04:12');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1131,7 +1131,7 @@ fn query_timestamp_with_timezone_postgres() {
         VALUES
         ('2022-09-07 16:04:12 +02:00');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1174,7 +1174,7 @@ fn query_timestamp_postgres() {
         VALUES
         ('2022-09-07 16:04:12');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
     // The name of the output parquet file we are going to write. Since it is in a temporary
@@ -1235,7 +1235,7 @@ fn query_all_the_types() {
         VALUES
         ('abcde', 1.23, 1.23, 42, 42, 1.23, 1.23, 1.23, 'Hello, World!', '2020-09-16', '03:54:12', '2020-09-16 03:54:12');"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     let expected_values = "{\
         a: \"abcde\", \
@@ -1292,7 +1292,7 @@ fn query_bits() {
         VALUES
         (0), (1), (NULL), (1), (0);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     let expected_values = "\
         {a: false}\n\
@@ -1342,7 +1342,7 @@ fn query_doubles() {
         VALUES
         (0.1), (2.3);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     let expected_values = "\
         {a: 0.1}\n\
@@ -1517,7 +1517,7 @@ fn read_query_from_stdin() {
         (34),
         (12);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     let expected_values = "\
         {a: 54}\n\
@@ -1553,7 +1553,7 @@ fn split_files_on_num_row_groups() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1601,7 +1601,7 @@ fn file_name_no_empty_file_and_split_files() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1647,7 +1647,7 @@ fn split_files_on_size_limit() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1692,7 +1692,7 @@ fn configurable_suffix_length() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {table_name} (A) VALUES(1)");
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, (), None).unwrap();
 
     // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
@@ -1741,6 +1741,7 @@ fn varbinary_column() {
         (CONVERT(Binary(5), 'World')),\
         (NULL)",
         (),
+        None,
     )
     .unwrap();
 
@@ -1785,6 +1786,7 @@ fn query_varchar_max() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) Values ('Hello, World!');"),
         (),
+        None,
     )
     .unwrap();
 
@@ -1831,6 +1833,7 @@ fn query_varchar_max_utf16() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) Values ('Hello, World!');"),
         (),
+        None,
     )
     .unwrap();
 
@@ -1876,6 +1879,7 @@ fn binary_column() {
         (CONVERT(Binary(5), 'World')),\
         (NULL)",
         (),
+        None,
     )
     .unwrap();
 
@@ -1925,6 +1929,7 @@ fn prefer_varbinary() {
         (NULL)"
         ),
         (),
+        None,
     )
     .unwrap();
 
@@ -1969,6 +1974,7 @@ fn interior_nul_in_varchar() {
     conn.execute(
         "INSERT INTO InteriorNul (a) VALUES (?);",
         &"a\0b".into_parameter(),
+        None,
     )
     .unwrap();
 
@@ -2104,6 +2110,7 @@ fn utf_16_encoding() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?);"),
         &"Ü".into_parameter(),
+        None,
     )
     .unwrap();
 
@@ -2149,6 +2156,7 @@ fn auto_encoding() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?);"),
         &"Ü".into_parameter(),
+        None,
     )
     .unwrap();
 
@@ -2219,7 +2227,7 @@ pub fn insert_32_bit_integer() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     assert_eq!("42\n5\n1", actual);
 }
@@ -2265,7 +2273,7 @@ pub fn insert_optional_32_bit_integer() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("42\nNULL\n1", actual);
@@ -2312,7 +2320,7 @@ pub fn insert_64_bit_integer() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("-42\n5\n1", actual);
@@ -2378,7 +2386,7 @@ pub fn insert_file_with_last_row_group_of_less_size() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1\n2\n1", actual);
@@ -2425,7 +2433,7 @@ pub fn insert_optional_64_bit_integer() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("-42\nNULL\n1", actual);
@@ -2478,7 +2486,7 @@ pub fn insert_utf8() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("Hello, World!\nHallo, Welt!\nBonjour, Monde!", actual);
@@ -2531,7 +2539,7 @@ pub fn insert_optional_utf8() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("Hello, World!\nNULL\nHallo, Welt!", actual);
@@ -2586,7 +2594,7 @@ pub fn insert_utf16() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("Hello, World!\nHallo, Welt!\nBonjour, Monde!", actual);
@@ -2641,7 +2649,7 @@ pub fn insert_optional_utf16() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("Hello, World!\nNULL\nHallo, Welt!", actual);
@@ -2688,7 +2696,7 @@ pub fn insert_bool() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1\n0\n0", actual);
@@ -2735,7 +2743,7 @@ pub fn insert_optional_bool() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1\nNULL\n0", actual);
@@ -2782,7 +2790,7 @@ pub fn insert_f32() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -2832,7 +2840,7 @@ pub fn insert_optional_f32() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1.2000000476837158\nNULL\n3.4000000953674316", actual);
@@ -2879,7 +2887,7 @@ pub fn insert_f64() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1.2\n3.3999999999999999\n5.5999999999999996", actual);
@@ -2926,7 +2934,7 @@ pub fn insert_optional_f64() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1.2\nNULL\n3.3999999999999999", actual);
@@ -2973,7 +2981,7 @@ pub fn insert_date() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1970-01-01\n1971-01-01\n2021-03-09", actual);
@@ -3020,7 +3028,7 @@ pub fn insert_optional_date() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1970-01-01\nNULL\n2021-03-09", actual);
@@ -3073,7 +3081,7 @@ pub fn insert_time_ms() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("00:00:00.000\n01:00:00.000\n23:00:00.000", actual);
@@ -3126,7 +3134,7 @@ pub fn insert_optional_time_ms() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("00:00:00.000\nNULL\n23:00:00.000", actual);
@@ -3179,7 +3187,7 @@ pub fn insert_time_us() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("00:00:00.000000\n01:00:00.000000\n23:00:00.000000", actual);
@@ -3232,7 +3240,7 @@ pub fn insert_optional_time_us() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!("00:00:00.000000\nNULL\n23:00:00.000000", actual);
@@ -3280,7 +3288,7 @@ pub fn insert_decimal_from_i32() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\n1234567.89\n-.42", actual);
@@ -3328,7 +3336,7 @@ pub fn insert_decimal_from_i32_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\nNULL\n-.42", actual);
@@ -3376,7 +3384,7 @@ pub fn insert_decimal_from_i64() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\n1234567.89\n-.42", actual);
@@ -3424,7 +3432,7 @@ pub fn insert_decimal_from_i64_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\nNULL\n-.42", actual);
@@ -3472,7 +3480,7 @@ pub fn insert_timestamp_ms() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3528,7 +3536,7 @@ pub fn insert_timestamp_ms_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3584,7 +3592,7 @@ pub fn insert_timestamp_us() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3640,7 +3648,7 @@ pub fn insert_timestamp_us_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3696,7 +3704,7 @@ pub fn insert_binary() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3752,7 +3760,7 @@ pub fn insert_binary_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3817,7 +3825,7 @@ pub fn insert_fixed_len_binary() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3878,7 +3886,7 @@ pub fn insert_fixed_len_binary_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(
@@ -3940,7 +3948,7 @@ pub fn insert_decimal_from_binary() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\n.01\n655.36\n-.01\n-.01", actual);
@@ -3993,7 +4001,7 @@ pub fn insert_decimal_from_binary_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\nNULL\n.01", actual);
@@ -4056,7 +4064,7 @@ pub fn insert_decimal_from_fixed_binary() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".00\n.01\n655.36\n-.01", actual);
@@ -4116,7 +4124,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
 
     // Query table and check for expected result
     let query = format!("SELECT a FROM {table_name} ORDER BY Id");
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
     assert_eq!(".01\nNULL\n-.01", actual);
@@ -4135,6 +4143,7 @@ pub fn write_query_result_to_stdout() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?)"),
         [42i32, 5, 64].as_slice(),
+        None
     )
     .unwrap();
 
@@ -4404,8 +4413,8 @@ fn setup_empty_table(
         .collect::<Vec<_>>()
         .join(", ");
     let create_table = format!("CREATE TABLE {table_name} (id {identity},{cols});");
-    conn.execute(drop_table, ())?;
-    conn.execute(&create_table, ())?;
+    conn.execute(drop_table, (), None)?;
+    conn.execute(&create_table, (), None)?;
     Ok(())
 }
 
@@ -4431,11 +4440,12 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     let conn = ENV
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
         .unwrap();
     conn.execute(
         &format!("CREATE TABLE {table_name} (country VARCHAR(255), population BIGINT);"),
         (),
+        None
     )
     .unwrap();
 

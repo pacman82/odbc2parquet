@@ -88,7 +88,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
     };
 
     if let Some(cursor) = odbc_conn
-        .into_cursor(&query, params.as_slice())
+        .into_cursor(&query, params.as_slice(), None)
         // Drop the connection for odbc_api::ConnectionAndError in order to make the error
         // convertible into an anyhow error. The connection is offered by odbc_api in the error type
         // to allow reusing the same connection, even after conversion into cursor failed. However
