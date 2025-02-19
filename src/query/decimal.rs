@@ -3,8 +3,7 @@ use std::{convert::TryInto, marker::PhantomData};
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc},
-    decimal_text_to_i128, DataType,
+    buffers::{AnySlice, BufferDesc}, decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64, DataType
 };
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -157,7 +156,7 @@ impl<Pdt> DecimalTextToInteger<Pdt> {
 impl<Pdt> ColumnStrategy for DecimalTextToInteger<Pdt>
 where
     Pdt: ParquetDataType,
-    Pdt::T: FromRadix10Signed + BufferedDataType,
+    Pdt::T: FromRadix10Signed + BufferedDataType + FromDecimalTextRepresentation,
 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, Pdt::get_physical_type())
@@ -189,10 +188,6 @@ where
         column_writer: &mut ColumnWriter,
         column_view: AnySlice,
     ) -> Result<(), Error> {
-        // This vec is going to hold the digits with sign and decimal point. It is
-        // allocated once and reused for each value.
-        let mut digits: Vec<u8> = Vec::with_capacity(self.precision as usize + 2);
-
         let column_writer = Pdt::get_column_writer_mut(column_writer).unwrap();
         let view = column_view.as_text_view().expect(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
@@ -201,13 +196,28 @@ where
         parquet_buffer.write_optional(
             column_writer,
             view.iter().map(|value| {
+                let scale = self.scale as usize;
                 value.map(|text| {
-                    digits.clear();
-                    digits.extend(text.iter().filter(|&&c| c != b'.'));
-                    Pdt::T::from_radix_10_signed(&digits).0
+                    Pdt::T::from_decimal_text_representation(text, scale)
                 })
             }),
         )
+    }
+}
+
+trait FromDecimalTextRepresentation {
+    fn from_decimal_text_representation(text: &[u8], scale: usize) -> Self;
+}
+
+impl FromDecimalTextRepresentation for i32 {
+    fn from_decimal_text_representation(text: &[u8], scale: usize) -> Self {
+        decimal_text_to_i32(text, scale)
+    }
+}
+
+impl FromDecimalTextRepresentation for i64 {
+    fn from_decimal_text_representation(text: &[u8], scale: usize) -> Self {
+        decimal_text_to_i64(text, scale)
     }
 }
 
