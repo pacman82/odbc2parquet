@@ -1,5 +1,19 @@
 # Changelog
 
+## [7.0.3](https://github.com/pacman82/odbc2parquet/compare/v7.0.2...v7.0.3) - 2025-02-19
+
+### Fixed
+
+- decimals will now have correct value, even if the datasource omits trailing zeroes in their string representation
+
+### Other
+
+- Replace asterisk (*) with dash (-) for lists in changelog
+- *(deps)* bump clap from 4.5.29 to 4.5.30
+- *(deps)* bump clap_complete from 4.5.44 to 4.5.45
+- *(deps)* bump tempfile from 3.16.0 to 3.17.1
+- *(deps)* bump parquet from 54.1.0 to 54.2.0
+
 ## [7.0.2](https://github.com/pacman82/odbc2parquet/compare/v7.0.1...v7.0.2) - 2025-02-16
 
 ### Other
