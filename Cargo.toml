@@ -33,7 +33,7 @@ num-traits = "0.2.19"
 clap_complete = "4.5.47"
 bytesize = "2.0.1"
 io-arg = "0.2.1"
-tempfile = "3.19.0"
+tempfile = "3.19.1"
 
 # Using ODBC version 3.5 is avoiding warnings with drivers which only support 3.5 as oppossed to
 # 3.8. Currently odbc2parquet does not need to use use any ODBC version 3.8 features.
