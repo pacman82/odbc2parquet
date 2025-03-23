@@ -175,6 +175,17 @@ MyTable
 
 Use `odbc2parquet help insert` to see all options related to inserting data.
 
+### Shell Completions
+
+The completions sub command supports generating completions for various shells. Here is e.g. how you might want to add shell completions for powershell:
+
+```powershell
+if (!(Test-Path -Path $PROFILE)) {
+  New-Item -ItemType File -Path $PROFILE -Force
+}
+Add-Content -Path $PROFILE -Value '(& odbc2parquet completions powershell) | Out-String | Invoke-Expression'
+```
+
 ## Links
 
 Thanks to @samaguire there is a script for Powershell users which helps you to download a bunch of tables to a folder: <https://github.com/samaguire/odbc2parquet-PSscripts>
