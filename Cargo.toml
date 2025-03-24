@@ -26,7 +26,7 @@ categories = ["command-line-utilities"]
 [dependencies]
 anyhow = "1.0.97"
 stderrlog = "0.6.0"
-log = "0.4.26"
+log = "0.4.27"
 chrono = "0.4.40"
 atoi = "2.0.0"
 num-traits = "0.2.19"
