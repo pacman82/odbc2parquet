@@ -46,7 +46,7 @@ version = "4.5.34"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "54.3.0"
+version = "54.3.1"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 
