@@ -168,6 +168,7 @@ pub fn strategy_from_column_description(
         dt @ (DataType::Char { length: _ }
         | DataType::Varchar { length: _ }
         | DataType::WVarchar { length: _ }
+        | DataType::WLongVarchar { length: _ }
         | DataType::LongVarchar { length: _ }
         | DataType::WChar { length: _ }) => {
             let len_in_chars = if use_utf16 {
