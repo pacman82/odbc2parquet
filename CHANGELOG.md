@@ -1,5 +1,31 @@
 # Changelog
 
+## [7.0.4](https://github.com/pacman82/odbc2parquet/compare/v7.0.3...v7.0.4) - 2025-04-08
+
+### Other
+
+- update odbc-api
+- *(deps)* bump clap from 4.5.34 to 4.5.35
+- *(deps)* bump parquet from 54.3.0 to 54.3.1
+- *(deps)* bump clap from 4.5.32 to 4.5.34
+- *(deps)* bump log from 0.4.26 to 0.4.27
+- Document how to add shell completions to powershell
+- *(deps)* bump parquet from 54.2.0 to 54.3.0
+- *(deps)* bump tempfile from 3.19.0 to 3.19.1
+- *(deps)* bump clap_complete from 4.5.46 to 4.5.47
+- *(deps)* bump tempfile from 3.18.0 to 3.19.0
+- *(deps)* bump clap from 4.5.31 to 4.5.32
+- *(deps)* bump tempfile from 3.17.1 to 3.18.0
+- *(deps)* bump bytes from 1.10.0 to 1.10.1
+- *(deps)* bump anyhow from 1.0.96 to 1.0.97
+- *(deps)* bump bytesize from 2.0.0 to 2.0.1
+- *(deps)* bump chrono from 0.4.39 to 0.4.40
+- *(deps)* bump clap_complete from 4.5.45 to 4.5.46
+- *(deps)* bump clap from 4.5.30 to 4.5.31
+- *(deps)* bump bytesize from 1.3.2 to 2.0.0
+- *(deps)* bump log from 0.4.25 to 0.4.26
+- *(deps)* bump anyhow from 1.0.95 to 1.0.96
+
 ## [7.0.3](https://github.com/pacman82/odbc2parquet/compare/v7.0.2...v7.0.3) - 2025-02-19
 
 ### Fixed
