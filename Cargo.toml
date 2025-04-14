@@ -24,7 +24,7 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 stderrlog = "0.6.0"
 log = "0.4.27"
 chrono = "0.4.40"
