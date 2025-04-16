@@ -51,7 +51,7 @@ default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 
 [dev-dependencies]
-assert_cmd = "2.0.16"
+assert_cmd = "2.0.17"
 bytes = "1.10.1"
 lazy_static = "1.5.0"
 predicates = "3.1.3"
