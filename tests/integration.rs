@@ -387,7 +387,7 @@ fn should_allow_specifying_explicit_compression_level() {
             "--column-compression-default",
             "gzip",
             "--column-compression-level-default",
-            "10",
+            "9",
             out_str,
             &query,
             "42",
