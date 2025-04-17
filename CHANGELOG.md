@@ -1,5 +1,14 @@
 # Changelog
 
+## [8.0.0](https://github.com/pacman82/odbc2parquet/compare/v7.0.4...v8.0.0) - 2025-04-17
+
+### Other
+
+- [**breaking**] Updated to newest parquet crate
+- *(deps)* bump assert_cmd from 2.0.16 to 2.0.17
+- *(deps)* bump clap from 4.5.35 to 4.5.36
+- *(deps)* bump anyhow from 1.0.97 to 1.0.98
+
 ## [7.0.4](https://github.com/pacman82/odbc2parquet/compare/v7.0.3...v7.0.4) - 2025-04-08
 
 ### Other
