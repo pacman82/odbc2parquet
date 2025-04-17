@@ -4,7 +4,7 @@
 
 ### Other
 
-- [**breaking**] Updated to newest parquet crate
+- [**breaking**] Updated to newest parquet crate. As a consequece valid compression level ranges using `--column-compression-level-default` have changed.
 - *(deps)* bump assert_cmd from 2.0.16 to 2.0.17
 - *(deps)* bump clap from 4.5.35 to 4.5.36
 - *(deps)* bump anyhow from 1.0.97 to 1.0.98
