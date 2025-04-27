@@ -19,7 +19,7 @@ jobs:
           SA_PASSWORD: My@Test@Password1
 
       postgres:
-        image: postgres:13
+        image: postgres:17
         ports:
           - "5432:5432"
         env:
