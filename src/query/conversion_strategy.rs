@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Error};
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, ColumnDescription, ResultSetMetadata};
+use odbc_api::{buffers::ColumnarAnyBuffer, ResultSetMetadata};
 use parquet::{
     file::writer::SerializedColumnWriter,
     schema::types::{Type, TypePtr},
@@ -36,21 +36,17 @@ impl ConversionStrategy {
         let mut columns = Vec::new();
 
         for index in 1..(num_cols + 1) {
-            let mut cd = ColumnDescription::default();
-            // Reserving helps with drivers not reporting column name size correctly.
-            cd.name.reserve(128);
-            cursor.describe_col(index as u16, &mut cd)?;
+            let name = cursor.col_name(index as u16)?;
+            let nullability = cursor.col_nullability(index as u16)?;
+            let data_type = cursor.col_data_type(index as u16)?;
 
             debug!(
                 "ODBC column description for column {index}: name: '{}', \
                 relational type: '{:?}', \
                 nullability: {:?}",
-                cd.name_to_string().unwrap_or_default(),
-                cd.data_type,
-                cd.nullability
+                name, data_type, nullability
             );
 
-            let name = cd.name_to_string()?;
             // Give a generated name, should we fail to retrieve one from the ODBC data source.
             let name = if name.is_empty() {
                 format!("Column{index}")
@@ -58,8 +54,14 @@ impl ConversionStrategy {
                 name
             };
 
-            let column_fetch_strategy =
-                strategy_from_column_description(&cd, mapping_options, cursor, index)?;
+            let column_fetch_strategy = strategy_from_column_description(
+                &name,
+                data_type,
+                nullability,
+                mapping_options,
+                cursor,
+                index,
+            )?;
             columns.push((name, column_fetch_strategy));
         }
 
@@ -174,9 +176,7 @@ impl ConversionStrategy {
                 buffer_index,
             } => {
                 let indicator_msg = if let Some(length) = indicator {
-                    format!(
-                        "The driver indicated an actual length of {length}."
-                    )
+                    format!("The driver indicated an actual length of {length}.")
                 } else {
                     "Sadly the driver did not return a length indicator for the value, so you will \
                     have to guess its actual length."

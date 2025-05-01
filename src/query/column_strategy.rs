@@ -5,7 +5,7 @@ use log::{debug, info};
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
-    ColumnDescription, DataType, Nullability, ResultSetMetadata,
+    DataType, Nullability, ResultSetMetadata,
 };
 use parquet::{
     basic::{LogicalType, Repetition},
@@ -71,7 +71,9 @@ pub struct MappingOptions<'a> {
 /// * `index`: One based column index. Useful if additional meta-information needs to be acquired
 ///   using `cursor`
 pub fn strategy_from_column_description(
-    cd: &ColumnDescription,
+    name: &str,
+    data_type: DataType,
+    nullability: Nullability,
     mapping_options: MappingOptions,
     cursor: &mut impl ResultSetMetadata,
     index: i16,
@@ -85,14 +87,15 @@ pub fn strategy_from_column_description(
         column_length_limit,
     } = mapping_options;
 
+    let is_optional = nullability.could_be_nullable();
+
     // Convert ODBC nullability to Parquet repetition. If the ODBC driver can not tell whether a
     // given column in the result may contain NULLs we assume it does.
-    let repetition = match cd.nullability {
-        Nullability::Nullable | Nullability::Unknown => Repetition::OPTIONAL,
-        Nullability::NoNulls => Repetition::REQUIRED,
+    let repetition = if is_optional {
+        Repetition::OPTIONAL
+    } else {
+        Repetition::REQUIRED
     };
-
-    let is_optional = cd.could_be_nullable();
 
     let apply_length_limit = |reported_length: Option<NonZeroUsize>| {
         min(
@@ -103,7 +106,7 @@ pub fn strategy_from_column_description(
         )
     };
 
-    let strategy: Box<dyn ColumnStrategy> = match cd.data_type {
+    let strategy: Box<dyn ColumnStrategy> = match data_type {
         DataType::Float { precision: 0..=24 } | DataType::Real => {
             fetch_identical::<FloatType>(is_optional)
         }
@@ -187,7 +190,7 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 time_from_text(repetition, precision.try_into().unwrap())
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+                unknown_non_char_type(&data_type, cursor, index, repetition, apply_length_limit)?
             }
         }
         DataType::Other {
@@ -200,16 +203,15 @@ pub fn strategy_from_column_description(
                 // give it special treatment so users can sort by time instead lexicographically.
                 info!(
                     "Detected Timestamp type with time zone. Applying instant semantics for \
-                    column {}.",
-                    cd.name_to_string()?
+                    column {name}."
                 );
                 timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
-                unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+                unknown_non_char_type(&data_type, cursor, index, repetition, apply_length_limit)?
             }
         }
         DataType::Unknown | DataType::Time { .. } | DataType::Other { .. } => {
-            unknown_non_char_type(cd, cursor, index, repetition, apply_length_limit)?
+            unknown_non_char_type(&data_type, cursor, index, repetition, apply_length_limit)?
         }
     };
 
@@ -220,13 +222,13 @@ pub fn strategy_from_column_description(
 }
 
 fn unknown_non_char_type(
-    cd: &ColumnDescription,
+    data_type: &DataType,
     cursor: &mut impl ResultSetMetadata,
     index: i16,
     repetition: Repetition,
     apply_length_limit: impl FnOnce(Option<NonZeroUsize>) -> usize,
 ) -> Result<Box<dyn ColumnStrategy>, Error> {
-    let length = if let Some(len) = cd.data_type.utf8_len() {
+    let length = if let Some(len) = data_type.utf8_len() {
         Some(len)
     } else {
         cursor.col_display_size(index.try_into().unwrap())?
