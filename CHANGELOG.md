@@ -1,5 +1,19 @@
 # Changelog
 
+## [8.0.1](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.0.1) - 2025-05-17
+
+### Other
+
+- update dependencies
+- *(deps)* bump clap_complete from 4.5.48 to 4.5.50
+- Use column attributes instead of description
+- *(deps)* bump clap_complete from 4.5.47 to 4.5.48
+- *(deps)* bump chrono from 0.4.40 to 0.4.41
+- *(deps)* bump odbc-api from 12.0.1 to 12.0.2
+- Add hint to install PostgreSQL ODBC drivers
+- Update to PostgreSQL 17
+- *(deps)* bump clap from 4.5.36 to 4.5.37
+
 ## [8.0.0](https://github.com/pacman82/odbc2parquet/compare/v7.0.4...v8.0.0) - 2025-04-17
 
 ### Other
