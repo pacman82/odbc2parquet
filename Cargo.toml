@@ -33,7 +33,7 @@ num-traits = "0.2.19"
 clap_complete = "4.5.50"
 bytesize = "2.0.1"
 io-arg = "0.2.1"
-tempfile = "3.19.1"
+tempfile = "3.20.0"
 
 # Using ODBC version 3.5 is avoiding warnings with drivers which only support 3.5 as oppossed to
 # 3.8. Currently odbc2parquet does not need to use use any ODBC version 3.8 features.
@@ -42,11 +42,11 @@ version = "12.2.0"
 features = ["odbc_version_3_5"]
 
 [dependencies.clap]
-version = "4.5.37"
+version = "4.5.38"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "55.0.0"
+version = "55.1.0"
 default-features = false
 features =  ["snap", "brotli", "flate2", "lz4", "zstd", "base64"]
 
