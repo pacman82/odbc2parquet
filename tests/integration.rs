@@ -1817,7 +1817,6 @@ fn query_varchar_max() {
     parquet_read_out(out_str).stdout(eq("{a: \"Hello, World!\"}\n"));
 }
 
-
 /// Introduced after discovering a bug, that columns were not ignored on windows.
 ///
 /// Since VARCHARMAX reports a size of 0, it will be ignored, resulting in an output file with no
@@ -2019,7 +2018,7 @@ fn nchar_not_truncated() {
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
         &"Ü".into_parameter(),
-        None
+        None,
     )
     .unwrap();
 
@@ -4132,6 +4131,23 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     assert_eq!(".01\nNULL\n-.01", actual);
 }
 
+#[test]
+#[cfg_attr(not(feature = "unfinished"), ignore)]
+
+fn insert_using_exec() {
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "exec",
+            "--connection-string",
+            MSSQL,
+            "INSERT INTO {table_name} (a) VALUES (?:a)",
+        ])
+        .assert()
+        .success();
+}
+
 /// Write query output to stdout
 #[test]
 pub fn write_query_result_to_stdout() {
@@ -4145,7 +4161,7 @@ pub fn write_query_result_to_stdout() {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?)"),
         [42i32, 5, 64].as_slice(),
-        None
+        None,
     )
     .unwrap();
 
@@ -4447,7 +4463,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     conn.execute(
         &format!("CREATE TABLE {table_name} (country VARCHAR(255), population BIGINT);"),
         (),
-        None
+        None,
     )
     .unwrap();
 

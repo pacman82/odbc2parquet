@@ -1,5 +1,7 @@
 mod connection;
 mod enum_args;
+#[cfg(feature = "unfinished")]
+mod execute;
 mod insert;
 mod parquet_buffer;
 mod query;
@@ -67,6 +69,12 @@ enum Command {
         output: IoArg,
         /// Name of the shell to generate completions for.
         shell: Shell,
+    },
+    #[cfg(feature = "unfinished")]
+    /// Executes an arbitrary SQL statement using the contents of an parquet file as input arrays.
+    Exec {
+        #[clap(flatten)]
+        exec_opt: ExecOpt,
     },
 }
 
@@ -254,6 +262,38 @@ pub struct InsertOpt {
     table: String,
 }
 
+#[derive(Args)]
+pub struct ExecOpt {
+    #[clap(flatten)]
+    connect_opts: ConnectOpts,
+    /// Encoding used for transferring character data to the database.
+    ///
+    /// `Utf16`: Use 16Bit characters to send text to the database, which implies the using
+    /// UTF-16 encoding. This should work well independent of the system configuration, but requires
+    /// additional work since text is always stored as UTF-8 in parquet.
+    ///
+    /// `System`: Use 8Bit characters for requesting text from the data source, implies using
+    /// the encoding defined by the system locale. This only works for non ASCII characters if the
+    /// locales character set is UTF-8.
+    ///
+    /// `Auto`: Since on OS-X and Linux the default locales character set is always UTF-8 the
+    /// default option is the same as `System` on non-windows platforms. On windows the default is
+    /// `Utf16`.
+    #[arg(long, value_enum, default_value = "Auto", ignore_case = true)]
+    encoding: EncodingArgument,
+    /// Path to the input parquet file which is used to fill the database table with values.
+    input: PathBuf,
+    /// SQL statement to execute. The statement uses `?` as placeholders for parameters, like with
+    /// any statement executed via ODBC. To associate the parameters with columns of the input
+    /// parquet file however, the `?` placeholber must be followed by a colon and the name of the
+    /// column in the parquet file. E.g. `INSERT INTO table (col1, col2) VALUES (?:col1, ?:col2)`.
+    /// In case you want to use the `?` in a capacity different from a placeholder it must be
+    /// escaped with a backslash (`\?`). Backslashes must also be escaped with another backslash.
+    /// Keep in mind that your shell may also need escaping for backslashes. You may need four
+    /// backslashes in total to write a singe backslash in e.g. a string literal (`\\\\`).
+    statement: String,
+}
+
 impl Cli {
     /// Perform some validation logic, beyond what is possible (or sensible) to verify directly with
     /// clap.
@@ -341,6 +381,10 @@ fn main() -> Result<(), Error> {
             let output = output.open_as_output()?;
             let mut output = output.into_write();
             generate(shell, &mut Cli::command(), "odbc2parquet", &mut output);
+        }
+        #[cfg(feature = "unfinished")]
+        Command::Exec { exec_opt }=> {
+            execute::execute(&exec_opt)?;
         }
     }
 
