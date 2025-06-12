@@ -4140,7 +4140,7 @@ fn insert_using_exec() {
     let conn = ENV
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
-    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER", "INTEGER"]).unwrap();
 
     // Prepare file
 
@@ -4167,7 +4167,7 @@ fn insert_using_exec() {
             "--connection-string",
             MSSQL,
             input_path.to_str().unwrap(),
-            &format!("INSERT INTO {table_name} (a) VALUES (?a?)"),
+            &format!("INSERT INTO {table_name} (a,b) VALUES (?a?, ?a?)"),
         ])
         .assert()
         .success();

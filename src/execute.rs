@@ -1,6 +1,6 @@
-use std::{fs::File, mem::swap};
+use std::{collections::HashMap, fs::File, mem::swap};
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use log::info;
 use parquet::file::reader::{FileReader as _, SerializedFileReader};
 
@@ -27,17 +27,35 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let num_columns = schema_desc.num_columns();
 
     // Hardcoded for now
-    let (statement_text, mapping) = unmask_arguments(&statement);
+    let (statement_text, mapping) = to_positional_arguments(&statement);
     let statement = odbc_conn.prepare(&statement_text)?;
-    let column_descriptions: Vec<_> = (0..num_columns).map(|i| schema_desc.column(i)).collect();
-    // let column_names: Vec<&str> = column_descriptions
-    //     .iter()
-    //     .map(|col_desc| col_desc.name())
-    //     .collect();
-    let column_buf_desc: Vec<_> = column_descriptions
-        .iter()
-        .map(|col_desc| parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16()))
-        .collect::<Result<_, _>>()?;
+    let column_descriptions: HashMap<_, _> = (0..num_columns)
+        .map(|index_pq| {
+            let desc = schema_desc.column(index_pq);
+            (desc.name().to_owned(), (index_pq, desc))
+        })
+        .collect();
+    let column_descriptionns_with_index: Vec<_> = mapping
+        .into_iter()
+        .map(|name| {
+            let (index_pq, desc) = column_descriptions.get(&name).ok_or(anyhow!(
+                "Parameter name {name} does not exist in parquet schema"
+            ))?;
+            Ok((*index_pq, desc))
+        })
+        .collect::<Result<_, Error>>()?;
+    // The order of the column buffer descriptions will be the order of the positional parameters
+    // and the order of the columns in the allocated ODBC transport buffer. Yet, it may not be the
+    // order of the columns in the parquet file, which is why we keep track of the index in parquet
+    // separately.
+    let column_buf_desc: Vec<_> = column_descriptionns_with_index
+        .into_iter()
+        .map(|(index_pq, col_desc)| {
+            let (buf_desc, odbc_to_parquet) =
+                parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16())?;
+            Ok((index_pq, buf_desc, odbc_to_parquet))
+        })
+        .collect::<Result<_, Error>>()?;
 
     let num_row_groups = reader.num_row_groups();
 
@@ -45,7 +63,9 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let mut batch_size = 1;
     let mut odbc_buffer = statement.into_column_inserter(
         batch_size,
-        column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
+        column_buf_desc
+            .iter()
+            .map(|(_index_pq, desc, _copy_col)| *desc),
     )?;
 
     let mut pb = ParquetBuffer::new(batch_size);
@@ -64,7 +84,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         // Ensure that num rows is less than batch size of originally created buffers.
         if num_rows > batch_size {
             batch_size = num_rows;
-            let descs = column_buf_desc.iter().map(|(desc, _)| *desc);
+            let descs = column_buf_desc.iter().map(|(_, desc, _)| *desc);
             // An inefficiency here: Currently `odbc-api`s interface forces us to prepare the
             // statement again, in case we need to allocate more row groups.
             odbc_buffer = odbc_conn
@@ -73,8 +93,8 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
-        for (column_index, (_, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
-            let column_reader = row_group_reader.get_column_reader(column_index)?;
+        for (column_index, (index_pq, _, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
+            let column_reader = row_group_reader.get_column_reader(*index_pq)?;
             let column_writer = odbc_buffer.column_mut(column_index);
             parquet_to_odbc_col(num_rows, &mut pb, column_reader, column_writer)?;
         }
@@ -87,7 +107,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 
 /// Takes an SQL statement with named arguments and repalaces them with positional arguments.
 /// Additionally, the mapping of positions to names is returned.
-fn unmask_arguments(statement_with_named_args: &str) -> (String, Vec<String>) {
+fn to_positional_arguments(statement_with_named_args: &str) -> (String, Vec<String>) {
     let mut statement_with_positional_args = String::new();
     let mut mapping = Vec::new();
     // `true` if we currently parse a placeholder name. `false`, if we parse statement text.
@@ -136,14 +156,15 @@ fn unmask_arguments(statement_with_named_args: &str) -> (String, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::unmask_arguments;
+    use super::to_positional_arguments;
 
     #[test]
     fn replace_named_args_with_positional_placeholders() {
         // Given
         let statement_with_named_args = "INSERT INTO table (col1, col2) VALUES (?col1?, ?col2?)";
         // When
-        let (statement_with_positional_args, mapping) = unmask_arguments(statement_with_named_args);
+        let (statement_with_positional_args, mapping) =
+            to_positional_arguments(statement_with_named_args);
         // Then
         assert_eq!(
             statement_with_positional_args,
@@ -157,7 +178,8 @@ mod tests {
         // Given
         let statement_with_named_args = "UPDATE table SET col1 = '\\?' WHERE col2 = ?a?";
         // When
-        let (statement_with_positional_args, mapping) = unmask_arguments(statement_with_named_args);
+        let (statement_with_positional_args, mapping) =
+            to_positional_arguments(statement_with_named_args);
         // Then
         assert_eq!(
             statement_with_positional_args,
