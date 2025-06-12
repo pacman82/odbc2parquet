@@ -368,7 +368,7 @@ impl<Pdt, Odt> ParquetToOdbcBuilder<Pdt, Odt> {
 
 /// Takes a parquet column descriptor and chooses a strategy for inserting the column into the
 /// database.
-fn parquet_type_to_odbc_buffer_desc(
+pub fn parquet_type_to_odbc_buffer_desc(
     col_desc: &ColumnDescriptor,
     use_utf16: bool,
 ) -> Result<(BufferDesc, Box<FnParquetToOdbcCol>), Error> {
