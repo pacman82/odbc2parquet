@@ -4135,6 +4135,30 @@ pub fn insert_decimal_from_fixed_binary_optional() {
 #[cfg_attr(not(feature = "unfinished"), ignore)]
 
 fn insert_using_exec() {
+    let table_name = "InsertUsingExec";
+    // Prepare table
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
+
+    // Prepare file
+
+    // A temporary directory, to be removed at the end of the test.
+    let tmp_dir = tempdir().unwrap();
+    // The name of the input parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let input_path = tmp_dir.path().join("input.par");
+
+    let message_type = "
+        message schema {
+            OPTIONAL DOUBLE a;
+        }
+    ";
+
+    write_values_to_file(message_type, &input_path, &[1.2f64, 3.4], Some(&[1, 0, 1]));
+
+    // When insert values into table using exec
     Command::cargo_bin("odbc2parquet")
         .unwrap()
         .args([
@@ -4142,10 +4166,18 @@ fn insert_using_exec() {
             "exec",
             "--connection-string",
             MSSQL,
+            input_path.to_str().unwrap(),
             "INSERT INTO {table_name} (a) VALUES (?:a)",
         ])
         .assert()
         .success();
+
+    // Query table and check for expected result
+    let query = format!("SELECT a FROM {table_name} ORDER BY Id");
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("1.2\nNULL\n3.3999999999999999", actual);
 }
 
 /// Write query output to stdout
