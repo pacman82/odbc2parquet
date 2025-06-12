@@ -4152,11 +4152,11 @@ fn insert_using_exec() {
 
     let message_type = "
         message schema {
-            OPTIONAL DOUBLE a;
+            OPTIONAL INT32 a;
         }
     ";
 
-    write_values_to_file(message_type, &input_path, &[1.2f64, 3.4], Some(&[1, 0, 1]));
+    write_values_to_file(message_type, &input_path, &[1i32, 2], Some(&[1, 0, 1]));
 
     // When insert values into table using exec
     Command::cargo_bin("odbc2parquet")
@@ -4167,7 +4167,7 @@ fn insert_using_exec() {
             "--connection-string",
             MSSQL,
             input_path.to_str().unwrap(),
-            "INSERT INTO {table_name} (a) VALUES (?:a)",
+            &format!("INSERT INTO {table_name} (a) VALUES (?a?)"),
         ])
         .assert()
         .success();
@@ -4177,7 +4177,7 @@ fn insert_using_exec() {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
-    assert_eq!("1.2\nNULL\n3.3999999999999999", actual);
+    assert_eq!("1\nNULL\n2", actual);
 }
 
 /// Write query output to stdout

@@ -1,6 +1,6 @@
 mod connection;
 mod enum_args;
-#[cfg(feature = "unfinished")]
+// #[cfg(feature = "unfinished")]
 mod execute;
 mod insert;
 mod parquet_buffer;
@@ -283,14 +283,13 @@ pub struct ExecOpt {
     encoding: EncodingArgument,
     /// Path to the input parquet file which is used to fill the database table with values.
     input: PathBuf,
-    /// SQL statement to execute. The statement uses `?` as placeholders for parameters, like with
-    /// any statement executed via ODBC. To associate the parameters with columns of the input
-    /// parquet file however, the `?` placeholber must be followed by a colon and the name of the
-    /// column in the parquet file. E.g. `INSERT INTO table (col1, col2) VALUES (?:col1, ?:col2)`.
-    /// In case you want to use the `?` in a capacity different from a placeholder it must be
-    /// escaped with a backslash (`\?`). Backslashes must also be escaped with another backslash.
-    /// Keep in mind that your shell may also need escaping for backslashes. You may need four
-    /// backslashes in total to write a singe backslash in e.g. a string literal (`\\\\`).
+    /// SQL statement to execute. You can bind the columns of the parquet file to input parameters
+    /// of the statement. You can do this by using the column name of the parquet file surrounded by
+    /// question marks (`?`). E.g. `INSERT INTO table (col1, col2) VALUES (?col1?, ?col2?)`. In case
+    /// you want to use the `?` in a capacity different from a placeholder it must be escaped with a
+    /// backslash (`\?`). Backslashes must also be escaped with another backslash. Keep in mind that
+    /// your shell may also need escaping for backslashes. You may need four backslashes in total to
+    /// write a singe backslash in e.g. a string literal (`\\\\`).
     statement: String,
 }
 

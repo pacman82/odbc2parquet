@@ -683,11 +683,9 @@ pub fn parquet_type_to_odbc_buffer_desc(
                     )
                 }
                 ConvertedType::INTERVAL => bail!(
-                    "
-                    Inserting interval types is currently not supported. There is no reason for \
+                    "Inserting interval types is currently not supported. There is no reason for \
                     this besides the fact, that nobody has implemented it so far. Please raise an \
-                    issue at https://github.com/pacman82/odbc2parquet/issues.
-                "
+                    issue at https://github.com/pacman82/odbc2parquet/issues."
                 ), // implies len == 12
                 _ => unexpected(),
             }

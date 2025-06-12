@@ -1,10 +1,13 @@
-use std::fs::File;
+use std::{fs::File, mem::swap};
 
 use anyhow::Error;
 use log::info;
 use parquet::file::reader::{FileReader as _, SerializedFileReader};
 
-use crate::{connection::open_connection, insert::parquet_type_to_odbc_buffer_desc, parquet_buffer::ParquetBuffer, ExecOpt};
+use crate::{
+    connection::open_connection, insert::parquet_type_to_odbc_buffer_desc,
+    parquet_buffer::ParquetBuffer, ExecOpt,
+};
 
 pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let ExecOpt {
@@ -24,8 +27,8 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let num_columns = schema_desc.num_columns();
 
     // Hardcoded for now
-    let statement_text = "INSERT INTO InsertUsingExec (a) VALUES (?)";
-    let statement = odbc_conn.prepare(statement_text)?;
+    let (statement_text, mapping) = unmask_arguments(&statement);
+    let statement = odbc_conn.prepare(&statement_text)?;
     let column_descriptions: Vec<_> = (0..num_columns).map(|i| schema_desc.column(i)).collect();
     // let column_names: Vec<&str> = column_descriptions
     //     .iter()
@@ -80,4 +83,86 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+/// Takes an SQL statement with named arguments and repalaces them with positional arguments.
+/// Additionally, the mapping of positions to names is returned.
+fn unmask_arguments(statement_with_named_args: &str) -> (String, Vec<String>) {
+    let mut statement_with_positional_args = String::new();
+    let mut mapping = Vec::new();
+    // `true` if we currently parse a placeholder name. `false`, if we parse statement text.
+    let mut is_placeholder_name = false;
+    // Keeps track of the current placeholder name, if we are parsing one.
+    let mut current_placeholder_name = String::new();
+    // If we encounter a backslash, we mask the next character.
+    let mut mask_next_char = false;
+    for c in statement_with_named_args.chars() {
+        match c {
+            _ if mask_next_char => {
+                if is_placeholder_name {
+                    current_placeholder_name.push(c);
+                } else {
+                    statement_with_positional_args.push(c);
+                }
+                mask_next_char = false;
+            }
+            '\\' => {
+                mask_next_char = true;
+            }
+            '?' => {
+                if is_placeholder_name {
+                    // At the end of a placeholder name the current placeholder name is finished and
+                    // we can add it to the mapping.
+                    mapping.push(String::new());
+                    swap(&mut current_placeholder_name, mapping.last_mut().unwrap());
+                } else {
+                    // At the beginning of a new placeholder, we place a positional placeholder in
+                    // the resulting statement.
+                    statement_with_positional_args.push('?')
+                }
+                is_placeholder_name = !is_placeholder_name;
+            }
+            _ => {
+                if is_placeholder_name {
+                    current_placeholder_name.push(c);
+                } else {
+                    statement_with_positional_args.push(c);
+                }
+            }
+        }
+    }
+    (statement_with_positional_args, mapping)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unmask_arguments;
+
+    #[test]
+    fn replace_named_args_with_positional_placeholders() {
+        // Given
+        let statement_with_named_args = "INSERT INTO table (col1, col2) VALUES (?col1?, ?col2?)";
+        // When
+        let (statement_with_positional_args, mapping) = unmask_arguments(statement_with_named_args);
+        // Then
+        assert_eq!(
+            statement_with_positional_args,
+            "INSERT INTO table (col1, col2) VALUES (?, ?)"
+        );
+        assert_eq!(mapping, &["col1".to_string(), "col2".to_string()]);
+    }
+
+    #[test]
+    fn use_backslash_to_escape_question_mark() {
+        // Given
+        let statement_with_named_args = "UPDATE table SET col1 = '\\?' WHERE col2 = ?a?";
+        // When
+        let (statement_with_positional_args, mapping) = unmask_arguments(statement_with_named_args);
+        // Then
+        assert_eq!(
+            statement_with_positional_args,
+            "UPDATE table SET col1 = '?' WHERE col2 = ?"
+        );
+        assert_eq!(mapping, &["a".to_string()]);
+    }
 }
