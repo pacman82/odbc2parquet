@@ -1,6 +1,6 @@
 mod connection;
 mod enum_args;
-// #[cfg(feature = "unfinished")]
+#[cfg(feature = "unfinished")]
 mod execute;
 mod insert;
 mod parquet_buffer;
