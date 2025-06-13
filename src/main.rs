@@ -382,7 +382,7 @@ fn main() -> Result<(), Error> {
             generate(shell, &mut Cli::command(), "odbc2parquet", &mut output);
         }
         #[cfg(feature = "unfinished")]
-        Command::Exec { exec_opt }=> {
+        Command::Exec { exec_opt } => {
             execute::execute(&exec_opt)?;
         }
     }

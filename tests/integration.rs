@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{ErrorKind, Write},
-    path::Path,
+    path::{Path, PathBuf},
     str,
     sync::Arc,
 };
@@ -24,7 +24,7 @@ use parquet::{
     schema::parser::parse_message_type,
 };
 use predicates::{ord::eq, str::contains};
-use tempfile::{tempdir, NamedTempFile};
+use tempfile::{tempdir, NamedTempFile, TempDir};
 
 const MSSQL: &str = "Driver={ODBC Driver 18 for SQL Server};\
     Server=localhost;\
@@ -4143,20 +4143,12 @@ fn insert_using_exec() {
     setup_empty_table_mssql(&conn, table_name, &["INTEGER", "INTEGER"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT32 a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[1i32, 2], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(1i32), None, Some(2)]);
 
     // When insert values into table using exec
     Command::cargo_bin("odbc2parquet")
@@ -4166,7 +4158,7 @@ fn insert_using_exec() {
             "exec",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             &format!("INSERT INTO {table_name} (a,b) VALUES (?a?, ?a?)"),
         ])
         .assert()
@@ -4341,6 +4333,54 @@ fn query_4097_bits() {
         ])
         .assert()
         .success();
+}
+
+/// A parquet file which will remove itself after it leaves scope. Intended for provinding test
+/// fixtures for tests which require a parquet file as input.
+struct TmpParquetFile {
+    // A temporary directory, to be removed at the end of the test.
+    _tmp_dir: TempDir,
+    path: PathBuf,
+}
+
+impl TmpParquetFile {
+    /// Creates a new temporary parquet file.
+    pub fn new<T>(message_type: &str, values: &[Option<T>]) -> Self
+    where
+        T: WriteToCw + Clone,
+    {
+        let tmp_dir = tempdir().expect("Must be able to create temporary directory");
+        let path = tmp_dir.path().join("input.par");
+        Self::write_one_dim_array(&path, message_type, values);
+        TmpParquetFile {
+            _tmp_dir: tmp_dir,
+            path,
+        }
+    }
+
+    /// Returns the path to the parquet file.
+    pub fn path_as_str(&self) -> &str {
+        self.path
+            .to_str()
+            .expect("Temporary file path must be utf8")
+    }
+
+    fn write_one_dim_array<T>(path: &Path, message_type: &str, input: &[Option<T>])
+    where
+        T: WriteToCw + Clone,
+    {
+        let def_levels = input
+            .iter()
+            .map(|opt| if opt.is_some() { 1i16 } else { 0 })
+            .collect::<Vec<_>>();
+        let values = input
+            .into_iter()
+            .cloned()
+            .filter_map(|opt| opt)
+            .collect::<Vec<_>>();
+
+        write_values_to_file(message_type, path, &values, Some(&def_levels));
+    }
 }
 
 /// Writes a parquet file with one row group and one column.

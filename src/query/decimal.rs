@@ -3,7 +3,8 @@ use std::{convert::TryInto, marker::PhantomData};
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc}, decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64, DataType
+    buffers::{AnySlice, BufferDesc},
+    decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64, DataType,
 };
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
@@ -197,9 +198,7 @@ where
             column_writer,
             view.iter().map(|value| {
                 let scale = self.scale as usize;
-                value.map(|text| {
-                    Pdt::T::from_decimal_text_representation(text, scale)
-                })
+                value.map(|text| Pdt::T::from_decimal_text_representation(text, scale))
             }),
         )
     }

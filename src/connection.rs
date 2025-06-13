@@ -1,6 +1,9 @@
 use anyhow::{bail, Error};
 use clap::Args;
-use odbc_api::{environment, escape_attribute_value, handles::OutputStringBuffer, Connection, ConnectionOptions, DriverCompleteOption};
+use odbc_api::{
+    environment, escape_attribute_value, handles::OutputStringBuffer, Connection,
+    ConnectionOptions, DriverCompleteOption,
+};
 
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(Args)]
@@ -28,7 +31,6 @@ pub struct ConnectOpts {
     #[arg(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
-
 
 /// Open a database connection using the options provided on the command line.
 pub fn open_connection<'e>(opt: &ConnectOpts) -> Result<Connection<'e>, Error> {

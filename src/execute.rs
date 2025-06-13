@@ -93,7 +93,8 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
-        for (column_index, (index_pq, _, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
+        for (column_index, (index_pq, _, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate()
+        {
             let column_reader = row_group_reader.get_column_reader(*index_pq)?;
             let column_writer = odbc_buffer.column_mut(column_index);
             parquet_to_odbc_col(num_rows, &mut pb, column_reader, column_writer)?;
