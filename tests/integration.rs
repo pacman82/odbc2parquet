@@ -3780,13 +3780,6 @@ pub fn insert_fixed_len_binary() {
     setup_empty_table_mssql(&conn, table_name, &["BINARY(13)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED FIXED_LEN_BYTE_ARRAY(13) a;
@@ -3799,15 +3792,13 @@ pub fn insert_fixed_len_binary() {
     };
 
     let text: FixedLenByteArray = to_fixed_len_byte_array("Hello, World!");
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
         &[
-            text,
-            to_fixed_len_byte_array("Hallo, Welt!!"),
-            to_fixed_len_byte_array("0123456789012"),
+            Some(text),
+            Some(to_fixed_len_byte_array("Hallo, Welt!!")),
+            Some(to_fixed_len_byte_array("0123456789012")),
         ],
-        None,
     );
 
     // Insert file into table
@@ -3818,7 +3809,7 @@ pub fn insert_fixed_len_binary() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3846,12 +3837,6 @@ pub fn insert_fixed_len_binary_optional() {
 
     // Prepare file
 
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL FIXED_LEN_BYTE_ARRAY(13) a;
@@ -3864,11 +3849,13 @@ pub fn insert_fixed_len_binary_optional() {
     };
 
     let text: FixedLenByteArray = to_fixed_len_byte_array("Hello, World!");
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, to_fixed_len_byte_array("0123456789012")],
-        Some(&[1, 0, 1]),
+        &[
+            Some(text),
+            None,
+            Some(to_fixed_len_byte_array("0123456789012")),
+        ],
     );
 
     // Insert file into table
@@ -3879,7 +3866,7 @@ pub fn insert_fixed_len_binary_optional() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3906,31 +3893,21 @@ pub fn insert_decimal_from_binary() {
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED BYTE_ARRAY a (DECIMAL(9,2));
         }
     ";
-
     let zero: ByteArray = vec![0u8].into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
         &[
-            zero,
-            vec![1].into(),
-            vec![1, 0, 0].into(),
-            vec![255, 255, 255].into(),
-            vec![255].into(),
+            Some(zero),
+            Some(vec![1].into()),
+            Some(vec![1, 0, 0].into()),
+            Some(vec![255, 255, 255].into()),
+            Some(vec![255].into()),
         ],
-        None,
     );
 
     // Insert file into table
@@ -3941,7 +3918,7 @@ pub fn insert_decimal_from_binary() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3963,27 +3940,20 @@ pub fn insert_decimal_from_binary_optional() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
-
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL BYTE_ARRAY a (DECIMAL(9,2));
         }
     ";
-
     let zero: ByteArray = vec![0u8].into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[zero, vec![1].into()],
-        Some(&[1, 0, 1]),
+        &[
+            Some(zero),
+            None,
+            Some(vec![1].into()),
+        ],
     );
 
     // Insert file into table
@@ -3994,7 +3964,7 @@ pub fn insert_decimal_from_binary_optional() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -4018,35 +3988,23 @@ pub fn insert_decimal_from_fixed_binary() {
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED FIXED_LEN_BYTE_ARRAY(3) a (DECIMAL(5,2));
         }
     ";
-
     let to_fixed_len_byte_array = |input: Vec<u8>| -> FixedLenByteArray {
         let ba: ByteArray = input.into();
         ba.into()
     };
-
-    let zero: FixedLenByteArray = to_fixed_len_byte_array(vec![0u8, 0, 0]);
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
         &[
-            zero,
-            to_fixed_len_byte_array(vec![0, 0, 1]),
-            to_fixed_len_byte_array(vec![1, 0, 0]),
-            to_fixed_len_byte_array(vec![255, 255, 255]),
+            Some(to_fixed_len_byte_array(vec![0, 0, 0])),
+            Some(to_fixed_len_byte_array(vec![0, 0, 1])),
+            Some(to_fixed_len_byte_array(vec![1, 0, 0])),
+            Some(to_fixed_len_byte_array(vec![255, 255, 255])),
         ],
-        None,
     );
 
     // Insert file into table
@@ -4057,7 +4015,7 @@ pub fn insert_decimal_from_fixed_binary() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -4079,34 +4037,22 @@ pub fn insert_decimal_from_fixed_binary_optional() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(5,2)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL FIXED_LEN_BYTE_ARRAY(3) a (DECIMAL(5,2));
         }
     ";
-
     let to_fixed_len_byte_array = |input: Vec<u8>| -> FixedLenByteArray {
         let ba: ByteArray = input.into();
         ba.into()
     };
-
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
         &[
-            to_fixed_len_byte_array(vec![0, 0, 1]),
-            to_fixed_len_byte_array(vec![255, 255, 255]),
+            Some(to_fixed_len_byte_array(vec![0, 0, 1])),
+            None,
+            Some(to_fixed_len_byte_array(vec![255, 255, 255])),
         ],
-        Some(&[1, 0, 1]),
     );
 
     // Insert file into table
@@ -4117,7 +4063,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
