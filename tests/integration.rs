@@ -2200,17 +2200,13 @@ pub fn insert_32_bit_integer() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
     // Prepare file
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
     let message_type = "
         message schema {
             REQUIRED INT32 a;
         }
     ";
-    write_values_to_file(message_type, &input_path, &[42i32, 5, 1], None);
+    let input = TmpParquetFile::new(message_type, &[Some(42i32), Some(5), Some(1)]);
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2220,7 +2216,7 @@ pub fn insert_32_bit_integer() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2243,20 +2239,13 @@ pub fn insert_optional_32_bit_integer() {
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT32 a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[42i32, 1], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(42i32), None, Some(1)]);
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2266,7 +2255,7 @@ pub fn insert_optional_32_bit_integer() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2290,20 +2279,13 @@ pub fn insert_64_bit_integer() {
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT64 a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[-42i64, 5, 1], None);
+    let input = TmpParquetFile::new(message_type, &[Some(-42i64), Some(5), Some(1)]);
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2313,7 +2295,7 @@ pub fn insert_64_bit_integer() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2403,20 +2385,13 @@ pub fn insert_optional_64_bit_integer() {
     setup_empty_table_mssql(&conn, table_name, &["BIGINT"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT64 a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[-42i64, 1], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(-42i64), None, Some(1)]);
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2426,7 +2401,7 @@ pub fn insert_optional_64_bit_integer() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2450,26 +2425,17 @@ pub fn insert_utf8() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED BYTE_ARRAY a (UTF8);
         }
     ";
-
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into(), "Bonjour, Monde!".into()],
-        None,
+        &[Some(text), Some("Hallo, Welt!".into()), Some("Bonjour, Monde!".into())],
     );
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2479,7 +2445,7 @@ pub fn insert_utf8() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2503,26 +2469,17 @@ pub fn insert_optional_utf8() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL BYTE_ARRAY a (UTF8);
         }
     ";
-
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into()],
-        Some(&[1, 0, 1]),
+        &[Some(text), None, Some("Hallo, Welt!".into())],
     );
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2532,7 +2489,7 @@ pub fn insert_optional_utf8() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2556,26 +2513,17 @@ pub fn insert_utf16() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED BYTE_ARRAY a (UTF8);
         }
     ";
-
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into(), "Bonjour, Monde!".into()],
-        None,
+        &[Some(text), Some("Hallo, Welt!".into()), Some("Bonjour, Monde!".into())],
     );
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2587,7 +2535,7 @@ pub fn insert_utf16() {
             MSSQL,
             "--encoding",
             "Utf16",
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2611,26 +2559,17 @@ pub fn insert_optional_utf16() {
     setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL BYTE_ARRAY a (UTF8);
         }
     ";
-
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into()],
-        Some(&[1, 0, 1]),
+        &[Some(text), None, Some("Hallo, Welt!".into())],
     );
+    let input_path = input.path_as_str();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2642,7 +2581,7 @@ pub fn insert_optional_utf16() {
             MSSQL,
             "--encoding",
             "Utf16",
-            input_path.to_str().unwrap(),
+            input_path,
             table_name,
         ])
         .assert()
@@ -2666,20 +2605,13 @@ pub fn insert_bool() {
     setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED BOOLEAN a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[true, false, false], None);
+    let input = TmpParquetFile::new(message_type, &[Some(true), Some(false), Some(false)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2713,20 +2645,13 @@ pub fn insert_optional_bool() {
     setup_empty_table_mssql(&conn, table_name, &["BIT"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL BOOLEAN a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[true, false], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(true), None, Some(false)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2760,20 +2685,13 @@ pub fn insert_f32() {
     setup_empty_table_mssql(&conn, table_name, &["FLOAT"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED FLOAT a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[1.2f32, 3.4, 5.6], None);
+    let input = TmpParquetFile::new(message_type, &[Some(1.2f32), Some(3.4), Some(5.6)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2808,22 +2726,13 @@ pub fn insert_optional_f32() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["FLOAT"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL FLOAT a;
         }
     ";
-
-    write_values_to_file(message_type, &input_path, &[1.2f32, 3.4], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(1.2f32), None, Some(3.4)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2855,22 +2764,14 @@ pub fn insert_f64() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["FLOAT(53)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED DOUBLE a;
         }
     ";
 
-    write_values_to_file(message_type, &input_path, &[1.2f64, 3.4, 5.6], None);
+    let input = TmpParquetFile::new(message_type, &[Some(1.2f64), Some(3.4), Some(5.6)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2902,22 +2803,14 @@ pub fn insert_optional_f64() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["FLOAT(53)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL DOUBLE a;
         }
     ";
 
-    write_values_to_file(message_type, &input_path, &[1.2f64, 3.4], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(1.2f64), None, Some(3.4)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2949,22 +2842,14 @@ pub fn insert_date() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DATE"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT32 a (DATE);
         }
     ";
 
-    write_values_to_file(message_type, &input_path, &[0i32, 365, 18695], None);
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(365), Some(18695)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -2997,21 +2882,14 @@ pub fn insert_optional_date() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["Date"]).unwrap();
 
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT32 a (DATE);
         }
     ";
 
-    write_values_to_file(message_type, &input_path, &[0i32, 18695], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(18695)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3043,28 +2921,14 @@ pub fn insert_time_ms() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME(3)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT32 a (TIME_MILLIS);
         }
     ";
-
     // Total number of milli seconds since midnight
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i32, 3_600_000, 82_800_000],
-        None,
-    );
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(3_600_000), Some(82_800_000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3097,14 +2961,6 @@ pub fn insert_optional_time_ms() {
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME(3)"]).unwrap();
 
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT32 a (TIME_MILLIS);
@@ -3112,12 +2968,8 @@ pub fn insert_optional_time_ms() {
     ";
 
     // Total number of milli seconds since midnight
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i32, 82_800_000],
-        Some(&[1, 0, 1]),
-    );
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(82_800_000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3149,28 +3001,15 @@ pub fn insert_time_us() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME(6)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT64 a (TIME_MICROS);
         }
     ";
 
-    // Total number of milli seconds since midnight
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i64, 3_600_000_000, 82_800_000_000],
-        None,
-    );
+    // Total number of microseconds since midnight
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(3_600_000_000), Some(82_800_000_000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3202,28 +3041,15 @@ pub fn insert_optional_time_us() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["TIME(6)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT64 a (TIME_MICROS);
         }
     ";
 
-    // Total number of milli seconds since midnight
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i64, 82_800_000_000],
-        Some(&[1, 0, 1]),
-    );
+    // Total number of microseconds since midnight
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(82_800_000_000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3257,21 +3083,13 @@ pub fn insert_decimal_from_i32() {
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT32 a (DECIMAL(9,2));
         }
     ";
-
-    // Total number of milli seconds since midnight
-    write_values_to_file(message_type, &input_path, &[0i32, 123456789, -42], None);
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(123456789), Some(-42)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3303,23 +3121,13 @@ pub fn insert_decimal_from_i32_optional() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT32 a (DECIMAL(9,2));
         }
     ";
-
-    // Total number of milli seconds since midnight
-    write_values_to_file(message_type, &input_path, &[0i32, -42], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(-42)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3353,21 +3161,14 @@ pub fn insert_decimal_from_i64() {
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT64 a (DECIMAL(9,2));
         }
     ";
 
-    // Total number of milli seconds since midnight
-    write_values_to_file(message_type, &input_path, &[0i64, 123456789, -42], None);
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(123456789), Some(-42)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3401,21 +3202,14 @@ pub fn insert_decimal_from_i64_optional() {
     setup_empty_table_mssql(&conn, table_name, &["DECIMAL(9,2)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
-        message schema {
-            OPTIONAL INT64 a (DECIMAL(9,2));
-        }
-    ";
+            message schema {
+                OPTIONAL INT64 a (DECIMAL(9,2));
+            }
+        ";
 
-    // Total number of milli seconds since midnight
-    write_values_to_file(message_type, &input_path, &[0i64, -42], Some(&[1, 0, 1]));
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(-42)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3447,23 +3241,14 @@ pub fn insert_timestamp_ms() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT64 a (TIMESTAMP_MILLIS);
         }
     ";
-
     // Total number of milli seconds since unix epoch
-    write_values_to_file(message_type, &input_path, &[0i64, 1, 1616367053000], None);
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(1), Some(1616367053000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3501,12 +3286,6 @@ pub fn insert_timestamp_ms_optional() {
 
     // Prepare file
 
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT64 a (TIMESTAMP_MILLIS);
@@ -3514,12 +3293,8 @@ pub fn insert_timestamp_ms_optional() {
     ";
 
     // Total number of milli seconds since unix epoch
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i64, 1616367053000],
-        Some(&[1, 0, 1]),
-    );
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(1616367053000)]);
+    let input_path = input.path.clone();
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3554,28 +3329,14 @@ pub fn insert_timestamp_us() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
-
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED INT64 a (TIMESTAMP_MICROS);
         }
     ";
-
-    // Total number of milli seconds since unix epoch
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i64, 1, 1616367053000000],
-        None,
-    );
+    // Total number of microseconds since unix epoch
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3585,7 +3346,7 @@ pub fn insert_timestamp_us() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3610,28 +3371,13 @@ pub fn insert_timestamp_us_optional() {
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["DATETIME2"]).unwrap();
-
-    // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL INT64 a (TIMESTAMP_MICROS);
         }
     ";
-
-    // Total number of milli seconds since unix epoch
-    write_values_to_file(
-        message_type,
-        &input_path,
-        &[0i64, 1616367053000000],
-        Some(&[1, 0, 1]),
-    );
+    // Total number of microseconds since unix epoch
+    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3641,7 +3387,7 @@ pub fn insert_timestamp_us_optional() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3668,13 +3414,6 @@ pub fn insert_binary() {
     setup_empty_table_mssql(&conn, table_name, &["VARBINARY(50)"]).unwrap();
 
     // Prepare file
-
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             REQUIRED BYTE_ARRAY a;
@@ -3682,11 +3421,13 @@ pub fn insert_binary() {
     ";
 
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into(), "Bonjour, Monde!".into()],
-        None,
+        &[
+            Some(text),
+            Some("Hallo, Welt!".into()),
+            Some("Bonjour, Monde!".into()),
+        ],
     );
 
     // Insert file into table
@@ -3697,7 +3438,7 @@ pub fn insert_binary() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3725,12 +3466,6 @@ pub fn insert_binary_optional() {
 
     // Prepare file
 
-    // A temporary directory, to be removed at the end of the test.
-    let tmp_dir = tempdir().unwrap();
-    // The name of the input parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
-    let input_path = tmp_dir.path().join("input.par");
-
     let message_type = "
         message schema {
             OPTIONAL BYTE_ARRAY a;
@@ -3738,11 +3473,9 @@ pub fn insert_binary_optional() {
     ";
 
     let text: ByteArray = "Hello, World!".into();
-    write_values_to_file(
+    let input = TmpParquetFile::new(
         message_type,
-        &input_path,
-        &[text, "Hallo, Welt!".into()],
-        Some(&[1, 0, 1]),
+        &[Some(text), None, Some("Hallo, Welt!".into())],
     );
 
     // Insert file into table
@@ -3753,7 +3486,7 @@ pub fn insert_binary_optional() {
             "insert",
             "--connection-string",
             MSSQL,
-            input_path.to_str().unwrap(),
+            input.path_as_str(),
             table_name,
         ])
         .assert()
@@ -3947,14 +3680,7 @@ pub fn insert_decimal_from_binary_optional() {
         }
     ";
     let zero: ByteArray = vec![0u8].into();
-    let input = TmpParquetFile::new(
-        message_type,
-        &[
-            Some(zero),
-            None,
-            Some(vec![1].into()),
-        ],
-    );
+    let input = TmpParquetFile::new(message_type, &[Some(zero), None, Some(vec![1].into())]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
