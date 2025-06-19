@@ -3817,9 +3817,8 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     assert_eq!(".01\nNULL\n-.01", actual);
 }
 
+/// Verify that we can use the `exec` command to insert values into a table
 #[test]
-#[cfg_attr(not(feature = "unfinished"), ignore)]
-
 fn basic_use_exec_for_insert() {
     let table_name = "InsertUsingExec";
     // Prepare table
@@ -3861,8 +3860,6 @@ fn basic_use_exec_for_insert() {
 /// Verify that named arguments work in exec command, even if they appear in a different order from
 /// the columns in the parquet file
 #[test]
-#[cfg_attr(not(feature = "unfinished"), ignore)]
-
 fn exec_with_switched_order() {
     let table_name = "ExecWithSwitchedOrder";
     // Prepare table

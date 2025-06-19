@@ -5,7 +5,7 @@ use log::info;
 use parquet::file::reader::{FileReader as _, SerializedFileReader};
 
 use crate::{
-    connection::open_connection, insert::parquet_type_to_odbc_buffer_desc,
+    connection::open_connection, input::parquet_type_to_odbc_buffer_desc,
     parquet_buffer::ParquetBuffer, ExecOpt,
 };
 
