@@ -2205,7 +2205,7 @@ pub fn insert_32_bit_integer() {
             REQUIRED INT32 a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(42i32), Some(5), Some(1)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(42i32), Some(5), Some(1)]);
     let input_path = input.path_as_str();
 
     // Insert file into table
@@ -2244,7 +2244,7 @@ pub fn insert_optional_32_bit_integer() {
             OPTIONAL INT32 a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(42i32), None, Some(1)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(42i32), None, Some(1)]);
     let input_path = input.path_as_str();
 
     // Insert file into table
@@ -2284,7 +2284,7 @@ pub fn insert_64_bit_integer() {
             REQUIRED INT64 a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(-42i64), Some(5), Some(1)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(-42i64), Some(5), Some(1)]);
     let input_path = input.path_as_str();
 
     // Insert file into table
@@ -2390,7 +2390,7 @@ pub fn insert_optional_64_bit_integer() {
             OPTIONAL INT64 a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(-42i64), None, Some(1)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(-42i64), None, Some(1)]);
     let input_path = input.path_as_str();
 
     // Insert file into table
@@ -2431,9 +2431,13 @@ pub fn insert_utf8() {
         }
     ";
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
-        &[Some(text), Some("Hallo, Welt!".into()), Some("Bonjour, Monde!".into())],
+        &[
+            Some(text),
+            Some("Hallo, Welt!".into()),
+            Some("Bonjour, Monde!".into()),
+        ],
     );
     let input_path = input.path_as_str();
 
@@ -2475,7 +2479,7 @@ pub fn insert_optional_utf8() {
         }
     ";
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[Some(text), None, Some("Hallo, Welt!".into())],
     );
@@ -2519,9 +2523,13 @@ pub fn insert_utf16() {
         }
     ";
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
-        &[Some(text), Some("Hallo, Welt!".into()), Some("Bonjour, Monde!".into())],
+        &[
+            Some(text),
+            Some("Hallo, Welt!".into()),
+            Some("Bonjour, Monde!".into()),
+        ],
     );
     let input_path = input.path_as_str();
 
@@ -2565,7 +2573,7 @@ pub fn insert_optional_utf16() {
         }
     ";
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[Some(text), None, Some("Hallo, Welt!".into())],
     );
@@ -2610,7 +2618,7 @@ pub fn insert_bool() {
             REQUIRED BOOLEAN a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(true), Some(false), Some(false)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(true), Some(false), Some(false)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2650,7 +2658,7 @@ pub fn insert_optional_bool() {
             OPTIONAL BOOLEAN a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(true), None, Some(false)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(true), None, Some(false)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2690,7 +2698,7 @@ pub fn insert_f32() {
             REQUIRED FLOAT a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(1.2f32), Some(3.4), Some(5.6)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(1.2f32), Some(3.4), Some(5.6)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2731,7 +2739,7 @@ pub fn insert_optional_f32() {
             OPTIONAL FLOAT a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(1.2f32), None, Some(3.4)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(1.2f32), None, Some(3.4)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2770,7 +2778,7 @@ pub fn insert_f64() {
         }
     ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(1.2f64), Some(3.4), Some(5.6)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(1.2f64), Some(3.4), Some(5.6)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2809,7 +2817,7 @@ pub fn insert_optional_f64() {
         }
     ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(1.2f64), None, Some(3.4)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(1.2f64), None, Some(3.4)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2848,7 +2856,7 @@ pub fn insert_date() {
         }
     ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(365), Some(18695)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i32), Some(365), Some(18695)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2888,7 +2896,7 @@ pub fn insert_optional_date() {
         }
     ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(18695)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i32), None, Some(18695)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2927,7 +2935,10 @@ pub fn insert_time_ms() {
         }
     ";
     // Total number of milli seconds since midnight
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(3_600_000), Some(82_800_000)]);
+    let input = TmpParquetFile::with_1_dim(
+        message_type,
+        &[Some(0i32), Some(3_600_000), Some(82_800_000)],
+    );
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -2968,7 +2979,7 @@ pub fn insert_optional_time_ms() {
     ";
 
     // Total number of milli seconds since midnight
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(82_800_000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i32), None, Some(82_800_000)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3008,7 +3019,10 @@ pub fn insert_time_us() {
     ";
 
     // Total number of microseconds since midnight
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(3_600_000_000), Some(82_800_000_000)]);
+    let input = TmpParquetFile::with_1_dim(
+        message_type,
+        &[Some(0i64), Some(3_600_000_000), Some(82_800_000_000)],
+    );
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3048,7 +3062,7 @@ pub fn insert_optional_time_us() {
     ";
 
     // Total number of microseconds since midnight
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(82_800_000_000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(82_800_000_000)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3088,7 +3102,7 @@ pub fn insert_decimal_from_i32() {
             REQUIRED INT32 a (DECIMAL(9,2));
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), Some(123456789), Some(-42)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i32), Some(123456789), Some(-42)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3126,7 +3140,7 @@ pub fn insert_decimal_from_i32_optional() {
             OPTIONAL INT32 a (DECIMAL(9,2));
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(0i32), None, Some(-42)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i32), None, Some(-42)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3167,7 +3181,7 @@ pub fn insert_decimal_from_i64() {
         }
     ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(123456789), Some(-42)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(123456789), Some(-42)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3208,7 +3222,7 @@ pub fn insert_decimal_from_i64_optional() {
             }
         ";
 
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(-42)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(-42)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3247,7 +3261,7 @@ pub fn insert_timestamp_ms() {
         }
     ";
     // Total number of milli seconds since unix epoch
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(1), Some(1616367053000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3293,7 +3307,7 @@ pub fn insert_timestamp_ms_optional() {
     ";
 
     // Total number of milli seconds since unix epoch
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(1616367053000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(1616367053000)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3336,7 +3350,7 @@ pub fn insert_timestamp_us() {
         }
     ";
     // Total number of microseconds since unix epoch
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3377,7 +3391,7 @@ pub fn insert_timestamp_us_optional() {
         }
     ";
     // Total number of microseconds since unix epoch
-    let input = TmpParquetFile::new(message_type, &[Some(0i64), None, Some(1616367053000000)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3421,7 +3435,7 @@ pub fn insert_binary() {
     ";
 
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(text),
@@ -3473,7 +3487,7 @@ pub fn insert_binary_optional() {
     ";
 
     let text: ByteArray = "Hello, World!".into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[Some(text), None, Some("Hallo, Welt!".into())],
     );
@@ -3525,7 +3539,7 @@ pub fn insert_fixed_len_binary() {
     };
 
     let text: FixedLenByteArray = to_fixed_len_byte_array("Hello, World!");
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(text),
@@ -3582,7 +3596,7 @@ pub fn insert_fixed_len_binary_optional() {
     };
 
     let text: FixedLenByteArray = to_fixed_len_byte_array("Hello, World!");
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(text),
@@ -3632,7 +3646,7 @@ pub fn insert_decimal_from_binary() {
         }
     ";
     let zero: ByteArray = vec![0u8].into();
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(zero),
@@ -3680,7 +3694,7 @@ pub fn insert_decimal_from_binary_optional() {
         }
     ";
     let zero: ByteArray = vec![0u8].into();
-    let input = TmpParquetFile::new(message_type, &[Some(zero), None, Some(vec![1].into())]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(zero), None, Some(vec![1].into())]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3723,7 +3737,7 @@ pub fn insert_decimal_from_fixed_binary() {
         let ba: ByteArray = input.into();
         ba.into()
     };
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(to_fixed_len_byte_array(vec![0, 0, 0])),
@@ -3772,7 +3786,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
         let ba: ByteArray = input.into();
         ba.into()
     };
-    let input = TmpParquetFile::new(
+    let input = TmpParquetFile::with_1_dim(
         message_type,
         &[
             Some(to_fixed_len_byte_array(vec![0, 0, 1])),
@@ -3806,7 +3820,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
 #[test]
 #[cfg_attr(not(feature = "unfinished"), ignore)]
 
-fn insert_using_exec() {
+fn basic_use_exec_for_insert() {
     let table_name = "InsertUsingExec";
     // Prepare table
     let conn = ENV
@@ -3820,7 +3834,7 @@ fn insert_using_exec() {
             OPTIONAL INT32 a;
         }
     ";
-    let input = TmpParquetFile::new(message_type, &[Some(1i32), None, Some(2)]);
+    let input = TmpParquetFile::with_1_dim(message_type, &[Some(1i32), None, Some(2)]);
 
     // When insert values into table using exec
     Command::cargo_bin("odbc2parquet")
@@ -3831,7 +3845,7 @@ fn insert_using_exec() {
             "--connection-string",
             MSSQL,
             input.path_as_str(),
-            &format!("INSERT INTO {table_name} (a,b) VALUES (?a?, ?a?)"),
+            &format!("INSERT INTO {table_name} (a) VALUES (?a?)"),
         ])
         .assert()
         .success();
@@ -3842,6 +3856,50 @@ fn insert_using_exec() {
     let actual = cursor_to_string(cursor);
 
     assert_eq!("1\nNULL\n2", actual);
+}
+
+/// Verify that named arguments work in exec command, even if they appear in a different order from
+/// the columns in the parquet file
+#[test]
+#[cfg_attr(not(feature = "unfinished"), ignore)]
+
+fn exec_with_switched_order() {
+    let table_name = "ExecWithSwitchedOrder";
+    // Prepare table
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER", "INTEGER"]).unwrap();
+
+    // Prepare file
+    let message_type = "
+        message schema {
+            OPTIONAL INT32 a;
+            OPTIONAL INT32 b; 
+        }
+    ";
+    let input = TmpParquetFile::with_2_dim(message_type, &[Some(1i32)], &[Some(2i32)]);
+
+    // When insert values into table using exec
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "exec",
+            "--connection-string",
+            MSSQL,
+            input.path_as_str(),
+            &format!("INSERT INTO {table_name} (b, a) VALUES (?b?, ?a?)"),
+        ])
+        .assert()
+        .success();
+
+    // Query table and check for expected result
+    let query = format!("SELECT a, b FROM {table_name} ORDER BY Id");
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("1,2", actual);
 }
 
 /// Write query output to stdout
@@ -4017,13 +4075,34 @@ struct TmpParquetFile {
 
 impl TmpParquetFile {
     /// Creates a new temporary parquet file.
-    pub fn new<T>(message_type: &str, values: &[Option<T>]) -> Self
+    pub fn with_1_dim<T>(message_type: &str, values: &[Option<T>]) -> Self
     where
         T: WriteToCw + Clone,
     {
+        let values = ColumnDataImpl::new(values);
+        Self::new(
+            message_type,
+            &[&values],
+        )
+    }
+
+    pub fn with_2_dim<T, U>(message_type: &str, values_a: &[Option<T>], values_b: &[Option<U>]) -> Self
+    where
+        T: WriteToCw + Clone,
+        U: WriteToCw + Clone,
+    {
+        let column_a = ColumnDataImpl::new(values_a);
+        let column_b = ColumnDataImpl::new(values_b);
+        Self::new(
+            message_type,
+            &[&column_a, &column_b],
+        )
+    }
+
+    pub fn new(message_type: &str, values: &[&dyn ColumnData]) -> Self {
         let tmp_dir = tempdir().expect("Must be able to create temporary directory");
         let path = tmp_dir.path().join("input.par");
-        Self::write_one_dim_array(&path, message_type, values);
+        write_values_to_file(message_type, &path, values);
         TmpParquetFile {
             _tmp_dir: tmp_dir,
             path,
@@ -4036,11 +4115,40 @@ impl TmpParquetFile {
             .to_str()
             .expect("Temporary file path must be utf8")
     }
+}
 
-    fn write_one_dim_array<T>(path: &Path, message_type: &str, input: &[Option<T>])
-    where
-        T: WriteToCw + Clone,
-    {
+/// Writes a parquet file with one row group and one column.
+fn write_values_to_file(message_type: &str, input_path: &Path, columns: &[&dyn ColumnData]) {
+    let schema = Arc::new(parse_message_type(message_type).unwrap());
+    let props = Arc::new(WriterProperties::builder().build());
+    let file = File::create(input_path).unwrap();
+    let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
+    let mut row_group_writer = writer.next_row_group().unwrap();
+
+    for col in columns {
+        let mut col_writer = row_group_writer.next_column().unwrap().unwrap();
+        col.write(&mut col_writer.untyped());
+        col_writer.close().unwrap();
+    }
+    
+    row_group_writer.close().unwrap();
+    writer.close().unwrap();
+}
+
+const COLUMN_NAMES: &[&str] = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
+
+pub trait ColumnData {
+    fn write(&self, column_writer: &mut ColumnWriter);
+}
+
+struct ColumnDataImpl<T> {
+    values: Vec<T>,
+    def_levels: Vec<i16>,
+}
+
+impl<T> ColumnDataImpl<T> {
+    /// Creates a new instance of `ColumnDataImpl`.
+    pub fn new(input: &[Option<T>]) -> Self where T: Clone{
         let def_levels = input
             .iter()
             .map(|opt| if opt.is_some() { 1i16 } else { 0 })
@@ -4051,32 +4159,21 @@ impl TmpParquetFile {
             .filter_map(|opt| opt)
             .collect::<Vec<_>>();
 
-        write_values_to_file(message_type, path, &values, Some(&def_levels));
+        ColumnDataImpl {
+            values,
+            def_levels,
+        }
     }
 }
 
-/// Writes a parquet file with one row group and one column.
-fn write_values_to_file<T>(
-    message_type: &str,
-    input_path: &Path,
-    values: &[T],
-    def_levels: Option<&[i16]>,
-) where
+impl<T> ColumnData for ColumnDataImpl<T>
+where
     T: WriteToCw,
 {
-    let schema = Arc::new(parse_message_type(message_type).unwrap());
-    let props = Arc::new(WriterProperties::builder().build());
-    let file = File::create(input_path).unwrap();
-    let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
-    let mut row_group_writer = writer.next_row_group().unwrap();
-    let mut col_writer = row_group_writer.next_column().unwrap().unwrap();
-    T::write_batch(col_writer.untyped(), values, def_levels);
-    col_writer.close().unwrap();
-    row_group_writer.close().unwrap();
-    writer.close().unwrap();
+    fn write(&self, column_writer: &mut ColumnWriter) {
+        T::write_batch(column_writer, &self.values, Some(&self.def_levels));
+    }
 }
-
-const COLUMN_NAMES: &[&str] = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
 
 /// Sets up a table in the mssql database and allows us to fill it with data. Column names are given
 /// automatically a,b,c, etc.
