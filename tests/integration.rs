@@ -3261,7 +3261,8 @@ pub fn insert_timestamp_ms() {
         }
     ";
     // Total number of milli seconds since unix epoch
-    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000)]);
+    let input =
+        TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000)]);
     let input_path = input.path.clone();
 
     // Insert file into table
@@ -3350,7 +3351,8 @@ pub fn insert_timestamp_us() {
         }
     ";
     // Total number of microseconds since unix epoch
-    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
+    let input =
+        TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -3391,7 +3393,8 @@ pub fn insert_timestamp_us_optional() {
         }
     ";
     // Total number of microseconds since unix epoch
-    let input = TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(1616367053000000)]);
+    let input =
+        TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(1616367053000000)]);
 
     // Insert file into table
     Command::cargo_bin("odbc2parquet")
@@ -4079,23 +4082,21 @@ impl TmpParquetFile {
         T: WriteToCw + Clone,
     {
         let values = ColumnDataImpl::new(values);
-        Self::new(
-            message_type,
-            &[&values],
-        )
+        Self::new(message_type, &[&values])
     }
 
-    pub fn with_2_dim<T, U>(message_type: &str, values_a: &[Option<T>], values_b: &[Option<U>]) -> Self
+    pub fn with_2_dim<T, U>(
+        message_type: &str,
+        values_a: &[Option<T>],
+        values_b: &[Option<U>],
+    ) -> Self
     where
         T: WriteToCw + Clone,
         U: WriteToCw + Clone,
     {
         let column_a = ColumnDataImpl::new(values_a);
         let column_b = ColumnDataImpl::new(values_b);
-        Self::new(
-            message_type,
-            &[&column_a, &column_b],
-        )
+        Self::new(message_type, &[&column_a, &column_b])
     }
 
     pub fn new(message_type: &str, values: &[&dyn ColumnData]) -> Self {
@@ -4129,7 +4130,7 @@ fn write_values_to_file(message_type: &str, input_path: &Path, columns: &[&dyn C
         col.write(&mut col_writer.untyped());
         col_writer.close().unwrap();
     }
-    
+
     row_group_writer.close().unwrap();
     writer.close().unwrap();
 }
@@ -4147,7 +4148,10 @@ struct ColumnDataImpl<T> {
 
 impl<T> ColumnDataImpl<T> {
     /// Creates a new instance of `ColumnDataImpl`.
-    pub fn new(input: &[Option<T>]) -> Self where T: Clone{
+    pub fn new(input: &[Option<T>]) -> Self
+    where
+        T: Clone,
+    {
         let def_levels = input
             .iter()
             .map(|opt| if opt.is_some() { 1i16 } else { 0 })
@@ -4158,10 +4162,7 @@ impl<T> ColumnDataImpl<T> {
             .filter_map(|opt| opt)
             .collect::<Vec<_>>();
 
-        ColumnDataImpl {
-            values,
-            def_levels,
-        }
+        ColumnDataImpl { values, def_levels }
     }
 }
 

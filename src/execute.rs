@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs::File, mem::swap};
 
 use anyhow::{anyhow, Error};
 use log::info;
-use parquet::{file::reader::{FileReader as _, SerializedFileReader}};
+use parquet::file::reader::{FileReader as _, SerializedFileReader};
 
 use crate::{
     connection::open_connection, input::parquet_type_to_odbc_buffer_desc,
@@ -39,12 +39,15 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     // the inidices of the ODBC transport buffer columns and the indices of the parquet columns.
     //
     // Buffer to Parquet index
-    let index_mappings: Vec<usize> = mapping.iter().map(|name| {
-        column_descriptions_by_name
-            .get(name)
-            .map(|(index_pq, _)| *index_pq)
-            .ok_or_else(|| anyhow!("Parameter name {name} does not exist in parquet schema"))
-    }).collect::<Result<_, Error>>()?;
+    let index_mappings: Vec<usize> = mapping
+        .iter()
+        .map(|name| {
+            column_descriptions_by_name
+                .get(name)
+                .map(|(index_pq, _)| *index_pq)
+                .ok_or_else(|| anyhow!("Parameter name {name} does not exist in parquet schema"))
+        })
+        .collect::<Result<_, Error>>()?;
 
     let column_descriptionns_by_placeholder_index: Vec<_> = mapping
         .iter()
@@ -73,9 +76,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let mut batch_size = 1;
     let mut odbc_buffer = statement.into_column_inserter(
         batch_size,
-        column_buf_desc
-            .iter()
-            .map(|(desc, _copy_col)| *desc),
+        column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
     )?;
 
     let mut pb = ParquetBuffer::new(batch_size);
@@ -103,8 +104,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
-        for (column_index, ( _, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate()
-        {
+        for (column_index, (_, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
             let index_pq = index_mappings[column_index];
             let column_reader = row_group_reader.get_column_reader(index_pq)?;
             let column_writer = odbc_buffer.column_mut(column_index);
@@ -119,9 +119,9 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 
 /// Takes an SQL statement with named arguments and repalaces them with positional arguments.
 /// Additionally, the mapping of positions to names is returned.
-/// 
+///
 /// # Returns
-/// 
+///
 /// * First element is the SQL statement with positional placeholders (`?`) as required by ODBC.
 /// * Second element is a list which contains an entry for each positional placeholder in order of
 ///   appearance. Each entry is the name of the parquet column, that it is corresponding to. The

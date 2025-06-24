@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{format_err, anyhow, Error};
+use anyhow::{anyhow, format_err, Error};
 use io_arg::IoArg;
 use parquet::{
     basic::{Compression, Encoding},
@@ -241,9 +241,12 @@ fn path_with_suffix(path: &Path, num_file: u32, suffix_length: usize) -> Result<
     stem.push(suffix);
     // Retain file extension (we can potentially simplify this once `Path::add_extension` is stable)
     if let Some(extension) = path.extension() {
-        stem.push(format!(".{}", extension.to_str().ok_or(anyhow!(
-            "Output file extension is not valid UTF-8"
-        ))?));
+        stem.push(format!(
+            ".{}",
+            extension
+                .to_str()
+                .ok_or(anyhow!("Output file extension is not valid UTF-8"))?
+        ));
     }
     let path_with_suffix = path.with_file_name(stem);
     Ok(path_with_suffix)
