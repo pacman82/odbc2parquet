@@ -1,14 +1,12 @@
 # Changelog
 
-## [8.1.0](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.1.0) - 2025-06-24
-
-### Added
-
-- add exec command
+## [8.0.1](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.0.1) - 2025-06-24
 
 ### Fixed
 
-- Maintain parts of the filestem separated by dot (.) in the presence of suffixes
+- Maintain parts of the filestem separated by dot (`.`) in the presence of suffixes.
+
+  There had been an issue writing into an output path which contained a dot (`.`) in the file stem, like e.g. `my_db.my_table.parquet`. In case file splitting was enabled the last part of the file stem had been replaced by the suffix with the file number. E.g. `my_db_01.parquet`. After this fix it would now be `my_db.my_table_01.parquet`.
 
 ### Other
 
