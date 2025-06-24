@@ -70,6 +70,7 @@ enum Command {
         /// Name of the shell to generate completions for.
         shell: Shell,
     },
+    #[cfg(feature = "unfinished")]
     /// Executes an arbitrary SQL statement using the contents of an parquet file as input arrays.
     Exec {
         #[clap(flatten)]
@@ -380,6 +381,7 @@ fn main() -> Result<(), Error> {
             let mut output = output.into_write();
             generate(shell, &mut Cli::command(), "odbc2parquet", &mut output);
         }
+        #[cfg(feature = "unfinished")]
         Command::Exec { exec_opt } => {
             execute::execute(&exec_opt)?;
         }
