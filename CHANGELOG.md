@@ -1,5 +1,47 @@
 # Changelog
 
+## [8.1.0](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.1.0) - 2025-06-24
+
+### Added
+
+- add exec command
+
+### Fixed
+
+- Maintain parts of the filestem separated by dot (.) in the presence of suffixes
+
+### Other
+
+- formatting
+- Add unfinished feature flag to exec subcommand in order to facilitate bugfix release
+- Introude array placeholder index
+- Test switched order of exec input arguments
+- Use TmpParquetFile in all insert tests.
+- More test use TmpParquetFile
+- Introduce TmpParquetFile test helper
+- deactivate module execute if unfinished flag is not set
+- Exec command
+- *(exec)* unmasking of arguments
+- Test for exec passes trivialy
+- Failing integration test for exec subcommand
+- introduce unfinished feature flag and start work on Exec command behind it
+- *(deps)* bump clap from 4.5.39 to 4.5.40
+- *(deps)* bump clap_complete from 4.5.52 to 4.5.54
+- *(deps)* bump clap_complete from 4.5.51 to 4.5.52
+- *(deps)* bump clap_complete from 4.5.50 to 4.5.51
+- *(deps)* bump clap from 4.5.38 to 4.5.39
+- *(deps)* bump odbc-api from 13.0.0 to 13.0.1
+- *(deps)* bump odbc-api from 12.2.0 to 13.0.0
+- update dependencies
+- *(deps)* bump clap_complete from 4.5.48 to 4.5.50
+- Use column attributes instead of description
+- *(deps)* bump clap_complete from 4.5.47 to 4.5.48
+- *(deps)* bump chrono from 0.4.40 to 0.4.41
+- *(deps)* bump odbc-api from 12.0.1 to 12.0.2
+- Add hint to install PostgreSQL ODBC drivers
+- Update to PostgreSQL 17
+- *(deps)* bump clap from 4.5.36 to 4.5.37
+
 ## [8.0.0](https://github.com/pacman82/odbc2parquet/compare/v7.0.4...v8.0.0) - 2025-04-17
 
 ### Other
