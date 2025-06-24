@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, anyhow, Error};
 use io_arg::IoArg;
 use parquet::{
     basic::{Compression, Encoding},
@@ -239,10 +239,40 @@ fn path_with_suffix(path: &Path, num_file: u32, suffix_length: usize) -> Result<
         .ok_or_else(|| format_err!("Output needs To have a file stem."))?
         .to_owned();
     stem.push(suffix);
-    let mut path_with_suffix = path.with_file_name(stem);
-    // Retain file extension
+    // Retain file extension (we can potentially simplify this once `Path::add_extension` is stable)
     if let Some(extension) = path.extension() {
-        path_with_suffix = path_with_suffix.with_extension(extension);
+        stem.push(format!(".{}", extension.to_str().ok_or(anyhow!(
+            "Output file extension is not valid UTF-8"
+        ))?));
     }
+    let path_with_suffix = path.with_file_name(stem);
     Ok(path_with_suffix)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::path::PathBuf;
+
+    use super::path_with_suffix;
+
+    #[test]
+    fn filenames_with_suffixes() {
+        let path = path_with_suffix(&PathBuf::from("test.par"), 1, 2).unwrap();
+        assert_eq!(path.to_str().unwrap(), "test_01.par");
+    }
+
+    /// See: <https://github.com/pacman82/odbc2parquet/issues/754>
+    #[test]
+    fn filenames_with_dot_in_filestem_and_suffix() {
+        let path = path_with_suffix(&PathBuf::from("server-name-schema.table.par"), 1, 2).unwrap();
+        assert_eq!(path.to_str().unwrap(), "server-name-schema.table_01.par");
+    }
+
+    /// See: <https://github.com/pacman82/odbc2parquet/issues/754>
+    #[test]
+    fn retain_path_before_file_name() {
+        let path = path_with_suffix(&PathBuf::from("./some_path/out.par"), 1, 2).unwrap();
+        assert_eq!(path, PathBuf::from("./some_path/out_01.par"));
+    }
 }
