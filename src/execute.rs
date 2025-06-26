@@ -108,6 +108,10 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 // the inidices of the ODBC transport buffer columns and the indices of the parquet columns.
 struct IndexMapping {
     buffer_to_parquet_index: Vec<usize>,
+    // A zero based (!) parameter index is used to find the index of the matching odbc transport
+    // column buffer. In ODBC a parameter index is 1-based, but shifting it to 0-based matches our
+    // `Vec` better.
+    parameter_to_buffer_index: Vec<usize>,
 }
 
 impl IndexMapping {
@@ -141,9 +145,12 @@ impl IndexMapping {
                     .copied()
             })
             .collect::<Result<_, Error>>()?;
+        let parameter_to_buffer_index =
+            (0..placeholder_names_by_position.len()).collect::<Vec<_>>();
 
         Ok(IndexMapping {
             buffer_to_parquet_index,
+            parameter_to_buffer_index,
         })
     }
 
@@ -155,11 +162,11 @@ impl IndexMapping {
 
 impl InputParameterMapping for &IndexMapping {
     fn parameter_index_to_column_index(&self, paramteter_index: u16) -> usize {
-        (paramteter_index - 1) as usize
+        self.parameter_to_buffer_index[(paramteter_index - 1) as usize]
     }
 
     fn num_parameters(&self) -> usize {
-        self.buffer_to_parquet_index.len()
+        self.parameter_to_buffer_index.len()
     }
 }
 
