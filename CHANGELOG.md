@@ -1,5 +1,19 @@
 # Changelog
 
+## [8.1.0](https://github.com/pacman82/odbc2parquet/compare/v8.0.1...v8.1.0) - 2025-06-26
+
+### Added
+
+- Enable exec subcommand
+
+### Other
+
+- execute now reuses buffers in case of multiple mentions of the same placeholder
+- Introduce InputParameterMapping::parameter_to_buffer_index
+- Remove unused member from IndexMapping
+- IntroduceIndexMapping
+- *(deps)* bump odbc-api from 13.0.1 to 13.1.0
+
 ## [8.0.1](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.0.1) - 2025-06-24
 
 ### Fixed
