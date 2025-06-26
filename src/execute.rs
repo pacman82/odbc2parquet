@@ -134,19 +134,25 @@ impl IndexMapping {
                 (desc.name().to_owned(), index_pq)
             })
             .collect();
-        let buffer_to_parquet_index: Vec<usize> = placeholder_names_by_position
-            .iter()
-            .map(|name| {
-                parquet_index_by_name
-                    .get(name)
-                    .ok_or_else(|| {
-                        anyhow!("Parameter name {name} does not exist in parquet schema")
-                    })
-                    .copied()
-            })
-            .collect::<Result<_, Error>>()?;
-        let parameter_to_buffer_index =
-            (0..placeholder_names_by_position.len()).collect::<Vec<_>>();
+
+        let mut buffer_to_parquet_index: Vec<usize> = Vec::new();
+        let mut parameter_to_buffer_index: Vec<usize> = Vec::new();
+        let mut name_to_buffer_index: HashMap<String, usize> = HashMap::new();
+
+        // The order of the column buffers will correspond with the order of the first appearance in
+        // the SQL statement of the placeholder names. To save memory there will be only one column
+        // buffer per unique placeholder name.
+        for name in placeholder_names_by_position {
+            // This is the first time we see this placeholder name.
+            let parquet_index = parquet_index_by_name
+                .get(&name)
+                .ok_or_else(|| anyhow!("Parameter name {name} does not exist in parquet schema"))?;
+            let buffer_index = name_to_buffer_index.entry(name).or_insert_with(|| {
+                buffer_to_parquet_index.push(*parquet_index);
+                buffer_to_parquet_index.len() - 1
+            });
+            parameter_to_buffer_index.push(*buffer_index);
+        }
 
         Ok(IndexMapping {
             buffer_to_parquet_index,

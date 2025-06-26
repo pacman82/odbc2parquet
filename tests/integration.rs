@@ -3902,6 +3902,49 @@ fn exec_with_switched_order() {
     assert_eq!("1,2", actual);
 }
 
+/// Verify that named arguments work even if they appear in multiple positions
+#[test]
+fn exec_with_multiple_placeholder_mentions() {
+    let table_name = "ExecWithMultiplePlaceholderMentions";
+    // Prepare table
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    setup_empty_table_mssql(&conn, table_name, &["INTEGER", "VARCHAR(50)", "INTEGER"]).unwrap();
+
+    // Prepare file
+    let message_type = "
+        message schema {
+            OPTIONAL INT32 a;
+            OPTIONAL BYTE_ARRAY b (UTF8); 
+        }
+    ";
+    let text: ByteArray = "Hello".into();
+    let input = TmpParquetFile::with_2_dim(message_type, &[Some(1i32)], &[Some(text)]);
+
+
+    // When insert values into table using exec
+    Command::cargo_bin("odbc2parquet")
+        .unwrap()
+        .args([
+            "-vvvv",
+            "exec",
+            "--connection-string",
+            MSSQL,
+            input.path_as_str(),
+            &format!("INSERT INTO {table_name} (a, b, c) VALUES (?a?, ?b?, ?a?)"),
+        ])
+        .assert()
+        .success();
+
+    // Query table and check for expected result
+    let query = format!("SELECT a, b, c FROM {table_name} ORDER BY Id");
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("1,Hello,1", actual);
+}
+
 /// Write query output to stdout
 #[test]
 pub fn write_query_result_to_stdout() {
