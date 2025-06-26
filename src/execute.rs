@@ -88,7 +88,10 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         }
         odbc_buffer.set_num_rows(num_rows);
         pb.set_num_rows_fetched(num_rows);
-        for (index_buf, index_pq) in mapping.parquet_indices_in_order_of_column_buffers().enumerate() {
+        for (index_buf, index_pq) in mapping
+            .parquet_indices_in_order_of_column_buffers()
+            .enumerate()
+        {
             let column_reader = row_group_reader.get_column_reader(index_pq)?;
             let column_writer = odbc_buffer.column_mut(index_buf);
             let (_, parquet_to_odbc_col) = &column_buf_desc[index_buf];
@@ -105,7 +108,6 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 // the inidices of the ODBC transport buffer columns and the indices of the parquet columns.
 struct IndexMapping {
     buffer_to_parquet_index: Vec<usize>,
-    parquet_index_by_name: HashMap<String, usize>,
 }
 
 impl IndexMapping {
@@ -128,27 +130,20 @@ impl IndexMapping {
                 (desc.name().to_owned(), index_pq)
             })
             .collect();
-        let column_descriptions_by_name: HashMap<_, _> = (0..num_columns)
-            .map(|index_pq| {
-                let desc = schema_desc.column(index_pq);
-                (desc.name().to_owned(), (index_pq, desc))
-            })
-            .collect();
         let buffer_to_parquet_index: Vec<usize> = placeholder_names_by_position
             .iter()
             .map(|name| {
-                column_descriptions_by_name
+                parquet_index_by_name
                     .get(name)
-                    .map(|(index_pq, _)| *index_pq)
                     .ok_or_else(|| {
                         anyhow!("Parameter name {name} does not exist in parquet schema")
                     })
+                    .copied()
             })
             .collect::<Result<_, Error>>()?;
 
         Ok(IndexMapping {
             buffer_to_parquet_index,
-            parquet_index_by_name,
         })
     }
 
