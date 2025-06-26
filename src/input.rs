@@ -368,7 +368,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
 
 /// We extend the parquet `DataType` to start of our builder pattern. These builders constructs the
 /// functors we use to transfer data from Parquet to ODBC.
-trait InserterBuilderStart: DataType + Sized {
+trait InpubBuilderStart: DataType + Sized {
     fn map_to_text<F>(f: F, nullable: bool) -> Box<FnParquetToOdbcCol>
     where
         F: Fn(&Self::T, usize, &mut TextColumnSliceMut<u8>) -> Result<(), Error> + 'static,
@@ -551,7 +551,7 @@ trait InserterBuilderStart: DataType + Sized {
     }
 }
 
-impl<T> InserterBuilderStart for T where T: DataType {}
+impl<T> InpubBuilderStart for T where T: DataType {}
 
 struct ParquetToOdbcBuilder<Pdt: ?Sized, Odt> {
     pdt: PhantomData<Pdt>,

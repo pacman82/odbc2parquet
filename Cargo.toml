@@ -38,7 +38,7 @@ tempfile = "3.20.0"
 # Using ODBC version 3.5 is avoiding warnings with drivers which only support 3.5 as oppossed to
 # 3.8. Currently odbc2parquet does not need to use use any ODBC version 3.8 features.
 [dependencies.odbc-api]
-version = "13.1.0"
+version = "14.0.0"
 features = ["odbc_version_3_5"]
 
 [dependencies.clap]
@@ -64,4 +64,4 @@ lto = true
 
 [features]
 default = []
-unfinished = []
+# unfinished = []

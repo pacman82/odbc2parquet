@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs::File, mem::swap};
 
 use anyhow::{anyhow, Error};
 use log::info;
+use odbc_api::InOrder;
 use parquet::file::reader::{FileReader as _, SerializedFileReader};
 
 use crate::{
@@ -28,6 +29,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 
     let (statement_text, mapping) = to_positional_arguments(&statement);
     let statement = odbc_conn.prepare(&statement_text)?;
+
     let column_descriptions_by_name: HashMap<_, _> = (0..num_columns)
         .map(|index_pq| {
             let desc = schema_desc.column(index_pq);
@@ -52,7 +54,9 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
     let column_descriptionns_by_placeholder_index: Vec<_> = mapping
         .iter()
         .map(|name| {
-            let (_index_pq, desc) = column_descriptions_by_name.get(name).unwrap();
+            let (_index_pq, desc) = column_descriptions_by_name.get(name).expect(
+                "A 'missing' column in the parquet schema, must be caught then building index map",
+            );
             Ok(desc)
         })
         .collect::<Result<_, Error>>()?;
@@ -74,9 +78,10 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 
     // Start with a small initial batch size and reallocate as we encounter larger row groups.
     let mut batch_size = 1;
-    let mut odbc_buffer = statement.into_column_inserter(
+    let mut odbc_buffer = statement.into_column_inserter_with_mapping(
         batch_size,
         column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
+        InOrder::new(index_mappings.len())
     )?;
 
     let mut pb = ParquetBuffer::new(batch_size);
