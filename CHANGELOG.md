@@ -4,14 +4,10 @@
 
 ### Added
 
-- Enable exec subcommand
+- The `exec` subcommand has been addded. It is a generalization of `insert` as it allows for passing the SQL statement on the command line. Named input placeholders are used to associate the statement parameters with columns in the input parquet file.
 
 ### Other
 
-- execute now reuses buffers in case of multiple mentions of the same placeholder
-- Introduce InputParameterMapping::parameter_to_buffer_index
-- Remove unused member from IndexMapping
-- IntroduceIndexMapping
 - *(deps)* bump odbc-api from 13.0.1 to 13.1.0
 
 ## [8.0.1](https://github.com/pacman82/odbc2parquet/compare/v8.0.0...v8.0.1) - 2025-06-24
