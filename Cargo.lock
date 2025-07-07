@@ -678,9 +678,9 @@ checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
 
 [[package]]
 name = "io-arg"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "140883deaece40693d064db8b0c71d4d347693ed39b5515a5649eb4e0c8ab384"
+checksum = "ee74e0370886b7db51428fdcc9c0cb83f91bdd85daedebfc4dcf829a17dc1c86"
 
 [[package]]
 name = "is-terminal"
