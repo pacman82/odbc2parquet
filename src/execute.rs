@@ -40,10 +40,8 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
         })
         .collect::<Result<_, Error>>()?;
 
-    // The order of the column buffer descriptions will be the order of the positional parameters
-    // and the order of the columns in the allocated ODBC transport buffer. Yet, it may not be the
-    // order of the columns in the parquet file, which is why we keep track of the index in parquet
-    // separately.
+    // The order of the column buffer descriptions may not be the order of the columns in the
+    // parquet file, which is why we keep track of the index in parquet separately.
     let column_buf_desc: Vec<_> = parquet_column_descs_in_order_of_column_bufs
         .iter()
         .map(|col_desc| {
@@ -160,7 +158,7 @@ impl IndexMapping {
         })
     }
 
-    /// Iterates over the parquet indices in order of the ODBC transparto buffers
+    /// Iterates over the parquet indices in order of the ODBC transpart buffers
     pub fn parquet_indices_in_order_of_column_buffers(&self) -> impl Iterator<Item = usize> + '_ {
         self.buffer_to_parquet_index.iter().copied()
     }
