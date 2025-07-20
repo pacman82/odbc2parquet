@@ -3922,7 +3922,6 @@ fn exec_with_multiple_placeholder_mentions() {
     let text: ByteArray = "Hello".into();
     let input = TmpParquetFile::with_2_dim(message_type, &[Some(1i32)], &[Some(text)]);
 
-
     // When insert values into table using exec
     Command::cargo_bin("odbc2parquet")
         .unwrap()

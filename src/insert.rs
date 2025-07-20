@@ -5,8 +5,9 @@ use log::info;
 use parquet::file::reader::{FileReader, SerializedFileReader};
 
 use crate::{
-    connection::open_connection, input::parquet_type_to_odbc_buffer_desc,
-    parquet_buffer::ParquetBuffer, InsertOpt,
+    connection::open_connection,
+    input::{copy_from_db_to_parquet, parquet_type_to_odbc_buffer_desc, IndexMapping},
+    InsertOpt,
 };
 
 /// Read the content of a parquet file and insert it into a table.
@@ -32,57 +33,22 @@ pub fn insert(insert_opt: &InsertOpt) -> Result<(), Error> {
         .iter()
         .map(|col_desc| col_desc.name())
         .collect();
-    let column_buf_desc: Vec<_> = column_descriptions
-        .iter()
-        .map(|col_desc| parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16()))
-        .collect::<Result<_, _>>()?;
+    let mut odbc_buf_desc = Vec::new();
+    let mut copy_col_fns = Vec::new();
+    for col_desc in &column_descriptions {
+        let (buf_desc, odbc_to_parquet) =
+            parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16())?;
+        odbc_buf_desc.push(buf_desc);
+        copy_col_fns.push(odbc_to_parquet);
+    }
     let insert_statement = insert_statement_text(table, &column_names);
-
     let statement = odbc_conn.prepare(&insert_statement)?;
 
-    let num_row_groups = reader.num_row_groups();
+    let odbc_inserter = statement.into_column_inserter(1, odbc_buf_desc)?;
 
-    // Start with a small initial batch size and reallocate as we encounter larger row groups.
-    let mut batch_size = 1;
-    let mut odbc_buffer = statement.into_column_inserter(
-        batch_size,
-        column_buf_desc.iter().map(|(desc, _copy_col)| *desc),
-    )?;
+    let mapping = IndexMapping::ordered_parameters(num_columns);
 
-    let mut pb = ParquetBuffer::new(batch_size);
-
-    for row_group_index in 0..num_row_groups {
-        info!(
-            "Insert row group {} of {}.",
-            row_group_index, num_row_groups
-        );
-        let row_group_reader = reader.get_row_group(row_group_index)?;
-        let num_rows: usize = row_group_reader
-            .metadata()
-            .num_rows()
-            .try_into()
-            .expect("Number of rows in row group of parquet file must be non negative");
-        // Ensure that num rows is less than batch size of originally created buffers.
-        if num_rows > batch_size {
-            batch_size = num_rows;
-            let descs = column_buf_desc.iter().map(|(desc, _)| *desc);
-            // An inefficiency here: Currently `odbc-api`s interface forces us to prepare the
-            // statement again, in case we need to allocate more row groups.
-            odbc_buffer = odbc_conn
-                .prepare(&insert_statement)?
-                .into_column_inserter(batch_size, descs)?;
-        }
-        odbc_buffer.set_num_rows(num_rows);
-        pb.set_num_rows_fetched(num_rows);
-        for (column_index, (_, parquet_to_odbc_col)) in column_buf_desc.iter().enumerate() {
-            let column_reader = row_group_reader.get_column_reader(column_index)?;
-            let column_writer = odbc_buffer.column_mut(column_index);
-            parquet_to_odbc_col(num_rows, &mut pb, column_reader, column_writer)?;
-        }
-
-        odbc_buffer.execute()?;
-    }
-
+    copy_from_db_to_parquet(reader, &mapping, odbc_inserter, copy_col_fns)?;
     Ok(())
 }
 
