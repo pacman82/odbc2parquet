@@ -1,5 +1,16 @@
 # Changelog
 
+## [8.1.1](https://github.com/pacman82/odbc2parquet/compare/v8.1.0...v8.1.1) - 2025-07-20
+
+### Other
+
+- Statements are only prepared once for execute or insert subcommand.
+- Update some comments in code
+- *(deps)* bump clap from 4.5.40 to 4.5.41
+- *(deps)* bump clap_complete from 4.5.54 to 4.5.55
+- *(deps)* bump io-arg from 0.2.1 to 0.2.2
+- *(deps)* bump odbc-api from 14.0.0 to 14.0.2
+
 ## [8.1.0](https://github.com/pacman82/odbc2parquet/compare/v8.0.1...v8.1.0) - 2025-06-26
 
 ### Added
