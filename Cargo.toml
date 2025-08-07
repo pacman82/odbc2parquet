@@ -42,7 +42,7 @@ version = "14.2.1"
 features = ["odbc_version_3_5"]
 
 [dependencies.clap]
-version = "4.5.42"
+version = "4.5.43"
 features = ["derive", "env"]
 
 [dependencies.parquet]
