@@ -1,5 +1,4 @@
 services:
-
   mssql:
     image: mcr.microsoft.com/mssql/server:2019-latest
     ports:
@@ -17,14 +16,3 @@ services:
       POSTGRES_DB: test
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
-
-  dev:
-    build: docker/dev
-    volumes:
-      - .:/workspace:cached
-
-    # Overrides default command so things don't shut down after the process ends.
-    command: sleep infinity
-
-    # Allows accessing dbs through port forwarding. dev container behaves like host for networking
-    network_mode: host
