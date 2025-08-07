@@ -1,5 +1,24 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [8.1.2](https://github.com/pacman82/odbc2parquet/compare/v8.1.1...v8.1.2) - 2025-08-07
+
+### Other
+
+- Update to parquet 56
+- Remove dev container
+- *(deps)* bump clap from 4.5.42 to 4.5.43
+- *(deps)* bump odbc-api from 14.2.0 to 14.2.1
+- *(deps)* bump clap from 4.5.41 to 4.5.42
+- *(deps)* bump odbc-api from 14.1.0 to 14.2.0
+# Changelog
+
 ## [8.1.1](https://github.com/pacman82/odbc2parquet/compare/v8.1.0...v8.1.1) - 2025-07-20
 
 ### Other
