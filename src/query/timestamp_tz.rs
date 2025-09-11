@@ -1,4 +1,4 @@
-use anyhow::Error;
+use anyhow::{Context, Error};
 use chrono::{DateTime, Utc};
 use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
@@ -94,7 +94,13 @@ fn to_utc_epoch(bytes: &[u8], precision: u8) -> Result<i64, Error> {
     let utf8 = String::from_utf8_lossy(bytes);
 
     // Parse to datetime
-    let date_time = DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.9f %:z")?;
+    let date_time =
+        DateTime::parse_from_str(&utf8, "%Y-%m-%d %H:%M:%S%.f %:z").with_context(|| {
+            format!(
+                "Failed to parse timestamp with timezone from string: {}",
+                utf8
+            )
+        })?;
     // let utc = date_time.naive_utc();
     let utc = date_time.with_timezone(&Utc);
     let integer = TimestampPrecision::new(precision).datetime_to_i64(&utc)?;
