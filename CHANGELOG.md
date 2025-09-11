@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.3](https://github.com/pacman82/odbc2parquet/compare/v8.1.2...v8.1.3) - 2025-09-11
+
+### Other
+
+- update to newest version of chrono
+- *(deps)* bump tempfile from 3.21.0 to 3.22.0
+- *(deps)* bump odbc-api from 17.0.0 to 19.0.0
+- *(deps)* bump log from 0.4.27 to 0.4.28
+- *(deps)* bump clap from 4.5.46 to 4.5.47
+- *(deps)* bump clap from 4.5.45 to 4.5.46
+- *(deps)* bump parquet from 56.0.0 to 56.1.0
+- *(deps)* bump tempfile from 3.20.0 to 3.21.0
+
 ## [8.1.2](https://github.com/pacman82/odbc2parquet/compare/v8.1.1...v8.1.2) - 2025-08-07
 
 ### Other
