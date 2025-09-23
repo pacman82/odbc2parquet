@@ -1024,7 +1024,7 @@ fn query_timestamp_ms_with_timezone_mssql() {
         .assert()
         .success();
 
-    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
+    let expected_values = "{a: 2022-09-07 14:04:12.000 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MILLIS,true));"));
@@ -1154,7 +1154,7 @@ fn query_timestamp_with_timezone_postgres() {
         .assert()
         .success();
 
-    let expected_values = "{a: 2022-09-07 14:04:12 +00:00}\n";
+    let expected_values = "{a: 2022-09-07 14:04:12.000000 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,false));"));
@@ -1197,7 +1197,7 @@ fn query_timestamp_postgres() {
         .assert()
         .success();
 
-    let expected_values = "{a: 2022-09-07 16:04:12 +00:00}\n";
+    let expected_values = "{a: 2022-09-07 16:04:12.000000 +00:00}\n";
     parquet_read_out(out_str).stdout(eq(expected_values));
 
     parquet_schema_out(out_str).stdout(contains("OPTIONAL INT64 a (TIMESTAMP(MICROS,false));"));
@@ -1249,7 +1249,7 @@ fn query_all_the_types() {
         i: \"Hello, World!\", \
         j: 2020-09-16, \
         k: 14052000000000, \
-        l: 2020-09-16 03:54:12 +00:00\
+        l: 2020-09-16 03:54:12.000 +00:00\
     }\n";
 
     // A temporary directory, to be removed at the end of the test.
