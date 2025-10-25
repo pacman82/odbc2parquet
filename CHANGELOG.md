@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.4](https://github.com/pacman82/odbc2parquet/compare/v8.1.3...v8.1.4) - 2025-10-25
+
+### Other
+
+- Update to parquet 57
+
 ## [8.1.3](https://github.com/pacman82/odbc2parquet/compare/v8.1.2...v8.1.3) - 2025-09-23
 
 ### Other
