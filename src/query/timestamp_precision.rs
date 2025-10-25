@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Error};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use odbc_api::sys::Timestamp;
-use parquet::format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit};
+use parquet::basic::TimeUnit;
 
 /// Relational types communicate the precision of timestamps in number of fraction digits, while
 /// parquet uses time units (milli, micro, nano). This enumeration stores the decision which time
@@ -24,9 +24,9 @@ impl TimestampPrecision {
 
     pub fn as_time_unit(self) -> TimeUnit {
         match self {
-            TimestampPrecision::Milliseconds => TimeUnit::MILLIS(MilliSeconds {}),
-            TimestampPrecision::Microseconds => TimeUnit::MICROS(MicroSeconds {}),
-            TimestampPrecision::Nanoseconds => TimeUnit::NANOS(NanoSeconds {}),
+            TimestampPrecision::Milliseconds => TimeUnit::MILLIS,
+            TimestampPrecision::Microseconds => TimeUnit::MICROS,
+            TimestampPrecision::Nanoseconds => TimeUnit::NANOS,
         }
     }
 

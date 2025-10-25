@@ -5,10 +5,9 @@ use atoi::FromRadix10;
 use chrono::{NaiveTime, Timelike};
 use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
-    basic::{LogicalType, Repetition, Type as PhysicalType},
+    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int32Type, Int64Type},
-    format::{MicroSeconds, MilliSeconds, NanoSeconds, TimeUnit},
     schema::types::Type,
 };
 
@@ -38,9 +37,9 @@ impl TimeFromText {
 impl ColumnStrategy for TimeFromText {
     fn parquet_type(&self, name: &str) -> Type {
         let (unit, pt) = match self.precision {
-            0..=3 => (TimeUnit::MILLIS(MilliSeconds {}), PhysicalType::INT32),
-            4..=6 => (TimeUnit::MICROS(MicroSeconds {}), PhysicalType::INT64),
-            _ => (TimeUnit::NANOS(NanoSeconds {}), PhysicalType::INT64),
+            0..=3 => (TimeUnit::MILLIS, PhysicalType::INT32),
+            4..=6 => (TimeUnit::MICROS, PhysicalType::INT64),
+            _ => (TimeUnit::NANOS, PhysicalType::INT64),
         };
 
         Type::primitive_type_builder(name, pt)
