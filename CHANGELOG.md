@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.4](https://github.com/pacman82/odbc2parquet/compare/v8.1.3...v8.1.4) - 2025-11-02
+
+### Other
+
+- Repalace `Command::cargo_bin` with `cargo_bin_cmd!`
+- replace lazy_static with Once
+- *(deps)* bump assert_cmd from 2.0.17 to 2.1.1
+- *(deps)* bump clap from 4.5.50 to 4.5.51
+- *(deps)* bump clap_complete from 4.5.59 to 4.5.60
+- Update to parquet 57
+
 ## [8.1.3](https://github.com/pacman82/odbc2parquet/compare/v8.1.2...v8.1.3) - 2025-09-23
 
 ### Other
