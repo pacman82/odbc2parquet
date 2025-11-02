@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Once},
 };
 
-use assert_cmd::{assert::Assert, Command};
+use assert_cmd::{assert::Assert, cargo::cargo_bin_cmd, Command};
 use bytes::Bytes;
 use odbc_api::{
     buffers::{BufferDesc, TextRowSet},
@@ -90,8 +90,7 @@ fn append_user_and_password_to_connection_string() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -135,8 +134,7 @@ fn nullable_parquet_buffers() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -167,7 +165,7 @@ fn foobar_connection_string() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
-    let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
+    let mut cmd = cargo_bin_cmd!();
     cmd.args([
         "-vvvv",
         "query",
@@ -190,7 +188,7 @@ fn should_give_good_error_if_specifying_directory_for_output() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
-    let mut cmd = Command::cargo_bin("odbc2parquet").unwrap();
+    let mut cmd = cargo_bin_cmd!();
     cmd.args(["query", "-c", MSSQL, out_str, "SELECT 42 AS A"])
         .assert()
         .stderr(contains("Could not create output file '"))
@@ -215,8 +213,7 @@ fn parameters_in_query() {
 
     let query = format!("SELECT a,b FROM {table_name} WHERE b=?");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -252,8 +249,7 @@ fn should_error_on_truncation_utf_8() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    let assertion = Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    let assertion = cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -292,8 +288,7 @@ fn should_error_on_truncation_utf_16() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    let assertion = Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    let assertion = cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -333,8 +328,7 @@ fn should_error_on_truncation_for_sequential_fetch() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    let assertion = Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    let assertion = cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -376,8 +370,7 @@ fn should_allow_specifying_explicit_compression_level() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -421,8 +414,7 @@ fn query_sales() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -463,8 +455,7 @@ fn query_sales_sequentially() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -503,8 +494,7 @@ fn query_decimals() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a,b,c,d FROM {table_name};");
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -553,8 +543,7 @@ fn query_decimals_avoid_decimal() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a,b,c,d FROM {table_name};");
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -597,8 +586,7 @@ fn query_decimals_avoid_decimal_int64_not_supported_by_driver() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a FROM {table_name};");
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -645,8 +633,7 @@ fn query_decimals_optional() {
 
     let query = format!("SELECT a,b,c FROM {table_name} ORDER BY id;");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -680,8 +667,7 @@ fn query_large_numeric_as_text() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a FROM {table_name};");
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -713,8 +699,7 @@ fn query_numeric_13_3() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -747,8 +732,7 @@ fn query_numeric_33_3() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -793,8 +777,7 @@ fn query_timestamp_with_timezone_mssql() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -827,8 +810,7 @@ fn query_timestamp_mssql_precision_7() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -861,8 +843,7 @@ fn query_unsigned_tinyint() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -895,8 +876,7 @@ fn should_error_if_timestamp_is_out_of_range() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -931,8 +911,7 @@ fn should_correctly_fetch_upper_bound_timestamp() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -966,8 +945,7 @@ fn should_correctly_fetch_lower_bound_timestamp() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1010,8 +988,7 @@ fn query_timestamp_ms_with_timezone_mssql() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1053,8 +1030,7 @@ fn query_time_mssql() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1096,8 +1072,7 @@ fn query_time_0_mssql() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1140,8 +1115,7 @@ fn query_timestamp_with_timezone_postgres() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1183,8 +1157,7 @@ fn query_timestamp_postgres() {
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1261,8 +1234,7 @@ fn query_all_the_types() {
 
     let query = format!("SELECT a,b,c,d,e,f,g,h,i,j,k,l FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1311,8 +1283,7 @@ fn query_bits() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1360,8 +1331,7 @@ fn query_doubles() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1399,8 +1369,7 @@ fn query_comes_back_with_no_rows() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1444,8 +1413,7 @@ fn no_empty_file_works_with_split_files() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1480,8 +1448,7 @@ fn emit_file_despite_no_empty_file_set() {
 
     let query = "SELECT 42 as a";
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1533,8 +1500,7 @@ fn read_query_from_stdin() {
     // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Tempfile path must be utf8");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args(["-vvvv", "query", out_str, "--connection-string", MSSQL, "-"])
         .write_stdin(query)
         .assert()
@@ -1564,8 +1530,7 @@ fn split_files_on_num_row_groups() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1612,8 +1577,7 @@ fn file_name_no_empty_file_and_split_files() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1658,8 +1622,7 @@ fn split_files_on_size_limit() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1703,8 +1666,7 @@ fn configurable_suffix_length() {
 
     let query = format!("SELECT a FROM {table_name}");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1754,8 +1716,7 @@ fn varbinary_column() {
 
     let query = "SELECT a FROM VarbinaryColumn;";
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1800,8 +1761,7 @@ fn query_varchar_max() {
     let query = format!("SELECT a FROM {table_name};");
 
     // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1846,8 +1806,7 @@ fn query_varchar_max_utf16() {
     let query = format!("SELECT a FROM {table_name};");
 
     // VARCHAR(max) has size 0. => Column is ignored and file would be empty and schemaless
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1891,8 +1850,7 @@ fn binary_column() {
 
     let query = "SELECT a FROM BinaryColumn;";
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1941,8 +1899,7 @@ fn prefer_varbinary() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -1986,8 +1943,7 @@ fn interior_nul_in_varchar() {
 
     let query = "SELECT a FROM InteriorNul;";
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -2031,8 +1987,7 @@ fn nchar_not_truncated() {
 
     let query = &format!("SELECT a FROM {};", table_name);
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args(&[
             "-vvvv",
             "query",
@@ -2078,8 +2033,7 @@ fn system_encoding() {
 
     let query = &format!("SELECT a FROM {};", table_name);
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args(&[
             "-vvvv",
             "query",
@@ -2124,8 +2078,7 @@ fn utf_16_encoding() {
 
     let query = &format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -2170,8 +2123,7 @@ fn auto_encoding() {
 
     let query = &format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -2208,8 +2160,7 @@ pub fn insert_32_bit_integer() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2247,8 +2198,7 @@ pub fn insert_optional_32_bit_integer() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2287,8 +2237,7 @@ pub fn insert_64_bit_integer() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2353,8 +2302,7 @@ pub fn insert_file_with_last_row_group_of_less_size() {
     writer.close().unwrap();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2393,8 +2341,7 @@ pub fn insert_optional_64_bit_integer() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2441,8 +2388,7 @@ pub fn insert_utf8() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2485,8 +2431,7 @@ pub fn insert_optional_utf8() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2533,8 +2478,7 @@ pub fn insert_utf16() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2579,8 +2523,7 @@ pub fn insert_optional_utf16() {
     let input_path = input.path_as_str();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2621,8 +2564,7 @@ pub fn insert_bool() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2661,8 +2603,7 @@ pub fn insert_optional_bool() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2701,8 +2642,7 @@ pub fn insert_f32() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2742,8 +2682,7 @@ pub fn insert_optional_f32() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2781,8 +2720,7 @@ pub fn insert_f64() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2820,8 +2758,7 @@ pub fn insert_optional_f64() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2859,8 +2796,7 @@ pub fn insert_date() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2899,8 +2835,7 @@ pub fn insert_optional_date() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2941,8 +2876,7 @@ pub fn insert_time_ms() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -2982,8 +2916,7 @@ pub fn insert_optional_time_ms() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3025,8 +2958,7 @@ pub fn insert_time_us() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3065,8 +2997,7 @@ pub fn insert_optional_time_us() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3105,8 +3036,7 @@ pub fn insert_decimal_from_i32() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3143,8 +3073,7 @@ pub fn insert_decimal_from_i32_optional() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3184,8 +3113,7 @@ pub fn insert_decimal_from_i64() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3225,8 +3153,7 @@ pub fn insert_decimal_from_i64_optional() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3265,8 +3192,7 @@ pub fn insert_timestamp_ms() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3311,8 +3237,7 @@ pub fn insert_timestamp_ms_optional() {
     let input_path = input.path.clone();
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3354,8 +3279,7 @@ pub fn insert_timestamp_us() {
         TmpParquetFile::with_1_dim(message_type, &[Some(0i64), Some(1), Some(1616367053000000)]);
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3396,8 +3320,7 @@ pub fn insert_timestamp_us_optional() {
         TmpParquetFile::with_1_dim(message_type, &[Some(0i64), None, Some(1616367053000000)]);
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3447,8 +3370,7 @@ pub fn insert_binary() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3495,8 +3417,7 @@ pub fn insert_binary_optional() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3551,8 +3472,7 @@ pub fn insert_fixed_len_binary() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3608,8 +3528,7 @@ pub fn insert_fixed_len_binary_optional() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3660,8 +3579,7 @@ pub fn insert_decimal_from_binary() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3699,8 +3617,7 @@ pub fn insert_decimal_from_binary_optional() {
     let input = TmpParquetFile::with_1_dim(message_type, &[Some(zero), None, Some(vec![1].into())]);
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3750,8 +3667,7 @@ pub fn insert_decimal_from_fixed_binary() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3798,8 +3714,7 @@ pub fn insert_decimal_from_fixed_binary_optional() {
     );
 
     // Insert file into table
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -3838,8 +3753,7 @@ fn basic_use_exec_for_insert() {
     let input = TmpParquetFile::with_1_dim(message_type, &[Some(1i32), None, Some(2)]);
 
     // When insert values into table using exec
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "exec",
@@ -3880,8 +3794,7 @@ fn exec_with_switched_order() {
     let input = TmpParquetFile::with_2_dim(message_type, &[Some(1i32)], &[Some(2i32)]);
 
     // When insert values into table using exec
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "exec",
@@ -3922,8 +3835,7 @@ fn exec_with_multiple_placeholder_mentions() {
     let input = TmpParquetFile::with_2_dim(message_type, &[Some(1i32)], &[Some(text)]);
 
     // When insert values into table using exec
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "exec",
@@ -3964,8 +3876,7 @@ pub fn write_query_result_to_stdout() {
 
     // Query table and write contents to stdout
     let query = format!("SELECT a FROM {table_name} ORDER BY id");
-    let command = Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    let command = cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -3994,8 +3905,7 @@ pub fn write_query_result_to_stdout() {
 /// Write query output to stdout
 #[test]
 pub fn reject_writing_to_stdout_and_file_size_limit() {
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -4021,8 +3931,7 @@ fn write_statistics_for_text_columns() {
     table.insert_rows_as_text(&[["aaa"], ["zzz"]]);
     let query = format!("SELECT a FROM {table_name}");
 
-    let command = Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    let command = cargo_bin_cmd!()
         .args([
             "query",
             "--connection-string",
@@ -4092,8 +4001,7 @@ fn query_4097_bits() {
 
     let query = format!("SELECT a FROM {table_name};");
 
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
@@ -4358,8 +4266,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
     let in_path = format!("tests/{file}");
 
     // Insert parquet
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "insert",
@@ -4372,8 +4279,7 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
         .success();
 
     // Query as parquet
-    Command::cargo_bin("odbc2parquet")
-        .unwrap()
+    cargo_bin_cmd!()
         .args([
             "-vvvv",
             "query",
