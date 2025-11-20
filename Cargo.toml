@@ -31,7 +31,7 @@ chrono = "0.4.42"
 atoi = "2.0.0"
 num-traits = "0.2.19"
 clap_complete = "4.5.61"
-bytesize = "2.2.0"
+bytesize = "2.3.0"
 io-arg = "0.2.2"
 tempfile = "3.23.0"
 
