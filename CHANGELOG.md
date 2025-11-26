@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.5](https://github.com/pacman82/odbc2parquet/compare/v8.1.4...v8.1.5) - 2025-11-26
+
+### Other
+
+- Update to odbc-api 20.1
+- *(deps)* bump parquet from 57.0.0 to 57.1.0
+- *(deps)* bump odbc-api from 19.1.0 to 20.0.0
+- *(deps)* bump actions/checkout from 5 to 6
+- *(deps)* bump bytesize from 2.2.0 to 2.3.0
+- *(deps)* bump clap from 4.5.52 to 4.5.53
+- *(deps)* bump clap_complete from 4.5.60 to 4.5.61
+- *(deps)* bump clap from 4.5.51 to 4.5.52
+- *(deps)* bump bytes from 1.10.1 to 1.11.0
+- *(deps)* bump bytesize from 2.1.0 to 2.2.0
+
 ## [8.1.4](https://github.com/pacman82/odbc2parquet/compare/v8.1.3...v8.1.4) - 2025-11-02
 
 ### Other
