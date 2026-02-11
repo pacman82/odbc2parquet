@@ -43,7 +43,7 @@ default-features = false
 features = ["odbc_version_3_5", "prompt"]
 
 [dependencies.clap]
-version = "4.5.57"
+version = "4.5.58"
 features = ["derive", "env"]
 
 [dependencies.parquet]
