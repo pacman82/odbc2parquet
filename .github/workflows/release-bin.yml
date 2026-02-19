@@ -54,11 +54,10 @@ jobs:
           asset_name: odbc2parquet-win-x86.zip
           tag: ${{ github.ref }}
 
-
   release_macos_intel:
     name: Build and release macOS Intel
     # https://github.com/actions/runner-images?tab=readme-ov-file#available-images
-    runs-on: macos-13 # Intel-based macOS runner
+    runs-on: macos-15-intel # Intel-based macOS runner
 
     steps:
       - name: Checkout
@@ -151,7 +150,7 @@ jobs:
           cross build --release --target aarch64-unknown-linux-gnu
           gzip --force target/aarch64-unknown-linux-gnu/release/odbc2parquet
           mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
-  
+
       - name: Github Upload
         uses: svenstaro/upload-release-action@v2
         with:
