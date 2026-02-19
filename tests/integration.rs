@@ -4288,7 +4288,8 @@ fn roundtrip(file: &'static str, table_name: &str) -> Assert {
             out_str,
             &format!("SELECT country, population FROM {table_name} ORDER BY population;"),
         ])
-        .assert();
+        .assert()
+        .success();
 
     let expectation = String::from_utf8(
         std::process::Command::new("parquet-read")
