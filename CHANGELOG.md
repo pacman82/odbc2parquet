@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.6](https://github.com/pacman82/odbc2parquet/compare/v8.1.5...v8.1.6) - 2026-02-19
+
+### Other
+
+- Fix lint for use unused result in roundtrip helper
+- Use current intel mac runner
+
 ## [8.1.5](https://github.com/pacman82/odbc2parquet/compare/v8.1.4...v8.1.5) - 2025-11-26
 
 ### Other
