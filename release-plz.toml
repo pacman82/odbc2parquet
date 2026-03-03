@@ -1,0 +1,9 @@
+# Map conventional commit messages to sensible defaults for changelog groups
+[changelog]
+commit_parsers = [
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Fixes" },
+    { message = "^perf", group = "Performance" },
+    { message = "^docs", group = "Documentation" },
+    { message = ".*", skip = true },
+]
