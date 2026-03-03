@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.6](https://github.com/pacman82/odbc2parquet/compare/v8.1.5...v8.1.6) - 2026-03-03
+
+### Performance
+
+- Use simd implementation of encoding-rs for utf8 to utf16 path
+- Use x86-64-v3 (AVX2, BMI, FMA — Haswell 2013+) for all x86-64
+
 ## [8.1.5](https://github.com/pacman82/odbc2parquet/compare/v8.1.4...v8.1.5) - 2025-11-26
 
 ### Other
