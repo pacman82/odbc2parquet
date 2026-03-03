@@ -1,5 +1,10 @@
+# Use x86-64-v3 (AVX2, BMI, FMA — Haswell 2013+) for all x86-64 platforms.
+# This enables LLVM auto-vectorization with AVX2 instructions.
+#
+# Link runtime statcially on Windows
+
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static"]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "target-cpu=x86-64-v3"]
 
 [target.i686-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
@@ -9,3 +14,9 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.armv7-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=x86-64-v3"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "target-cpu=x86-64-v3"]
