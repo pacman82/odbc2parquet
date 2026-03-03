@@ -1,6 +1,6 @@
 [package]
 name = "odbc2parquet"
-version = "8.1.5"
+version = "8.1.6"
 authors = ["Markus Klein"]
 edition = "2021"
 repository = "https://github.com/pacman82/odbc2parquet"
