@@ -1,4 +1,5 @@
-use anyhow::{anyhow, Error};
+use anyhow::Error;
+use encoding_rs::mem::convert_utf16_to_str;
 use log::warn;
 use odbc_api::buffers::{AnySlice, BufferDesc};
 use parquet::{
@@ -69,21 +70,23 @@ fn write_utf16_to_utf8(
     let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
     let view = column_reader.as_w_text_view().unwrap();
 
-    pb.write_optional_fallible(
+    let mut buf_utf8 = String::new();
+    pb.write_optional(
         cw,
         view.iter().map(|item| {
-            if let Some(ustr) = item {
-                let byte_array: ByteArray = ustr
-                    .to_string()
-                    .map_err(|_utf_16_error| {
-                        anyhow!("Data source must return valid UTF16 in wide character buffer")
-                    })?
-                    .into_bytes()
-                    .into();
-                Ok(Some(byte_array))
-            } else {
-                Ok(None)
-            }
+            item.map(|ustr| {
+                let utf16 = ustr.as_slice();
+                let max_utf8_len = utf16.len() * 3;
+                if max_utf8_len > buf_utf8.len() {
+                    let additional = max_utf8_len - buf_utf8.len();
+                    buf_utf8.reserve(additional);
+                    for _ in 0..additional {
+                        buf_utf8.push('\0');
+                    }
+                }
+                let written = convert_utf16_to_str(utf16, &mut buf_utf8[..max_utf8_len]);
+                buf_utf8[..written].to_owned().into_bytes().into()
+            })
         }),
     )?;
     Ok(())
