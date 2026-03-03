@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use anyhow::{anyhow, Error};
 use log::warn;
 use odbc_api::buffers::{AnySlice, BufferDesc};
@@ -145,17 +143,18 @@ fn write_to_utf8(
 }
 
 fn utf8_bytes_to_byte_array(bytes: &[u8]) -> ByteArray {
-    // Allocate string into a ByteArray and make sure it is all UTF-8 characters
-    let utf8_str = String::from_utf8_lossy(bytes);
-    // We need to allocate the string anyway to create a ByteArray (yikes!), yet if it already
-    // happened after the to_string_lossy method, it implies we had to use a replacement
-    // character!
-    if matches!(utf8_str, Cow::Owned(_)) {
+    // Allocate string into a ByteArray and make sure it is all UTF-8 characters.
+    if simdutf8::basic::from_utf8(bytes).is_ok() {
+        // Fast path: valid UTF-8, just copy the bytes directly
+        Vec::from(bytes).into()
+    } else {
+        // Slow path: contains invalid UTF-8, do lossy replacement
+        let utf8_str = String::from_utf8_lossy(bytes);
         warn!(
             "Non UTF-8 characters found in string. Try to execute odbc2parquet in a shell with \
             UTF-8 locale or try specifying `--encoding Utf16` on the command line. Value: {}",
             utf8_str
         );
+        utf8_str.into_owned().into_bytes().into()
     }
-    utf8_str.into_owned().into_bytes().into()
 }

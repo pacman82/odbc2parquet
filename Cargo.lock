@@ -1148,6 +1148,7 @@ dependencies = [
  "odbc-api",
  "parquet",
  "predicates",
+ "simdutf8",
  "stderrlog",
  "tempfile",
 ]
