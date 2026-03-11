@@ -126,7 +126,7 @@ Use `odbc2parquet help query` to see all options related to fetching data.
 
 ```bash
 odbc2parquet query \
---connection-string "Driver={ODBC Driver 18` for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;TrustServerCertificate=yes;" \
+--connection-string "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;TrustServerCertificate=yes;" \
 out.par  \
 "SELECT * FROM Birthdays"
 ```
