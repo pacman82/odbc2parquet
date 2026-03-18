@@ -2097,6 +2097,62 @@ fn utf_16_encoding() {
     parquet_read_out(out_str).stdout(eq(expected));
 }
 
+/// See: <https://github.com/pacman82/odbc2parquet/issues/862>
+///
+/// Then querying under windows (implying UTF-16 encoding) a column with value
+/// "Colt Telecom España S.A." was followed by a column if max_length with 18 bytes in UTF-8
+/// encoding. This let to a panic due to a violation of the String invariant, because that would
+/// split the reused buffer in the middle of the UTF-8 character "ñ" (which is 2 bytes in
+/// UTF-8).
+#[test]
+fn issue_862() {
+    let conn = env()
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
+    let table_name = "Issue862";
+    setup_empty_table_mssql(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (?),(?);"),
+        (
+            &"Colt Telecom España S.A.".into_parameter(),
+            // 6 characters will may take up to 18 bytes in UTF-8, these don't but it will still
+            // reproduce the issue.
+            &"123456".into_parameter(),
+        ),
+        None,
+    )
+    .unwrap();
+
+    // A temporary directory, to be removed at the end of the test.
+    let out_dir = tempdir().unwrap();
+    // The name of the output parquet file we are going to write. Since it is in a temporary
+    // directory it will not outlive the end of the test.
+    let out_path = out_dir.path().join("out.par");
+    // We need to pass the output path as a string argument.
+    let out_str = out_path.to_str().expect("Temporary file path must be utf8");
+
+    let query = &format!("SELECT a FROM {table_name};");
+
+    cargo_bin_cmd!()
+        .args([
+            "-vvvv",
+            "query",
+            "--encoding",
+            "utf16",
+            "--connection-string",
+            MSSQL,
+            out_str,
+            query,
+        ])
+        .assert()
+        .success();
+
+    let expected = "{a: \"Colt Telecom España S.A.\"}\n{a: \"123456\"}\n";
+
+    parquet_read_out(out_str).stdout(eq(expected));
+}
+
 /// Test non ASCII character with automatic codec detection
 #[test]
 fn auto_encoding() {

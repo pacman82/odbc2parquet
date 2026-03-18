@@ -77,12 +77,12 @@ fn write_utf16_to_utf8(
             item.map(|ustr| {
                 let utf16 = ustr.as_slice();
                 let max_utf8_len = utf16.len() * 3;
-                if max_utf8_len > buf_utf8.len() {
-                    let additional = max_utf8_len - buf_utf8.len();
-                    buf_utf8.reserve(additional);
-                    for _ in 0..additional {
-                        buf_utf8.push('\0');
-                    }
+                // Clearing is necessary. Otherwise we may slice the stream in between two bytes of
+                // a multi-byte character which would violate the invariant of String and cause a
+                // panic.
+                buf_utf8.clear();
+                for _ in 0..max_utf8_len {
+                    buf_utf8.push('\0');
                 }
                 let written = convert_utf16_to_str(utf16, &mut buf_utf8[..max_utf8_len]);
                 buf_utf8[..written].to_owned().into_bytes().into()
