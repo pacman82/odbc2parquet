@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write, path::PathBuf, sync::Arc};
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use bytesize::ByteSize;
 use log::info;
 use parquet::{
@@ -33,7 +33,7 @@ impl CurrentFile {
                 path.to_string_lossy()
             ))
         })?);
-        let path = TempPath::from_path(path);
+        let path = TempPath::try_from_path(path).context("Unable to create temporary file")?;
         let writer = SerializedFileWriter::new(output, schema.clone(), properties.clone())?;
 
         Ok(Self {
