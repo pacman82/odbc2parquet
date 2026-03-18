@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.7](https://github.com/pacman82/odbc2parquet/compare/v8.1.6...v8.1.7) - 2026-03-18
+
+### Documentation
+
+- Remove superfluous backtick from example in README
+
+### Fixes
+
+- Fix a panic which occurred on windows then querying text columns.
+
 ## [8.1.6](https://github.com/pacman82/odbc2parquet/compare/v8.1.5...v8.1.6) - 2026-03-03
 
 ### Performance
