@@ -6,7 +6,7 @@ use parquet::file::reader::{FileReader, SerializedFileReader};
 
 use crate::{
     connection::open_connection,
-    input::{copy_from_db_to_parquet, parquet_type_to_odbc_buffer_desc, IndexMapping},
+    input::{copy_from_db_to_parquet, parquet_type_to_odbc_param_desc, IndexMapping},
     InsertOpt,
 };
 
@@ -37,7 +37,7 @@ pub fn insert(insert_opt: &InsertOpt) -> Result<(), Error> {
     let mut copy_col_fns = Vec::new();
     for col_desc in &column_descriptions {
         let (buf_desc, odbc_to_parquet) =
-            parquet_type_to_odbc_buffer_desc(col_desc, encoding.use_utf16())?;
+            parquet_type_to_odbc_param_desc(col_desc, encoding.use_utf16())?;
         odbc_buf_desc.push(buf_desc);
         copy_col_fns.push(odbc_to_parquet);
     }

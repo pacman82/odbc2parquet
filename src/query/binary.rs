@@ -15,7 +15,7 @@ use super::column_strategy::ColumnStrategy;
 
 pub struct Binary<Pdt> {
     repetition: Repetition,
-    length: usize,
+    max_bytes: usize,
     _phantom: PhantomData<Pdt>,
 }
 
@@ -23,7 +23,7 @@ impl<Pdt> Binary<Pdt> {
     pub fn new(repetition: Repetition, length: usize) -> Self {
         Self {
             repetition,
-            length,
+            max_bytes: length,
             _phantom: PhantomData,
         }
     }
@@ -44,7 +44,7 @@ where
                 .unwrap(),
             PhysicalType::FIXED_LEN_BYTE_ARRAY => Type::primitive_type_builder(name, physical_type)
                 .with_repetition(self.repetition)
-                .with_length(self.length.try_into().unwrap())
+                .with_length(self.max_bytes.try_into().unwrap())
                 .build()
                 .unwrap(),
             _ => {
@@ -55,7 +55,7 @@ where
 
     fn buffer_desc(&self) -> BufferDesc {
         BufferDesc::Binary {
-            length: self.length,
+            max_bytes: self.max_bytes,
         }
     }
 
