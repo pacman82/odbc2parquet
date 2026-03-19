@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.8](https://github.com/pacman82/odbc2parquet/compare/v8.1.7...v8.1.8) - 2026-03-19
+
+### Features
+
+- [**breaking**] Insert decimal as DECIMAL rather than VARCHAR; Insert time as
+
 ## [8.1.7](https://github.com/pacman82/odbc2parquet/compare/v8.1.6...v8.1.7) - 2026-03-18
 
 ### Documentation
