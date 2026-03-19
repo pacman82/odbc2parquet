@@ -2,7 +2,6 @@
 //! input, as opposed to the query subcommand which uses Parquet File as output.
 
 use std::{
-    cmp::min,
     collections::HashMap,
     fs::File,
     io::Write,
@@ -19,8 +18,9 @@ use odbc_api::{
         AnyBuffer, AnySliceMut, BinColumnSliceMut, BufferDesc, NullableSliceMut, TextColumnSliceMut,
     },
     handles::StatementImpl,
+    parameter::WithDataType,
     sys::{Date, Timestamp},
-    Bit, ColumnarBulkInserter, InputParameterMapping, U16String,
+    BindParamDesc, Bit, ColumnarBulkInserter, InputParameterMapping, U16String,
 };
 use parquet::{
     basic::{ConvertedType, Type as PhysicalType},
@@ -42,7 +42,7 @@ const BUG: &str = "This is not supposed to happen. Please open a Bug at \
 pub fn copy_from_db_to_parquet(
     reader: SerializedFileReader<File>,
     mapping: &IndexMapping,
-    mut odbc_inserter: ColumnarBulkInserter<StatementImpl<'_>, AnyBuffer>,
+    mut odbc_inserter: ColumnarBulkInserter<StatementImpl<'_>, WithDataType<AnyBuffer>>,
     copy_col_fns: Vec<Box<FnParquetToOdbcCol>>,
 ) -> Result<(), Error> {
     let num_row_groups = reader.num_row_groups();
@@ -176,10 +176,10 @@ impl InputParameterMapping for &IndexMapping {
 
 /// Takes a parquet column descriptor and chooses a strategy for inserting the column into the
 /// database.
-pub fn parquet_type_to_odbc_buffer_desc(
+pub fn parquet_type_to_odbc_param_desc(
     col_desc: &ColumnDescriptor,
     use_utf16: bool,
-) -> Result<(BufferDesc, Box<FnParquetToOdbcCol>), Error> {
+) -> Result<(BindParamDesc, Box<FnParquetToOdbcCol>), Error> {
     // Column name. Used in error messages.
     let name = col_desc.self_type().name();
     if !col_desc.self_type().is_primitive() {
@@ -204,7 +204,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
     let (desc, parquet_to_odbc): (_, Box<FnParquetToOdbcCol>) = match pt {
         PhysicalType::BOOLEAN => match lt {
             ConvertedType::NONE => (
-                BufferDesc::Bit { nullable },
+                BindParamDesc::bit(nullable),
                 BoolType::map_to::<Bit>().with(|&b| Bit(b as u8), nullable),
             ),
             _ => unexpected(),
@@ -219,12 +219,12 @@ pub fn parquet_type_to_odbc_buffer_desc(
             | ConvertedType::UINT_16
             | ConvertedType::INT_8
             | ConvertedType::UINT_8 => (
-                BufferDesc::I32 { nullable },
+                BindParamDesc::i32(nullable),
                 Int32Type::map_identity(nullable),
             ),
             ConvertedType::TIME_MILLIS => (
                 // Time represented in format hh:mm:ss.fff
-                BufferDesc::Text { max_str_len: 12 },
+                BindParamDesc::time_as_text(3),
                 Int32Type::map_to_text(
                     |&milliseconds_since_midnight: &i32,
                      index: usize,
@@ -237,21 +237,18 @@ pub fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::DATE => (
-                BufferDesc::Date { nullable },
+                BindParamDesc::date(nullable),
                 Int32Type::map_to::<Date>().with(|&i| days_since_epoch_to_odbc_date(i), nullable),
             ),
             ConvertedType::DECIMAL => {
                 let precision: usize = col_desc.type_precision().try_into().unwrap();
                 let scale: usize = col_desc.type_scale().try_into().unwrap();
-                // We need one character for each digit and maybe an additional character for the
-                // decimal point and one sign.
-                let max_str_len = if scale == 0 {
-                    precision + 1
-                } else {
-                    precision + 1 + 1
+                let param_desc = BindParamDesc::decimal_as_text(precision as u8, scale as i8);
+                let BufferDesc::Text { max_str_len } = param_desc.buffer_desc else {
+                    unreachable!()
                 };
                 (
-                    BufferDesc::Text { max_str_len },
+                    param_desc,
                     Int32Type::map_to_text(
                         move |&n, index, odbc_buf| {
                             let buf = odbc_buf.set_mut(index, max_str_len);
@@ -266,12 +263,12 @@ pub fn parquet_type_to_odbc_buffer_desc(
         },
         PhysicalType::INT64 => match lt {
             ConvertedType::NONE | ConvertedType::INT_64 | ConvertedType::UINT_64 => (
-                BufferDesc::I64 { nullable },
+                BindParamDesc::i64(nullable),
                 Int64Type::map_identity(nullable),
             ),
             ConvertedType::TIME_MICROS => (
                 // Time represented in format hh:mm::ss.ffffff
-                BufferDesc::Text { max_str_len: 15 },
+                BindParamDesc::time_as_text(6),
                 Int64Type::map_to_text(
                     |&microseconds_since_midnight: &i64,
                      index: usize,
@@ -284,7 +281,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::TIMESTAMP_MICROS => (
-                BufferDesc::Timestamp { nullable },
+                BindParamDesc::timestamp(nullable, 6),
                 Int64Type::map_to::<Timestamp>().with(
                     |&microseconds_since_epoch| {
                         let dt = DateTime::from_timestamp(
@@ -306,7 +303,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
                 ),
             ),
             ConvertedType::TIMESTAMP_MILLIS => (
-                BufferDesc::Timestamp { nullable },
+                BindParamDesc::timestamp(nullable, 3),
                 Int64Type::map_to::<Timestamp>().with(
                     |&milliseconds_since_epoch| {
                         let dt = DateTime::from_timestamp(
@@ -330,15 +327,12 @@ pub fn parquet_type_to_odbc_buffer_desc(
             ConvertedType::DECIMAL => {
                 let precision: usize = col_desc.type_precision().try_into().unwrap();
                 let scale: usize = col_desc.type_scale().try_into().unwrap();
-                // We need one character for each digit and maybe an additional character for the
-                // decimal point and one sign.
-                let max_str_len = if scale == 0 {
-                    precision + 1
-                } else {
-                    precision + 1 + 1
+                let param_desc = BindParamDesc::decimal_as_text(precision as u8, scale as i8);
+                let BufferDesc::Text { max_str_len } = param_desc.buffer_desc else {
+                    unreachable!()
                 };
                 (
-                    BufferDesc::Text { max_str_len },
+                    param_desc,
                     Int64Type::map_to_text(
                         move |&n, index, odbc_buf| {
                             let buf = odbc_buf.set_mut(index, max_str_len);
@@ -359,14 +353,14 @@ pub fn parquet_type_to_odbc_buffer_desc(
         ),
         PhysicalType::FLOAT => match lt {
             ConvertedType::NONE => (
-                BufferDesc::F32 { nullable },
+                BindParamDesc::f32(nullable),
                 FloatType::map_identity(nullable),
             ),
             _ => unexpected(),
         },
         PhysicalType::DOUBLE => match lt {
             ConvertedType::NONE => (
-                BufferDesc::F64 { nullable },
+                BindParamDesc::f64(nullable),
                 DoubleType::map_identity(nullable),
             ),
             _ => unexpected(),
@@ -378,7 +372,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
                     let max_str_len = 1;
                     if use_utf16 {
                         (
-                            BufferDesc::WText { max_str_len },
+                            BindParamDesc::wide_text(max_str_len),
                             ByteArrayType::map_to_wtext(
                                 move |text, index, odbc_buf| {
                                     // This allocation is not strictly necessary, we could just as
@@ -397,7 +391,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
                         )
                     } else {
                         (
-                            BufferDesc::Text { max_str_len },
+                            BindParamDesc::text(max_str_len),
                             ByteArrayType::map_to_text(
                                 |text, index, odbc_buf| {
                                     odbc_buf.ensure_max_element_length(text.data().len(), index)?;
@@ -410,7 +404,7 @@ pub fn parquet_type_to_odbc_buffer_desc(
                     }
                 }
                 ConvertedType::NONE | ConvertedType::BSON => (
-                    BufferDesc::Binary { length: 1 },
+                    BindParamDesc::binary(1),
                     ByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| {
                             odbc_buf.ensure_max_element_length(bytes.as_bytes().len(), index)?;
@@ -431,11 +425,12 @@ pub fn parquet_type_to_odbc_buffer_desc(
                         )
                     }
                     let scale: usize = col_desc.type_scale().try_into().unwrap();
-                    let decimal_point_len: usize = min(scale, 1);
-                    // + 1 for Sign
-                    let max_str_len = precision + decimal_point_len + 1;
+                    let param_desc = BindParamDesc::decimal_as_text(precision as u8, scale as i8);
+                    let BufferDesc::Text { max_str_len } = param_desc.buffer_desc else {
+                        unreachable!()
+                    };
                     (
-                        BufferDesc::Text { max_str_len },
+                        param_desc,
                         ByteArrayType::map_to_text(
                             move |bytes, index, odbc_buf| {
                                 let n = i128_from_be_slice(bytes.as_bytes());
@@ -451,10 +446,10 @@ pub fn parquet_type_to_odbc_buffer_desc(
             }
         }
         PhysicalType::FIXED_LEN_BYTE_ARRAY => {
-            let length = col_desc.type_length().try_into().unwrap();
+            let max_bytes = col_desc.type_length().try_into().unwrap();
             match lt {
                 ConvertedType::NONE => (
-                    BufferDesc::Binary { length },
+                    BindParamDesc::binary(max_bytes),
                     FixedLenByteArrayType::map_to_binary(
                         |bytes, index, odbc_buf| {
                             odbc_buf.set_cell(index, Some(bytes.as_bytes()));
@@ -474,11 +469,12 @@ pub fn parquet_type_to_odbc_buffer_desc(
                         )
                     }
                     let scale: usize = col_desc.type_scale().try_into().unwrap();
-                    let decimal_point_len: usize = min(scale, 1);
-                    // + 1 for Sign
-                    let max_str_len = precision + decimal_point_len + 1;
+                    let param_desc = BindParamDesc::decimal_as_text(precision as u8, scale as i8);
+                    let BufferDesc::Text { max_str_len } = param_desc.buffer_desc else {
+                        unreachable!()
+                    };
                     (
-                        BufferDesc::Text { max_str_len },
+                        param_desc,
                         FixedLenByteArrayType::map_to_text(
                             move |bytes, index, odbc_buf| {
                                 let n = i128_from_be_slice(bytes.as_bytes());

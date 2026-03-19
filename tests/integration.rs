@@ -9,10 +9,8 @@ use std::{
 use assert_cmd::{assert::Assert, cargo::cargo_bin_cmd, Command};
 use bytes::Bytes;
 use odbc_api::{
-    buffers::{BufferDesc, TextRowSet},
-    environment,
-    sys::AttrConnectionPooling,
-    Connection, ConnectionOptions, Cursor, Environment, IntoParameter,
+    buffers::TextRowSet, environment, sys::AttrConnectionPooling, BindParamDesc, Connection,
+    ConnectionOptions, Cursor, Environment, IntoParameter,
 };
 use parquet::{
     column::writer::ColumnWriter,
@@ -4038,7 +4036,7 @@ fn query_4097_bits() {
         VALUES
         (?);"
     );
-    let desc = BufferDesc::Bit { nullable: false };
+    let desc = BindParamDesc::bit(false);
     let mut parameter_buffer = conn
         .prepare(&insert)
         .unwrap()
