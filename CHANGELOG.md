@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [8.1.8](https://github.com/pacman82/odbc2parquet/compare/v8.1.7...v8.1.8) - 2026-03-19
+## [9.0.0](https://github.com/pacman82/odbc2parquet/compare/v8.1.7...v9.0.0) - 2026-03-19
 
 ### Features
 
-- [**breaking**] Insert decimal as DECIMAL rather than VARCHAR; Insert time as
+- [**breaking**] Parquet Decimal type is now inserted as Relational Type DECIMAL rather than VARCHAR.
+- [**breaking**] Parquet Time type is now inserted as Relational Type TIME rather than VARCHAR.
+- [**breaking**] Parquet Timestamp type is now inserted as Relational Type TIMESTAMP rather than VARCHAR.
+
+This enables inserting with ODBC drivers which are less lenient with implicit conversions.
 
 ## [8.1.7](https://github.com/pacman82/odbc2parquet/compare/v8.1.6...v8.1.7) - 2026-03-18
 
