@@ -49,7 +49,7 @@ version = "4.6.0"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "58.0.0"
+version = "58.1.0"
 default-features = false
 features = [
     "snap",
