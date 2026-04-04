@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.0](https://github.com/pacman82/odbc2parquet/compare/v9.0.0...v10.0.0) - 2026-04-04
+
+### Features
+
+- [**breaking**] lower the severity of most log messages directly emitted from odbc2parquet from info to debug
+
 ## [9.0.0](https://github.com/pacman82/odbc2parquet/compare/v8.1.7...v9.0.0) - 2026-03-19
 
 ### Features
