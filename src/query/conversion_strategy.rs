@@ -126,7 +126,7 @@ impl ConversionStrategy {
             num_batch += 1;
             let num_rows = buffer.num_rows();
             total_rows_fetched += num_rows;
-            info!("Fetched batch {num_batch} with {num_rows} rows.");
+            debug!("Fetched batch {num_batch} with {num_rows} rows.");
             info!("Fetched {total_rows_fetched} rows in total.");
             self.write_batch(&mut writer, num_batch, buffer, &mut pb)?;
         }

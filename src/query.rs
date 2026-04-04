@@ -18,7 +18,7 @@ mod timestamp_tz;
 use anyhow::Error;
 use fetch_batch::{fetch_strategy, FetchBatch};
 use io_arg::IoArg;
-use log::info;
+use log::debug;
 use odbc_api::{Cursor, IntoParameter};
 use std::io::{stdin, Read};
 
@@ -67,7 +67,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
 
     let odbc_conn = open_connection(&connect_opts)?;
     let db_name = odbc_conn.database_management_system_name()?;
-    info!("Database Management System Name: {db_name}");
+    debug!("Database Management System Name: {db_name}");
 
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default

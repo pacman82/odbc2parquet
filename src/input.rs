@@ -11,7 +11,7 @@ use std::{
 
 use anyhow::{anyhow, bail, Error};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike};
-use log::info;
+use log::debug;
 use num_traits::{FromPrimitive, PrimInt, Signed, ToPrimitive};
 use odbc_api::{
     buffers::{
@@ -49,7 +49,7 @@ pub fn copy_from_db_to_parquet(
     let initial_batch_size = 1;
     let mut pb = ParquetBuffer::new(initial_batch_size);
     for row_group_index in 0..num_row_groups {
-        info!(
+        debug!(
             "Insert row group {} of {}.",
             row_group_index, num_row_groups
         );
@@ -61,7 +61,7 @@ pub fn copy_from_db_to_parquet(
             .expect("Number of rows in row group of parquet file must be non negative");
         // Ensure that odbc inserter buffer has enough capacity for the current row group.
         if odbc_inserter.capacity() < num_rows {
-            info!(
+            debug!(
                 "Resizing ODBC buffer from {} to {} rows.",
                 odbc_inserter.capacity(),
                 num_rows
