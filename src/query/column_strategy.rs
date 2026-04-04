@@ -1,7 +1,7 @@
 use std::{cmp::min, convert::TryInto, num::NonZeroUsize};
 
 use anyhow::Error;
-use log::{debug, info};
+use log::debug;
 use odbc_api::{
     buffers::{AnySlice, BufferDesc},
     sys::SqlDataType,
@@ -201,7 +201,7 @@ pub fn strategy_from_column_description(
             if db_name == "Microsoft SQL Server" {
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexicographically.
-                info!(
+                debug!(
                     "Detected Timestamp type with time zone. Applying instant semantics for \
                     column {name}."
                 );

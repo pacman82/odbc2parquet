@@ -1,7 +1,7 @@
 use std::mem::swap;
 
 use anyhow::Error;
-use log::info;
+use log::debug;
 use odbc_api::{
     buffers::ColumnarAnyBuffer, BlockCursor, ConcurrentBlockCursor, Cursor, RowSetBuffer,
 };
@@ -58,7 +58,7 @@ where
         let mem_usage_odbc_buffer_per_row: usize = table_strategy.fetch_buffer_size_per_row();
         let total_mem_usage_per_row =
             mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
-        info!(
+        debug!(
             "Memory usage per row is {} bytes. This excludes memory directly allocated by the ODBC \
             driver.",
             total_mem_usage_per_row,
@@ -66,7 +66,7 @@ where
 
         let batch_size_row = batch_size_limit.batch_size_in_rows(total_mem_usage_per_row)?;
 
-        info!("Batch size set to {} rows.", batch_size_row);
+        debug!("Batch size set to {} rows.", batch_size_row);
 
         let fetch_buffer = table_strategy.allocate_fetch_buffer(batch_size_row);
 
@@ -109,7 +109,7 @@ where
         let mem_usage_odbc_buffer_per_row: usize = table_strategy.fetch_buffer_size_per_row();
         let total_mem_usage_per_row =
             mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
-        info!(
+        debug!(
             "Memory usage per row is 2x {} bytes (buffer is alloctated two times, because of \
             concurrent fetching). This excludes memory directly allocated by the ODBC driver.",
             total_mem_usage_per_row,
@@ -117,7 +117,7 @@ where
 
         let batch_size_row = batch_size_limit.batch_size_in_rows(total_mem_usage_per_row)?;
 
-        info!("Batch size set to {} rows.", batch_size_row);
+        debug!("Batch size set to {} rows.", batch_size_row);
 
         let fetch_buffer = table_strategy.allocate_fetch_buffer(batch_size_row);
         let buffer = table_strategy.allocate_fetch_buffer(batch_size_row);

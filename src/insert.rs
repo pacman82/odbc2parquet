@@ -1,7 +1,7 @@
 use std::fs::File;
 
 use anyhow::Error;
-use log::info;
+use log::debug;
 use parquet::file::reader::{FileReader, SerializedFileReader};
 
 use crate::{
@@ -61,6 +61,6 @@ fn insert_statement_text(table: &str, column_names: &[&str]) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     let statement_text = format!("INSERT INTO {table} ({columns}) VALUES ({values});");
-    info!("Insert statement Text: {}", statement_text);
+    debug!("Insert statement Text: {}", statement_text);
     statement_text
 }
