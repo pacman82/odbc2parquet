@@ -1205,7 +1205,7 @@ checksum = "245cb4fe8236df4fd352ba96075d754233c6509d654d9f1c1482158b7d6c083d"
 
 [[package]]
 name = "odbc2parquet"
-version = "10.0.0"
+version = "10.0.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
