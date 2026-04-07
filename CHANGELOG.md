@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.1](https://github.com/pacman82/odbc2parquet/compare/v10.0.0...v10.0.1) - 2026-04-07
+
+### Fixes
+
+- Severity of "Fetched x rows in total" log message after each batch
+
 ## [10.0.0](https://github.com/pacman82/odbc2parquet/compare/v9.0.0...v10.0.0) - 2026-04-04
 
 ### Features
