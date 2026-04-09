@@ -16,3 +16,23 @@ services:
       POSTGRES_DB: test
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
+
+  # Only started when the `devcontainer` profile is active. The dev container
+  # client brings this service up by name, which auto-activates the profile;
+  # plain `docker compose up` from the host leaves it untouched.
+  dev:
+    profiles: [devcontainer]
+    build:
+      context: .devcontainer
+      dockerfile: Dockerfile
+    volumes:
+      - .:/workspace
+    # Share the host's network namespace so localhost:1433 / :5432 reach the
+    # mssql / postgres services through their published ports — same connection
+    # strings as on the host, no env-var juggling.
+    network_mode: host
+    # Bringing up `dev` also brings up the test databases, so opening the dev
+    # container leaves you with a complete environment in one step.
+    depends_on:
+      - mssql
+      - postgres
