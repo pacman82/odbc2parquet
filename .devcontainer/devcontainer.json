@@ -1,10 +1,19 @@
 {
   "name": "odbc2parquet-dev",
-  "build": {
-    "dockerfile": "Dockerfile",
-  },
-  "runArgs": ["--network=host"],
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "dev",
+  // Naming the service in `runServices` makes the dev container client invoke
+  // `docker compose up -d dev`, which auto-activates the `devcontainer`
+  // profile. Without this, the cli runs `docker compose up -d` with no service
+  // arg and the profile-gated `dev` service is silently skipped.
+  "runServices": ["dev"],
+  "workspaceFolder": "/workspace",
+  // The base image's CMD is `bash`, which exits immediately under compose
+  // (no TTY). overrideCommand tells the dev container client to inject its
+  // standard keepalive instead of declaring `command: sleep infinity` in the
+  // compose file.
+  "overrideCommand": true,
 
   // Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-  "remoteUser": "vscode",
+  "remoteUser": "vscode"
 }
