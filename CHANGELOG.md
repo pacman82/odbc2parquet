@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.1.0](https://github.com/pacman82/odbc2parquet/compare/v10.0.1...v10.1.0) - 2026-04-09
+
+### Features
+
+- Log final row count on info level
+
+### Fixes
+
+- Fixes an off by one error, which left the first file with one row group less than configured.
+
 ## [10.0.1](https://github.com/pacman82/odbc2parquet/compare/v10.0.0...v10.0.1) - 2026-04-07
 
 ### Fixes
