@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Context, Error};
-use log::debug;
+use log::{debug, info};
 use odbc_api::{buffers::ColumnarAnyBuffer, ResultSetMetadata};
 use parquet::{
     file::writer::SerializedColumnWriter,
@@ -127,10 +127,11 @@ impl ConversionStrategy {
             let num_rows = buffer.num_rows();
             total_rows_fetched += num_rows;
             debug!("Fetched batch {num_batch} with {num_rows} rows.");
-            debug!("Fetched {total_rows_fetched} rows in total.");
+            debug!("Fetched {total_rows_fetched} rows in total so far.");
             self.write_batch(&mut writer, num_batch, buffer, &mut pb)?;
         }
         writer.close_box()?;
+        info!("Done, {total_rows_fetched} rows written in total.");
         Ok(())
     }
 
