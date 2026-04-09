@@ -1507,27 +1507,26 @@ fn read_query_from_stdin() {
     parquet_read_out(out_str).stdout(eq(expected_values));
 }
 
+/// Regression test for #869: every file should hold the configured number of
+/// row groups, including the first.
 #[test]
 fn split_files_on_num_row_groups() {
-    // Setup table for test
+    // Given
     let table_name = "SplitFilesOnNumRowGroups";
     let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table_mssql(&conn, table_name, &["INTEGER"]).unwrap();
-    let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3)");
+    let insert = format!("INSERT INTO {table_name} (A) VALUES(1),(2),(3),(4),(5)");
     conn.execute(&insert, (), None).unwrap();
 
-    // A temporary directory, to be removed at the end of the test.
     let out_dir = tempdir().unwrap();
-    // The name of the output parquet file we are going to write. Since it is in a temporary
-    // directory it will not outlive the end of the test.
     let out_path = out_dir.path().join("out.par");
-    // We need to pass the output path as a string argument.
     let out_str = out_path.to_str().expect("Temporary file path must be utf8");
 
     let query = format!("SELECT a FROM {table_name}");
 
+    // When
     cargo_bin_cmd!()
         .args([
             "-vvvv",
@@ -1538,17 +1537,27 @@ fn split_files_on_num_row_groups() {
             "--batch-size-row",
             "1",
             "--row-groups-per-file",
-            "1",
+            "2",
             &query,
         ])
         .assert()
         .success();
 
-    // Expect one file per row in table (3)
-
-    parquet_read_out(out_dir.path().join("out_01.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_02.par").to_str().unwrap());
-    parquet_read_out(out_dir.path().join("out_03.par").to_str().unwrap());
+    // Then
+    let num_row_groups_in = |file_name| {
+        let path = out_dir.path().join(file_name);
+        let file = File::open(path).unwrap();
+        SerializedFileReader::new(file)
+            .unwrap()
+            .metadata()
+            .num_row_groups()
+    };
+    // The first file must hold the configured number of row groups (2).
+    assert_eq!(2, num_row_groups_in("out_01.par"));
+    // The same goes for the second file.
+    assert_eq!(2, num_row_groups_in("out_02.par"));
+    // For the third file, only one row group is left.
+    assert_eq!(1, num_row_groups_in("out_03.par"));
 }
 
 /// Verify naming of the files is with successive numbers starting from 1 to 3 with split files and

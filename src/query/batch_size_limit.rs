@@ -42,13 +42,13 @@ impl FileSizeLimit {
         !matches!(self, FileSizeLimit::None)
     }
 
-    pub fn should_start_new_file(&self, num_batch: u32, current_file_size: ByteSize) -> bool {
+    pub fn file_limit_reached(&self, num_batch: u32, current_file_size: ByteSize) -> bool {
         match self {
             FileSizeLimit::None => false,
-            FileSizeLimit::RowGroups(row_groups) => num_batch != 0 && num_batch % row_groups == 0,
+            FileSizeLimit::RowGroups(row_groups) => num_batch % row_groups == 0,
             FileSizeLimit::Size(size) => &current_file_size >= size,
             FileSizeLimit::Both { row_groups, size } => {
-                (num_batch != 0 && num_batch % row_groups == 0) || &current_file_size >= size
+                num_batch % row_groups == 0 || &current_file_size >= size
             }
         }
     }

@@ -67,7 +67,7 @@ pub trait ParquetOutput {
     ///
     /// # Parameters
     ///
-    /// * `num_batch`: Zero based num batch index
+    /// * `num_batch`: 1-based index of the batch being written.
     fn write_row_group(
         &mut self,
         num_batch: u32,
@@ -164,10 +164,7 @@ impl ParquetOutput for FileWriter {
             .unwrap()
             .write_row_group(column_exporter)?;
 
-        if self
-            .file_size
-            .should_start_new_file(num_batch + 1, file_size)
-        {
+        if self.file_size.file_limit_reached(num_batch, file_size) {
             self.current_file.take().unwrap().finalize()?;
         }
 
