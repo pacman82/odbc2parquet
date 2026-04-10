@@ -61,6 +61,6 @@ fn insert_statement_text(table: &str, column_names: &[&str]) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     let statement_text = format!("INSERT INTO {table} ({columns}) VALUES ({values});");
-    debug!("Insert statement Text: {}", statement_text);
+    debug!(sql:display = statement_text; "Insert statement generated");
     statement_text
 }

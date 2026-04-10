@@ -202,8 +202,8 @@ pub fn strategy_from_column_description(
                 // -155 is an indication for "Timestamp with timezone" on Microsoft SQL Server. We
                 // give it special treatment so users can sort by time instead lexicographically.
                 debug!(
-                    "Detected Timestamp type with time zone. Applying instant semantics for \
-                    column {name}."
+                    column = name;
+                    "Detected Timestamp type with time zone => Applying instant semantics",
                 );
                 timestamp_tz(precision.try_into().unwrap(), repetition)?
             } else {
@@ -216,7 +216,7 @@ pub fn strategy_from_column_description(
     };
 
     let desc = strategy.buffer_desc();
-    debug!("ODBC buffer description for column at index {index}: {desc:?}",);
+    debug!(column_index = index, description:? = desc; "ODBC buffer description",);
 
     Ok(strategy)
 }

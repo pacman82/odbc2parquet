@@ -41,10 +41,11 @@ impl ConversionStrategy {
             let data_type = cursor.col_data_type(index as u16)?;
 
             debug!(
-                "ODBC column description for column {index}: name: '{}', \
-                relational type: '{:?}', \
-                nullability: {:?}",
-                name, data_type, nullability
+                index = index,
+                name:display = name,
+                relational_type:? = data_type,
+                nullability:? = nullability;
+                "ODBC column description",
             );
 
             // Give a generated name, should we fail to retrieve one from the ODBC data source.
@@ -126,12 +127,16 @@ impl ConversionStrategy {
             num_batch += 1;
             let num_rows = buffer.num_rows();
             total_rows_fetched += num_rows;
-            debug!("Fetched batch {num_batch} with {num_rows} rows.");
-            debug!("Fetched {total_rows_fetched} rows in total so far.");
+            debug!(
+                num_batch = num_batch,
+                num_rows = num_rows,
+                total_row_count=total_rows_fetched;
+                "Fetched batch",
+            );
             self.write_batch(&mut writer, num_batch, buffer, &mut pb)?;
         }
         writer.close_box()?;
-        info!("Done, {total_rows_fetched} rows written in total.");
+        info!(total_rows_fetched=total_rows_fetched; "Done");
         Ok(())
     }
 
@@ -209,7 +214,7 @@ impl ColumnExporter<'_> {
         column_writer: &mut SerializedColumnWriter,
     ) -> Result<(), Error> {
         let col_name = &self.columns[col_index].0;
-        debug!("Writing column with index {col_index} and name '{col_name}'.");
+        debug!(index = col_index, name:display =col_name; "Writing column");
         let odbc_column = self.buffer.column(col_index);
         self.columns[col_index]
             .1

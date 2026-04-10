@@ -59,14 +59,13 @@ where
         let total_mem_usage_per_row =
             mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
         debug!(
-            "Memory usage per row is {} bytes. This excludes memory directly allocated by the ODBC \
-            driver.",
-            total_mem_usage_per_row,
+            bytes = total_mem_usage_per_row;
+            "Memory usage per row excluding memory directly allocated by the ODBC driver.",
         );
 
         let batch_size_row = batch_size_limit.batch_size_in_rows(total_mem_usage_per_row)?;
 
-        debug!("Batch size set to {} rows.", batch_size_row);
+        debug!(rows = batch_size_row; "Batch size");
 
         let fetch_buffer = table_strategy.allocate_fetch_buffer(batch_size_row);
 
@@ -110,6 +109,7 @@ where
         let total_mem_usage_per_row =
             mem_usage_odbc_buffer_per_row + ParquetBuffer::MEMORY_USAGE_BYTES_PER_ROW;
         debug!(
+            bytes = total_mem_usage_per_row * 2;
             "Memory usage per row is 2x {} bytes (buffer is alloctated two times, because of \
             concurrent fetching). This excludes memory directly allocated by the ODBC driver.",
             total_mem_usage_per_row,
@@ -117,7 +117,7 @@ where
 
         let batch_size_row = batch_size_limit.batch_size_in_rows(total_mem_usage_per_row)?;
 
-        debug!("Batch size set to {} rows.", batch_size_row);
+        debug!(rows = batch_size_row; "Batch size");
 
         let fetch_buffer = table_strategy.allocate_fetch_buffer(batch_size_row);
         let buffer = table_strategy.allocate_fetch_buffer(batch_size_row);

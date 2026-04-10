@@ -50,8 +50,9 @@ pub fn copy_from_db_to_parquet(
     let mut pb = ParquetBuffer::new(initial_batch_size);
     for row_group_index in 0..num_row_groups {
         debug!(
-            "Insert row group {} of {}.",
-            row_group_index, num_row_groups
+            row_group = row_group_index,
+            total_row_groups = num_row_groups;
+            "Insert row group",
         );
         let row_group_reader = reader.get_row_group(row_group_index)?;
         let num_rows: usize = row_group_reader
@@ -62,9 +63,9 @@ pub fn copy_from_db_to_parquet(
         // Ensure that odbc inserter buffer has enough capacity for the current row group.
         if odbc_inserter.capacity() < num_rows {
             debug!(
-                "Resizing ODBC buffer from {} to {} rows.",
-                odbc_inserter.capacity(),
-                num_rows
+                old_row_capacity = odbc_inserter.capacity(),
+                new_row_capacity = num_rows;
+                "Resizing ODBC transport buffer",
             );
             odbc_inserter = odbc_inserter.resize(num_rows, mapping)?;
         }
