@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [11.0.0](https://github.com/pacman82/odbc2parquet/compare/v10.1.0...v11.0.0) - 2026-04-10
+
+### Features
+
+- [**breaking**] Use structured logging
+
 ## [10.1.0](https://github.com/pacman82/odbc2parquet/compare/v10.0.1...v10.1.0) - 2026-04-09
 
 ### Features
