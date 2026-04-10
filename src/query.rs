@@ -67,7 +67,7 @@ pub fn query(opt: QueryOpt) -> Result<(), Error> {
 
     let odbc_conn = open_connection(&connect_opts)?;
     let db_name = odbc_conn.database_management_system_name()?;
-    debug!("Database Management System Name: {db_name}");
+    debug!(name:display = db_name; "Database Management System");
 
     let parquet_format_options = ParquetWriterOptions {
         column_compression_default: column_compression_default

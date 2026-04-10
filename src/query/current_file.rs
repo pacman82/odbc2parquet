@@ -71,10 +71,10 @@ impl CurrentFile {
         // Do not persist empty files
         let path = self.path.keep()?;
         info!(
-            "{} rows have been written to {} with a file size of {}.",
-            self.total_num_rows,
-            path.to_string_lossy(),
-            self.file_size
+            rows = self.total_num_rows,
+            size:display = self.file_size,
+            path:display = path.to_string_lossy();
+            "File complete"
         );
         Ok(())
     }

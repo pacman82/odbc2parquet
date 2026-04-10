@@ -3,6 +3,7 @@ mod enum_args;
 mod execute;
 mod input;
 mod insert;
+mod logging;
 mod parquet_buffer;
 mod query;
 
@@ -15,7 +16,6 @@ use io_arg::IoArg;
 use odbc_api::environment;
 use parquet::basic::Encoding;
 use std::path::PathBuf;
-use stderrlog::ColorChoice;
 
 use clap::{ArgAction, Args, CommandFactory, Parser};
 use clap_complete::{generate, Shell};
@@ -322,22 +322,7 @@ fn main() -> Result<(), Error> {
         opt.verbose as usize + 1
     };
 
-    let color_choice = if opt.no_color {
-        ColorChoice::Never
-    } else {
-        ColorChoice::Auto
-    };
-
-    // Initialize logging
-    stderrlog::new()
-        .module(module_path!())
-        .module("odbc_api")
-        .quiet(false) // Even if `opt.quiet` is true, we still want to print errors
-        .verbosity(verbose)
-        .color(color_choice)
-        .timestamp(stderrlog::Timestamp::Second)
-        .init()
-        .unwrap();
+    logging::init(verbose, opt.no_color);
 
     // Initialize ODBC environment used to create the connection to the Database. We now use the
     // singleton pattern with `environment`. This makes our life easier if using concurrent fetching
