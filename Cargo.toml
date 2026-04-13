@@ -40,7 +40,7 @@ encoding_rs = "0.8"
 # Using ODBC version 3.5 is avoiding warnings with drivers which only support 3.5 as oppossed to
 # 3.8. Currently odbc2parquet does not need to use use any ODBC version 3.8 features.
 [dependencies.odbc-api]
-version = "24.0.0"
+version = "24.1.1"
 default-features = false
 features = ["odbc_version_3_5", "prompt"]
 
