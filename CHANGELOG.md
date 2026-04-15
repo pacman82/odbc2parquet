@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-- [**breaking**] Use structured logging
+- [**breaking**] Reworked log messages to be more terse and on point. Used structured logging.
 
 ## [10.1.0](https://github.com/pacman82/odbc2parquet/compare/v10.0.1...v10.1.0) - 2026-04-09
 
