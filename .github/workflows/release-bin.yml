@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Build
         run: |
@@ -22,7 +22,7 @@ jobs:
           Compress-Archive -LiteralPath target/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86_64.zip
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-win-x86_64.zip
           asset_name: odbc2parquet-win-x86_64.zip
@@ -34,10 +34,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install latest rust toolchain
-        uses: dtolnay/rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
           toolchain: stable
           target: i686-pc-windows-msvc
@@ -48,7 +48,7 @@ jobs:
           Compress-Archive -LiteralPath target/i686-pc-windows-msvc/release/odbc2parquet.exe -DestinationPath odbc2parquet-win-x86.zip
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-win-x86.zip
           asset_name: odbc2parquet-win-x86.zip
@@ -61,7 +61,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Build
         run: |
@@ -70,7 +70,7 @@ jobs:
           mv target/release/odbc2parquet.gz odbc2parquet-macos-x86_64.gz
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-macos-x86_64.gz
           asset_name: odbc2parquet-macos-x86_64.gz
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Unix ODBC
         run: |
@@ -96,7 +96,7 @@ jobs:
           mv target/release/odbc2parquet.gz odbc2parquet-macos-arm64.gz
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-macos-arm64.gz
           asset_name: odbc2parquet-macos-arm64.gz
@@ -108,7 +108,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install unixODBC
         run: |
@@ -122,7 +122,7 @@ jobs:
           mv target/release/odbc2parquet.gz odbc2parquet-ubuntu-x86_64.gz
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-ubuntu-x86_64.gz
           asset_name: odbc2parquet-ubuntu-x86_64.gz
@@ -134,10 +134,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install latest rust toolchain
-        uses: dtolnay/rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
           toolchain: stable
           target: aarch64-unknown-linux-gnu
@@ -152,7 +152,7 @@ jobs:
           mv target/aarch64-unknown-linux-gnu/release/odbc2parquet.gz odbc2parquet-ubuntu-arm64.gz
 
       - name: Github Upload
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
           file: odbc2parquet-ubuntu-arm64.gz
           asset_name: odbc2parquet-ubuntu-arm64.gz
