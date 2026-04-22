@@ -1,9 +1,53 @@
-# Map conventional commit messages to sensible defaults for changelog groups
+[workspace]
+
+# The [changelog] table configures git-cliff, which release-plz uses under the hood.
+# Docs: https://git-cliff.org/docs/configuration/changelog
 [changelog]
+# We prefer to use a template closer to git-cliff's default, as oppossed to the one from
+# release-plz. This means we do not addhere to keep a changelog categories. The difference to
+# git-cliff's default is that we include the body of the commit, too. This way we have more
+# information if we curate the changelog on release.
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+
+    {% for commit in commits -%}
+        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+            {% if commit.breaking %}[**breaking**] {% endif %}\
+            {{ commit.message | upper_first }}
+{% if commit.body %}
+{{ commit.body | trim | indent(prefix="  ", first=true) }}
+
+{% endif %}
+    {%- endfor %}
+{% endfor %}
+"""
+trim = true
+
+# Breaking commits (via `!` marker or `BREAKING CHANGE:` footer) bypass `skip = true` parsers. So
+# `refactor!:` surfaces under Refactor with an inline `[**breaking**]` marker, while a plain
+# `refactor:` is skipped.
+protect_breaking_commits = true
+
+# Allowlist: only feat, fix, doc(s), perf, and body-matched security land in the changelog. Other
+# types are skipped except when breaking (see above). Non-allowlisted types retain their
+# git-cliff-default group name so the breaking-protected fall-through has a recognizable section to
+# land in.
 commit_parsers = [
-    { message = "^feat", group = "Features" },
-    { message = "^fix", group = "Fixes" },
-    { message = "^perf", group = "Performance" },
-    { message = "^docs", group = "Documentation" },
+    { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor", skip = true },
+    { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
+    { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^style", group = "<!-- 5 -->🎨 Styling", skip = true },
+    { message = "^test", group = "<!-- 6 -->🧪 Testing", skip = true },
+    { message = "^chore|^ci", group = "<!-- 7 -->⚙️ Miscellaneous Tasks", skip = true },
+    { body = ".*security", group = "<!-- 8 -->🛡️ Security" },
+    { message = "^revert", group = "<!-- 9 -->◀️ Revert", skip = true },
     { message = ".*", skip = true },
 ]
