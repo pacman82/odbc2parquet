@@ -3,7 +3,10 @@
 use std::marker::PhantomData;
 
 use anyhow::Error;
-use odbc_api::buffers::{AnySlice, BufferDesc, Item};
+use odbc_api::{
+    buffers::{AnyColumnBufferSlice, BufferDesc, Item},
+    Pod,
+};
 use parquet::{
     basic::{LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -41,7 +44,7 @@ impl<Pdt> IdenticalOptional<Pdt> {
 impl<Pdt> ColumnStrategy for IdenticalOptional<Pdt>
 where
     Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
+    Pdt::T: Item + Pod + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
         parquet_data_type::<Pdt>(name, self.logical_type.clone(), Repetition::OPTIONAL)
@@ -55,9 +58,9 @@ where
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
-        let it = Pdt::T::as_nullable_slice(column_view).unwrap();
+        let it = column_view.as_nullable_slice::<Pdt::T>().unwrap();
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|opt_ref| opt_ref.copied()))?;
         Ok(())
@@ -89,7 +92,7 @@ impl<Pdt> IdenticalRequired<Pdt> {
 impl<Pdt> ColumnStrategy for IdenticalRequired<Pdt>
 where
     Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
+    Pdt::T: Item + Pod + BufferedDataType,
 {
     fn parquet_type(&self, name: &str) -> Type {
         parquet_data_type::<Pdt>(name, self.logical_type.clone(), Repetition::REQUIRED)
@@ -103,12 +106,12 @@ where
         &self,
         _parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         // We do not require to buffer the values, as they must neither be transformed, nor contain
         // any gaps due to null, we can use the ODBC buffer directly to write the batch.
 
-        let values = Pdt::T::as_slice(column_view).unwrap();
+        let values = column_view.as_slice().unwrap();
         let column_writer = get_typed_column_writer_mut::<Pdt>(column_writer);
         column_writer.write_batch(values, None, None)?;
         Ok(())
@@ -136,7 +139,7 @@ where
 pub fn fetch_identical<Pdt>(is_optional: bool) -> Box<dyn ColumnStrategy>
 where
     Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
+    Pdt::T: Item + Pod + BufferedDataType,
 {
     if is_optional {
         Box::new(IdenticalOptional::<Pdt>::new())
@@ -151,7 +154,7 @@ pub fn fetch_identical_with_logical_type<Pdt>(
 ) -> Box<dyn ColumnStrategy>
 where
     Pdt: DataType,
-    Pdt::T: Item + BufferedDataType,
+    Pdt::T: Item + Pod + BufferedDataType,
 {
     if is_optional {
         Box::new(IdenticalOptional::<Pdt>::with_logical_type(Some(

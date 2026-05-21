@@ -1,6 +1,6 @@
 use anyhow::{Context, Error};
 use chrono::{DateTime, Utc};
-use odbc_api::buffers::{AnySlice, BufferDesc};
+use odbc_api::buffers::{AnyColumnBufferSlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -64,7 +64,7 @@ impl ColumnStrategy for TimestampTz {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         write_timestamp_tz(parquet_buffer, column_writer, column_view, self.precision)
     }
@@ -73,10 +73,10 @@ impl ColumnStrategy for TimestampTz {
 fn write_timestamp_tz(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
     precision: u8,
 ) -> Result<(), Error> {
-    let view = column_reader.as_text_view().expect(
+    let view = column_reader.as_text().expect(
         "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
         https://github.com/pacman82/odbc2parquet/issues.",
     );

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Error};
 use log::{debug, info};
-use odbc_api::{buffers::ColumnarAnyBuffer, ResultSetMetadata};
+use odbc_api::{buffers::ColumnarDynBuffer, ResultSetMetadata};
 use parquet::{
     file::writer::SerializedColumnWriter,
     schema::types::{Type, TypePtr},
@@ -95,8 +95,8 @@ impl ConversionStrategy {
             .sum()
     }
 
-    pub fn allocate_fetch_buffer(&self, batch_size_row: usize) -> ColumnarAnyBuffer {
-        ColumnarAnyBuffer::from_descs(
+    pub fn allocate_fetch_buffer(&self, batch_size_row: usize) -> ColumnarDynBuffer {
+        ColumnarDynBuffer::from_descs(
             batch_size_row,
             self.columns
                 .iter()
@@ -144,7 +144,7 @@ impl ConversionStrategy {
         &self,
         writer: &mut Box<dyn ParquetOutput>,
         num_batch: u32,
-        buffer: &ColumnarAnyBuffer,
+        buffer: &ColumnarDynBuffer,
         pb: &mut ParquetBuffer,
     ) -> Result<(), Error> {
         let num_rows = buffer.num_rows();
@@ -202,7 +202,7 @@ impl ConversionStrategy {
 
 /// Exposes the contents from a fetch buffer column by column to a parquet serializer
 pub struct ColumnExporter<'a> {
-    buffer: &'a ColumnarAnyBuffer,
+    buffer: &'a ColumnarDynBuffer,
     conversion_buffer: &'a mut ParquetBuffer,
     columns: &'a [(String, Box<dyn ColumnStrategy>)],
 }

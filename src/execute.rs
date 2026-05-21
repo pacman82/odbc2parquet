@@ -21,7 +21,7 @@ pub fn execute(exec_opt: &ExecOpt) -> Result<(), Error> {
 
     let file = File::open(input)?;
     let reader = SerializedFileReader::new(file)?;
-    let (statement_text, placeholder_names_by_position) = to_positional_arguments(&statement);
+    let (statement_text, placeholder_names_by_position) = to_positional_arguments(statement);
     let parquet_metadata = reader.metadata();
     let schema_desc = parquet_metadata.file_metadata().schema_descr();
 

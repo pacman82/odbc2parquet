@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul};
 use anyhow::Error;
 use atoi::FromRadix10;
 use chrono::{NaiveTime, Timelike};
-use odbc_api::buffers::{AnySlice, BufferDesc};
+use odbc_api::buffers::{AnyColumnBufferSlice, BufferDesc};
 use parquet::{
     basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
@@ -67,7 +67,7 @@ impl ColumnStrategy for TimeFromText {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         match self.precision {
             0..=3 => write_time_ms(parquet_buffer, column_writer, column_view),
@@ -80,7 +80,7 @@ impl ColumnStrategy for TimeFromText {
 fn write_time_ns(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
 ) -> Result<(), Error> {
     write_time_with::<Int64Type>(pb, column_writer, column_reader, 1_000_000_000, 1)
 }
@@ -88,7 +88,7 @@ fn write_time_ns(
 fn write_time_us(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
 ) -> Result<(), Error> {
     write_time_with::<Int64Type>(pb, column_writer, column_reader, 1_000_000, 1_000)
 }
@@ -96,7 +96,7 @@ fn write_time_us(
 fn write_time_ms(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
 ) -> Result<(), Error> {
     write_time_with::<Int32Type>(pb, column_writer, column_reader, 1_000, 1_000_000)
 }
@@ -104,7 +104,7 @@ fn write_time_ms(
 fn write_time_with<Pdt>(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
     s_factor: Pdt::T,
     ns_divisor: Pdt::T,
 ) -> Result<(), Error>
@@ -118,7 +118,7 @@ where
         + Copy,
     <Pdt::T as TryFrom<u32>>::Error: std::fmt::Debug,
 {
-    let from = column_reader.as_text_view().unwrap();
+    let from = column_reader.as_text().unwrap();
     let into = Pdt::get_column_writer_mut(column_writer).unwrap();
     pb.write_optional(
         into,

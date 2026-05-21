@@ -3,7 +3,7 @@ use std::mem::swap;
 use anyhow::Error;
 use log::debug;
 use odbc_api::{
-    buffers::ColumnarAnyBuffer, BlockCursor, ConcurrentBlockCursor, Cursor, RowSetBuffer,
+    buffers::ColumnarDynBuffer, BlockCursor, ConcurrentBlockCursor, Cursor, RowSetBuffer,
 };
 
 use crate::parquet_buffer::ParquetBuffer;
@@ -15,7 +15,7 @@ pub trait FetchBatch {
     fn max_batch_size_in_rows(&self) -> usize;
 
     /// Borrows a buffer containing the next batch to be written to the output parquet file
-    fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error>;
+    fn next_batch(&mut self) -> Result<Option<&ColumnarDynBuffer>, odbc_api::Error>;
 }
 
 pub fn fetch_strategy(
@@ -43,7 +43,7 @@ pub fn fetch_strategy(
 /// fast as double buffering with concurrent fetching, but it uses less memory due to only requiring
 /// one fetch buffer.
 struct SequentialFetch<C: Cursor> {
-    block_cursor: BlockCursor<C, ColumnarAnyBuffer>,
+    block_cursor: BlockCursor<C, ColumnarDynBuffer>,
 }
 
 impl<C> SequentialFetch<C>
@@ -78,7 +78,7 @@ impl<C> FetchBatch for SequentialFetch<C>
 where
     C: Cursor,
 {
-    fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
+    fn next_batch(&mut self) -> Result<Option<&ColumnarDynBuffer>, odbc_api::Error> {
         let batch = self.block_cursor.fetch_with_truncation_check(true)?;
         Ok(batch)
     }
@@ -92,8 +92,8 @@ where
 /// parquet, while the other is filled in an extra system thread.
 struct ConcurrentFetch<C: Cursor> {
     // This buffer is read from and its contents is written into parquet.
-    buffer: ColumnarAnyBuffer,
-    block_cursor: ConcurrentBlockCursor<C, ColumnarAnyBuffer>,
+    buffer: ColumnarDynBuffer,
+    block_cursor: ConcurrentBlockCursor<C, ColumnarDynBuffer>,
 }
 
 impl<C> ConcurrentFetch<C>
@@ -135,7 +135,7 @@ impl<C> FetchBatch for ConcurrentFetch<C>
 where
     C: Cursor,
 {
-    fn next_batch(&mut self) -> Result<Option<&ColumnarAnyBuffer>, odbc_api::Error> {
+    fn next_batch(&mut self) -> Result<Option<&ColumnarDynBuffer>, odbc_api::Error> {
         let batch = self.block_cursor.fetch()?;
         if let Some(mut batch) = batch {
             swap(&mut batch, &mut self.buffer);

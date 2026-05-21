@@ -1,7 +1,7 @@
 use anyhow::Error;
 use chrono::NaiveDate;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc, Item},
+    buffers::{AnyColumnBufferSlice, BufferDesc},
     sys::Date as OdbcDate,
 };
 use parquet::{
@@ -42,9 +42,9 @@ impl ColumnStrategy for Date {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
-        let it = OdbcDate::as_nullable_slice(column_view).unwrap();
+        let it = column_view.as_nullable_slice().unwrap();
         let column_writer = get_typed_column_writer_mut::<Int32Type>(column_writer);
         parquet_buffer.write_optional(column_writer, it.map(|date| date.map(days_since_epoch)))?;
         Ok(())

@@ -3,7 +3,7 @@ use std::{cmp::min, convert::TryInto, num::NonZeroUsize};
 use anyhow::Error;
 use log::debug;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc},
+    buffers::{AnyColumnBufferSlice, BufferDesc},
     sys::SqlDataType,
     DataType, Nullability, ResultSetMetadata,
 };
@@ -44,7 +44,7 @@ pub trait ColumnStrategy {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error>;
 }
 

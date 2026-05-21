@@ -1,6 +1,6 @@
 use anyhow::Error;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc},
+    buffers::{AnyColumnBufferSlice, BufferDesc},
     sys::Timestamp,
 };
 use parquet::{
@@ -46,7 +46,7 @@ impl ColumnStrategy for TimestampToI64 {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         write_timestamp_col(parquet_buffer, column_writer, column_view, self.precision)
     }
@@ -55,7 +55,7 @@ impl ColumnStrategy for TimestampToI64 {
 fn write_timestamp_col(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
     precision: TimestampPrecision,
 ) -> Result<(), Error> {
     let from = column_reader.as_nullable_slice::<Timestamp>().unwrap();

@@ -45,10 +45,10 @@ impl FileSizeLimit {
     pub fn file_limit_reached(&self, num_batch: u32, current_file_size: ByteSize) -> bool {
         match self {
             FileSizeLimit::None => false,
-            FileSizeLimit::RowGroups(row_groups) => num_batch % row_groups == 0,
+            FileSizeLimit::RowGroups(row_groups) => num_batch.is_multiple_of(*row_groups),
             FileSizeLimit::Size(size) => &current_file_size >= size,
             FileSizeLimit::Both { row_groups, size } => {
-                num_batch % row_groups == 0 || &current_file_size >= size
+                num_batch.is_multiple_of(*row_groups) || &current_file_size >= size
             }
         }
     }

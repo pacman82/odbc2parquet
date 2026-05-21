@@ -1,7 +1,7 @@
 use anyhow::Error;
 use encoding_rs::mem::convert_utf16_to_str;
 use log::warn;
-use odbc_api::buffers::{AnySlice, BufferDesc};
+use odbc_api::buffers::{AnyColumnBufferSlice, BufferDesc};
 use parquet::{
     basic::{ConvertedType, Repetition, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
@@ -56,7 +56,7 @@ impl ColumnStrategy for Utf16ToUtf8 {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         write_utf16_to_utf8(parquet_buffer, column_writer, column_view)
     }
@@ -65,10 +65,10 @@ impl ColumnStrategy for Utf16ToUtf8 {
 fn write_utf16_to_utf8(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
 ) -> Result<(), Error> {
     let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
-    let view = column_reader.as_w_text_view().unwrap();
+    let view = column_reader.as_wide_text().unwrap();
 
     let mut buf_utf8 = String::new();
     pb.write_optional(
@@ -123,7 +123,7 @@ impl ColumnStrategy for Utf8 {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         write_to_utf8(parquet_buffer, column_writer, column_view)
     }
@@ -132,10 +132,10 @@ impl ColumnStrategy for Utf8 {
 fn write_to_utf8(
     pb: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
 ) -> Result<(), Error> {
     let cw = get_typed_column_writer_mut::<ByteArrayType>(column_writer);
-    let view = column_reader.as_text_view().unwrap();
+    let view = column_reader.as_text().unwrap();
 
     pb.write_optional(
         cw,

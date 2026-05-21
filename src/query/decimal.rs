@@ -3,7 +3,7 @@ use std::{convert::TryInto, marker::PhantomData};
 use anyhow::Error;
 use atoi::FromRadix10Signed;
 use odbc_api::{
-    buffers::{AnySlice, BufferDesc},
+    buffers::{AnyColumnBufferSlice, BufferDesc},
     decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64, DataType,
 };
 use parquet::{
@@ -187,10 +187,10 @@ where
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         let column_writer = Pdt::get_column_writer_mut(column_writer).unwrap();
-        let view = column_view.as_text_view().expect(
+        let view = column_view.as_text().expect(
             "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
             https://github.com/pacman82/odbc2parquet/issues.",
         );
@@ -276,7 +276,7 @@ impl ColumnStrategy for DecimalAsBinary {
         &self,
         parquet_buffer: &mut ParquetBuffer,
         column_writer: &mut ColumnWriter,
-        column_view: AnySlice,
+        column_view: AnyColumnBufferSlice,
     ) -> Result<(), Error> {
         write_decimal_col(
             parquet_buffer,
@@ -291,12 +291,12 @@ impl ColumnStrategy for DecimalAsBinary {
 fn write_decimal_col(
     parquet_buffer: &mut ParquetBuffer,
     column_writer: &mut ColumnWriter,
-    column_reader: AnySlice,
+    column_reader: AnyColumnBufferSlice,
     length_in_bytes: usize,
     scale: i32,
 ) -> Result<(), Error> {
     let column_writer = FixedLenByteArrayType::get_column_writer_mut(column_writer).unwrap();
-    let view = column_reader.as_text_view().expect(
+    let view = column_reader.as_text().expect(
         "Invalid Column view type. This is not supposed to happen. Please open a Bug at \
         https://github.com/pacman82/odbc2parquet/issues.",
     );
