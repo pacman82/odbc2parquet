@@ -21,7 +21,7 @@ use odbc_api::{
     handles::StatementImpl,
     parameter::WithDataType,
     sys::{Date, Timestamp},
-    BindParamDesc, Bit, ColumnarBulkInserter, InputParameterMapping, U16String,
+    BindParamDesc, Bit, ColumnarBulkInserter, InputParameterMapping, Utf16String,
 };
 use parquet::{
     basic::{ConvertedType, Type as PhysicalType},
@@ -380,7 +380,7 @@ pub fn parquet_type_to_odbc_param_desc(
                                     // This allocation is not strictly necessary, we could just as
                                     // write directly into the buffer or at least preallocate the
                                     // U16String.
-                                    let value = U16String::from_str(
+                                    let value = Utf16String::from_str(
                                         text.as_utf8()
                                             .expect("Invalid UTF-8 sequence in parquet file."),
                                     );
