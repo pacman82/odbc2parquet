@@ -161,6 +161,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoi"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4652e33138d8d9c774c9697a351b019deb33737812be629603434407f288a323"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1255,7 +1264,7 @@ version = "28.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d536fcaf240c7d6c47bd5be3701bc2effd779e25ae23ce95b2193137d90313"
 dependencies = [
- "atoi",
+ "atoi 2.0.0",
  "log",
  "odbc-sys",
  "thiserror 2.0.18",
@@ -1275,7 +1284,7 @@ version = "11.0.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "atoi",
+ "atoi 3.0.0",
  "bytes",
  "bytesize",
  "chrono",
