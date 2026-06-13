@@ -8,7 +8,7 @@ use odbc_api::{
     Pod,
 };
 use parquet::{
-    basic::{LogicalType, Repetition},
+    basic::{DecimalType, LogicalType, Repetition},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::DataType,
     schema::types::Type,
@@ -130,7 +130,7 @@ where
     let mut builder = Type::primitive_type_builder(name, physical_type)
         .with_repetition(repetition)
         .with_logical_type(logical_type.clone());
-    if let Some(LogicalType::Decimal { scale, precision }) = logical_type {
+    if let Some(LogicalType::Decimal(DecimalType { scale, precision })) = logical_type {
         builder = builder.with_scale(scale).with_precision(precision);
     }
     builder.build().unwrap()

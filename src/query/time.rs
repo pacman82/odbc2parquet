@@ -5,7 +5,7 @@ use atoi::FromRadix10;
 use chrono::{NaiveTime, Timelike};
 use odbc_api::buffers::{AnyColumnBufferSlice, BufferDesc};
 use parquet::{
-    basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
+    basic::{LogicalType, Repetition, TimeType, TimeUnit, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int32Type, Int64Type},
     schema::types::Type,
@@ -43,10 +43,10 @@ impl ColumnStrategy for TimeFromText {
         };
 
         Type::primitive_type_builder(name, pt)
-            .with_logical_type(Some(LogicalType::Time {
+            .with_logical_type(Some(LogicalType::Time(TimeType {
                 is_adjusted_to_u_t_c: false,
                 unit,
-            }))
+            })))
             .with_repetition(self.repetition)
             .build()
             .unwrap()

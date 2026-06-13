@@ -7,7 +7,7 @@ use odbc_api::{
     decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64, DataType,
 };
 use parquet::{
-    basic::{LogicalType, Repetition, Type as PhysicalType},
+    basic::{DecimalType, IntType, LogicalType, Repetition, Type as PhysicalType},
     column::writer::ColumnWriter,
     data_type::{DataType as ParquetDataType, FixedLenByteArrayType, Int32Type, Int64Type},
     schema::types::Type,
@@ -42,15 +42,15 @@ pub fn decimal_fetch_strategy(
     match (precision, scale) {
         (0..=9, 0) => {
             let logical_type = if avoid_decimal {
-                LogicalType::Integer {
+                LogicalType::Integer(IntType {
                     bit_width: 32,
                     is_signed: true,
-                }
+                })
             } else {
-                LogicalType::Decimal {
+                LogicalType::Decimal(DecimalType {
                     scale: 0,
                     precision: precision as i32,
-                }
+                })
             };
             // Values with scale 0 and precision <= 9 can be fetched as i32 from the ODBC and we can
             // use the same physical type to store them in parquet.
@@ -63,10 +63,10 @@ pub fn decimal_fetch_strategy(
                 precision,
                 scale,
                 repetition,
-                LogicalType::Decimal {
+                LogicalType::Decimal(DecimalType {
                     scale,
                     precision: precision as i32,
-                },
+                }),
             ))
         }
         (10..=18, 0) => {
@@ -74,29 +74,29 @@ pub fn decimal_fetch_strategy(
             // can use the same physical type to store them in parquet. That is, if the database
             // does support fetching values as 64Bit integers.
             let logical_type = if avoid_decimal {
-                LogicalType::Integer {
+                LogicalType::Integer(IntType {
                     bit_width: 64,
                     is_signed: true,
-                }
+                })
             } else {
-                LogicalType::Decimal {
+                LogicalType::Decimal(DecimalType {
                     scale: 0,
                     precision: precision as i32,
-                }
+                })
             };
             if driver_does_support_i64 {
                 fetch_identical_with_logical_type::<Int64Type>(is_optional, logical_type)
             } else {
                 let logical_type = if avoid_decimal {
-                    LogicalType::Integer {
+                    LogicalType::Integer(IntType {
                         bit_width: 64,
                         is_signed: true,
-                    }
+                    })
                 } else {
-                    LogicalType::Decimal {
+                    LogicalType::Decimal(DecimalType {
                         scale,
                         precision: precision as i32,
-                    }
+                    })
                 };
                 // The database does not support 64Bit integers (looking at you Oracle). So we fetch
                 // the values from the database as text and convert them into 64Bit integers.
@@ -115,10 +115,10 @@ pub fn decimal_fetch_strategy(
                 precision,
                 scale,
                 repetition,
-                LogicalType::Decimal {
+                LogicalType::Decimal(DecimalType {
                     scale,
                     precision: precision as i32,
-                },
+                }),
             ))
         }
         (0..=38, _) => Box::new(DecimalAsBinary::new(repetition, scale, precision)),
@@ -249,10 +249,10 @@ impl ColumnStrategy for DecimalAsBinary {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::FIXED_LEN_BYTE_ARRAY)
             .with_length(self.length_in_bytes.try_into().unwrap())
-            .with_logical_type(Some(LogicalType::Decimal {
+            .with_logical_type(Some(LogicalType::Decimal(DecimalType {
                 scale: self.scale,
                 precision: self.precision as i32,
-            }))
+            })))
             .with_precision(self.precision.into())
             .with_scale(self.scale)
             .with_repetition(self.repetition)

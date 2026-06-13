@@ -2,7 +2,7 @@ use anyhow::{Context, Error};
 use chrono::{DateTime, Utc};
 use odbc_api::buffers::{AnyColumnBufferSlice, BufferDesc};
 use parquet::{
-    basic::{LogicalType, Repetition, Type as PhysicalType},
+    basic::{LogicalType, Repetition, TimestampType, Type as PhysicalType},
     column::writer::{get_typed_column_writer_mut, ColumnWriter},
     data_type::Int64Type,
     schema::types::Type,
@@ -37,10 +37,10 @@ impl TimestampTz {
 impl ColumnStrategy for TimestampTz {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, PhysicalType::INT64)
-            .with_logical_type(Some(LogicalType::Timestamp {
+            .with_logical_type(Some(LogicalType::Timestamp(TimestampType {
                 is_adjusted_to_u_t_c: true,
                 unit: TimestampPrecision::new(self.precision).as_time_unit(),
-            }))
+            })))
             .with_repetition(self.repetition)
             .build()
             .unwrap()

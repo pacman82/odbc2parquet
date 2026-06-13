@@ -4,7 +4,7 @@ use odbc_api::{
     sys::Timestamp,
 };
 use parquet::{
-    basic::{LogicalType, Repetition},
+    basic::{LogicalType, Repetition, TimestampType},
     column::writer::ColumnWriter,
     data_type::{DataType, Int64Type},
     schema::types::Type,
@@ -29,10 +29,10 @@ struct TimestampToI64 {
 impl ColumnStrategy for TimestampToI64 {
     fn parquet_type(&self, name: &str) -> Type {
         Type::primitive_type_builder(name, Int64Type::get_physical_type())
-            .with_logical_type(Some(LogicalType::Timestamp {
+            .with_logical_type(Some(LogicalType::Timestamp(TimestampType {
                 is_adjusted_to_u_t_c: false,
                 unit: self.precision.as_time_unit(),
-            }))
+            })))
             .with_repetition(self.repetition)
             .build()
             .unwrap()
