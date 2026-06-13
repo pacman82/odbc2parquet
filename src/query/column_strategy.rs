@@ -8,7 +8,7 @@ use odbc_api::{
     DataType, Nullability, ResultSetMetadata,
 };
 use parquet::{
-    basic::{LogicalType, Repetition},
+    basic::{IntType, LogicalType, Repetition},
     column::writer::ColumnWriter,
     data_type::{
         ByteArrayType, DoubleType, FixedLenByteArrayType, FloatType, Int32Type, Int64Type,
@@ -115,17 +115,17 @@ pub fn strategy_from_column_description(
         DataType::Double => fetch_identical::<DoubleType>(is_optional),
         DataType::SmallInt => fetch_identical_with_logical_type::<Int32Type>(
             is_optional,
-            LogicalType::Integer {
+            LogicalType::Integer(IntType {
                 bit_width: 16,
                 is_signed: true,
-            },
+            }),
         ),
         DataType::Integer => fetch_identical_with_logical_type::<Int32Type>(
             is_optional,
-            LogicalType::Integer {
+            LogicalType::Integer(IntType {
                 bit_width: 32,
                 is_signed: true,
-            },
+            }),
         ),
         DataType::Date => Box::new(Date::new(repetition)),
         DataType::Numeric { scale, precision } | DataType::Decimal { scale, precision } => {
@@ -146,10 +146,10 @@ pub fn strategy_from_column_description(
             let is_signed = !cursor.column_is_unsigned(index.try_into().unwrap())?;
             fetch_identical_with_logical_type::<Int32Type>(
                 is_optional,
-                LogicalType::Integer {
+                LogicalType::Integer(IntType {
                     bit_width: 8,
                     is_signed,
-                },
+                }),
             )
         }
         DataType::Binary { length } => {
