@@ -1237,11 +1237,11 @@ dependencies = [
  "objc2-foundation",
 ]
 
-[[package]]
+dock[[package]]
 name = "odbc-api"
-version = "28.2.0"
+version = "29.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c81fc7467324b7a4dfcce514d18439f95ec6acec1adcae113f7b72c34b1dc1d8"
+checksum = "efbf786f321712df749f34b99279334e45383b50d40c173ba5597894c21d1d34"
 dependencies = [
  "atoi",
  "log",
