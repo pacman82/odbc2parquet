@@ -24,14 +24,14 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 env_logger = { version = "0.11", features = ["kv"] }
-log = { version = "0.4.32", features = ["kv"] }
+log = { version = "0.4.33", features = ["kv"] }
 chrono = "0.4.45"
-atoi = "3.0.0"
+atoi = "3.1.0"
 num-traits = "0.2.19"
-clap_complete = "4.6.5"
-bytesize = "2.3.1"
+clap_complete = "4.6.7"
+bytesize = "2.4.2"
 io-arg = "0.2.2"
 tempfile = "3.27.0"
 simdutf8 = "0.1.5"
@@ -45,11 +45,11 @@ default-features = false
 features = ["odbc_version_3_5", "prompt"]
 
 [dependencies.clap]
-version = "4.6.1"
+version = "4.6.2"
 features = ["derive", "env"]
 
 [dependencies.parquet]
-version = "59.0.0"
+version = "59.1.0"
 default-features = false
 features = [
     "snap",
@@ -64,7 +64,7 @@ features = [
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
-bytes = "1.11.1"
+bytes = "1.12.1"
 predicates = "3.1.4"
 
 [profile.release]
