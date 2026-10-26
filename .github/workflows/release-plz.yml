@@ -25,7 +25,7 @@ jobs:
                   sudo apt-get update
                   sudo apt-get install -y unixodbc-dev
             - name: Run release-plz
-              uses: MarcoIeni/release-plz-action@6caa8d34f74d82b0dc76a18edd1cc3d6801c9baf # v0.5
+              uses: MarcoIeni/release-plz-action@7ef5e4d4b0420630cfcaeb182c01e13651d4c577 # v0.5
               with:
                   command: release
               env:
@@ -52,7 +52,7 @@ jobs:
               with:
                 toolchain: stable
             - name: Run release-plz
-              uses: MarcoIeni/release-plz-action@6caa8d34f74d82b0dc76a18edd1cc3d6801c9baf # v0.5
+              uses: MarcoIeni/release-plz-action@7ef5e4d4b0420630cfcaeb182c01e13651d4c577 # v0.5
               with:
                   command: release-pr
               env:
