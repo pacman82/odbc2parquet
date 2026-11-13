@@ -1261,9 +1261,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "30.0.0"
+version = "30.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d667cd254f7e711f3faf9374bd4cb4f44959b538d930ed3b92cd65a03ca418"
+checksum = "07df20ae00dc7fc31c9ae32451bb0d83fb9d18ddb970e066b26e43d6a76cd9a0"
 dependencies = [
  "atoi",
  "log",
@@ -1275,9 +1275,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.31.2"
+version = "0.31.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38467959ef8ec6b76e0d98a7da6a270b65b7ab4f22b2209ef81c8a9260633a50"
+checksum = "19e3a0f2c6531470f498c7cc5054f6b2a5922b5e82a5151065a257c1eb5ee1cd"
 
 [[package]]
 name = "odbc2parquet"
